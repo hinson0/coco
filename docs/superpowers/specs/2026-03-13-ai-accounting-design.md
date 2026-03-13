@@ -61,6 +61,12 @@
 - Supabase Auth 提供 JWT，BFF 验证 Token 后才处理请求
 - Supabase RLS 全表启用，数据库层强制用户数据隔离
 
+**认证流程**：客户端直接使用 Supabase Auth SDK 完成注册/登录/刷新 Token（不经过 BFF），BFF 只负责验证客户端传来的 JWT。
+
+**时区处理**：客户端在每次请求 Header 中携带 `X-Timezone`（如 `Asia/Shanghai`），BFF 使用该时区解析 GLM 返回的相对日期（如"昨天""上周"），转为 UTC 后存储。
+
+**ASR 音频格式**：Expo AV 录音使用 WAV 格式（16kHz 采样率、单声道），与腾讯云 ASR 实时语音识别 API 要求对齐。
+
 ## 4. 数据模型
 
 ### 4.1 users（Supabase Auth 自动管理）
@@ -76,11 +82,13 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | uuid PK | |
-| user_id | uuid FK → users.id | |
+| user_id | uuid FK → users.id \| null | null 表示系统预置分类，所有用户可见 |
 | name | text | 分类名（餐饮、交通…） |
 | icon | text | emoji 图标 |
 | type | enum(income, expense) | 收入/支出 |
 | is_default | boolean | 是否系统预置 |
+
+**RLS 策略**：`user_id IS NULL OR user_id = auth.uid()`，系统预置分类对所有用户可见，自定义分类仅本人可见。
 
 ### 4.3 transactions（账单记录 — 核心表）
 
@@ -92,17 +100,19 @@
 | amount | numeric(12,2) | 金额 |
 | type | enum(income, expense) | 收入/支出 |
 | note | text | 备注 |
-| occurred_at | timestamptz | 消费时间 |
+| occurred_at | timestamptz | 消费时间（客户端传入用户时区，BFF 转为 UTC 存储） |
 | source | enum(manual, ocr, asr, text) | 录入来源 |
 | raw_input | text | 原始语音/OCR/文字内容 |
 | receipt_url | text | 票据图片 URL（Supabase Storage） |
 | ai_confidence | float | AI 识别置信度 |
 | created_at | timestamptz | 创建时间 |
+| deleted_at | timestamptz \| null | 软删除时间，null 表示未删除 |
 
 **设计说明**：
 - `source` 记录每笔账单的录入方式，便于统计 AI 功能使用率
 - `raw_input` 保留原始输入，供用户对照核查
-- `ai_confidence` 低于阈值（0.7）时前端账单卡片加 ⚠️ 标记
+- `ai_confidence` 低于阈值（0.7）时前端账单卡片加 ⚠️ 标记（仍写入 DB，用户可事后编辑/删除）
+- `deleted_at` 支持软删除，用户误删可恢复
 
 ### 4.4 budgets（预算）
 
@@ -110,12 +120,26 @@
 |------|------|------|
 | id | uuid PK | |
 | user_id | uuid FK → users.id | |
-| category_id | uuid | null 表示总预算 |
+| category_id | uuid FK → categories.id \| null | null 表示总预算 |
 | amount | numeric(12,2) | 预算金额 |
-| period | enum(monthly, yearly) | 预算周期 |
+| period | enum(weekly, monthly, yearly) | 预算周期 |
 | start_date | date | 生效日期 |
 
-### 4.5 nl_query_logs（自然语言查询日志）
+### 4.5 chat_messages（聊天消息）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uuid PK | |
+| user_id | uuid FK → users.id | |
+| role | enum(user, assistant) | 发送方 |
+| content_type | enum(text, audio, image, bill_card, nl_result) | 消息类型 |
+| content | text | 文本内容 / JSON 数据 |
+| transaction_id | uuid FK → transactions.id \| null | 关联的账单（bill_card 类型） |
+| created_at | timestamptz | |
+
+**设计说明**：聊天记录独立存储，不依赖 `transactions` 表重建。`bill_card` 类型消息通过 `transaction_id` 关联实际账单。
+
+### 4.6 nl_query_logs（自然语言查询日志）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -164,8 +188,17 @@ OCR文本：{ocr_text}
 
 ```
 ① 用户输入文字 (如"午饭 35")
-→ ② BFF 判断意图 (记账 or 查询)
-→ ③ GLM 解析 → 生成账单 / 执行查询
+→ ② GLM 意图分类 (record / query)
+→ ③a 记账意图 → GLM 提取记账信息 → 生成账单
+→ ③b 查询意图 → 转入 NL 查询通道 (5.4)
+```
+
+**意图分类 GLM Prompt**：
+```
+判断以下用户输入的意图，返回 JSON：{"intent": "record"} 或 {"intent": "query"}。
+- record：用户在描述一笔消费或收入（如"午饭35"、"打车花了20"）
+- query：用户在查询历史数据（如"上周花了多少"、"本月餐饮支出"）
+用户输入：{user_text}
 ```
 
 ### 5.4 自然语言查询通道
@@ -178,7 +211,12 @@ OCR文本：{ocr_text}
 → ⑤ GLM 汇总 (生成自然语言答复)
 ```
 
-**安全要点**：BFF 对 GLM 生成的 SQL 做白名单校验（只允许 SELECT，禁止 DROP/UPDATE/INSERT）。用户的 `user_id` 由服务端强制注入到 WHERE 条件，不依赖 GLM 生成。
+**安全要点**：
+- BFF 对 GLM 生成的 SQL 做白名单校验：只允许 `SELECT`，禁止 `DROP/UPDATE/INSERT/DELETE`
+- **表白名单**：只允许查询 `transactions` 和 `categories` 两张表，禁止访问 `nl_query_logs`、`budgets` 等
+- **函数黑名单**：禁止 `pg_read_file`、`dblink`、`copy`、`lo_import` 等 PostgreSQL 危险函数
+- 用户的 `user_id` 由服务端强制注入到 WHERE 条件，不依赖 GLM 生成
+- SQL 正则校验失败时返回"无法理解，请换个问法"
 
 ### 5.5 统一降级策略
 
@@ -197,7 +235,7 @@ OCR文本：{ocr_text}
 | 统计 | 📊 | 月报/周报 + 分类饼图 + 趋势折线图 |
 | **✦ AI 记账** | 菱形 Spark | **中间突出按钮**，旋转 45° 圆角方块 + 橙色渐变 |
 | 预算 | 🎯 | 总预算 + 分类预算 + 超支提醒 |
-| 我的 | 👤 | 账号设置 + 分类管理 + 数据导出 |
+| 我的 | 👤 | 账号设置 + 分类管理 + 数据导出（CSV，按时间范围筛选，分享/下载） |
 
 **中间按钮设计**：菱形 Spark 造型（旋转 45° 圆角方块），橙色渐变背景 + ✦ 星标 + "AI" 文字，突出 AI 概念。
 
@@ -218,7 +256,7 @@ OCR文本：{ocr_text}
 - **💬 查询**：输入"这周花了多少" → NL Query → 文字答复
 
 **账单卡片设计**：
-- AI 自动生成后在聊天中展示卡片，同时写入 DB
+- AI 识别后**无论置信度高低都直接写入 DB**，聊天中展示已生成的账单卡片
 - 卡片包含：分类 emoji + 分类名 + 备注 + 金额 + 日期
 - 卡片内嵌「编辑」和「删除」操作
 - 支出：红色左边框；收入：绿色左边框
@@ -242,7 +280,13 @@ OCR文本：{ocr_text}
 | POST | /api/budgets | 创建/更新预算 |
 | GET | /api/transactions | 获取账单列表（分页） |
 | PATCH | /api/transactions/:id | 编辑账单 |
-| DELETE | /api/transactions/:id | 删除账单 |
+| DELETE | /api/transactions/:id | 删除账单（软删除） |
+| GET | /api/categories | 获取分类列表（含系统预置 + 自定义） |
+| POST | /api/categories | 创建自定义分类 |
+| PATCH | /api/categories/:id | 编辑自定义分类 |
+| DELETE | /api/categories/:id | 删除自定义分类 |
+| GET | /api/chat/messages | 获取聊天历史（分页） |
+| GET | /api/export | 导出账单 CSV（支持 start_date/end_date 参数） |
 
 ## 8. 项目结构
 
