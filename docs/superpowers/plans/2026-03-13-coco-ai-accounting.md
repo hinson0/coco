@@ -524,6 +524,20 @@ ALTER TABLE nl_query_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "nl_query_logs_all" ON nl_query_logs FOR ALL
   USING (user_id = auth.uid());
+
+-- NL 查询用只读 SQL 执行函数（仅限 service_role 调用）
+CREATE OR REPLACE FUNCTION exec_readonly_sql(sql_query text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  result json;
+BEGIN
+  EXECUTE sql_query INTO result;
+  RETURN result;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION exec_readonly_sql FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION exec_readonly_sql TO service_role;
 ```
 
 - [ ] **Step 2: 创建 seed.sql（系统预置分类）**
@@ -903,6 +917,7 @@ export interface ParsedRecord {
   readonly category: string;
   readonly note: string;
   readonly occurred_at: string | null;
+  readonly type: "income" | "expense";
 }
 
 function extractJson(raw: string): string {
@@ -925,6 +940,7 @@ export function parseRecordResponse(raw: string): ParsedRecord | null {
       category: parsed.category ?? "其他支出",
       note: parsed.note ?? "",
       occurred_at: parsed.occurred_at ?? null,
+      type: parsed.type === "income" ? "income" : "expense",
     };
   } catch {
     return null;
@@ -1619,6 +1635,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await supabase
     .from("transactions")
     .select("*, categories(name, icon)", { count: "exact" })
+    .eq("user_id", auth.userId)
     .is("deleted_at", null)
     .order("occurred_at", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -1679,10 +1696,15 @@ export async function PATCH(
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
+  // 过滤允许更新的字段，防止覆盖敏感字段
+  const { amount, category_id, note, type, occurred_at } = body;
+  const safeBody = { amount, category_id, note, type, occurred_at };
+
   const { data, error } = await supabase
     .from("transactions")
-    .update(body)
+    .update(safeBody)
     .eq("id", params.id)
+    .eq("user_id", auth.userId)
     .select()
     .single();
 
@@ -1703,11 +1725,12 @@ export async function DELETE(
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
-  // 软删除
+  // 软删除（含 user_id 验证）
   const { error } = await supabase
     .from("transactions")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .eq("user_id", auth.userId);
 
   if (error) {
     return NextResponse.json({ success: false, data: null, error: error.message }, { status: 500 });
@@ -1796,19 +1819,24 @@ export async function GET(req: NextRequest) {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
-  const byCategory = Object.values(
-    (data ?? []).reduce<Record<string, { name: string; icon: string; total: number; type: string }>>((acc, t) => {
-      const cat = (t as any).categories;
-      const key = t.category_id;
-      if (!acc[key]) acc[key] = { name: cat?.name ?? "未知", icon: cat?.icon ?? "📦", total: 0, type: t.type };
-      acc[key].total += Number(t.amount);
-      return acc;
-    }, {})
-  );
+  const categoryMap = (data ?? []).reduce<Record<string, { name: string; icon: string; amount: number; type: string }>>((acc, t) => {
+    const cat = (t as any).categories;
+    const key = t.category_id;
+    if (!acc[key]) acc[key] = { name: cat?.name ?? "未知", icon: cat?.icon ?? "📦", amount: 0, type: t.type };
+    acc[key].amount += Number(t.amount);
+    return acc;
+  }, {});
+
+  const categoryBreakdown = Object.values(categoryMap)
+    .sort((a, b) => b.amount - a.amount)
+    .map((cat) => ({
+      ...cat,
+      percentage: totalExpense > 0 ? Math.round((cat.amount / totalExpense) * 100) : 0,
+    }));
 
   return NextResponse.json({
     success: true,
-    data: { totalIncome, totalExpense, balance: totalIncome - totalExpense, byCategory },
+    data: { totalIncome, totalExpense, balance: totalIncome - totalExpense, categoryBreakdown },
     error: null,
   });
 }
@@ -1830,7 +1858,7 @@ export async function GET(req: NextRequest) {
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
-  const { data, error } = await supabase
+  const { data: budgets, error } = await supabase
     .from("budgets")
     .select("*, categories(name, icon)")
     .order("created_at");
@@ -1839,7 +1867,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, data: null, error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data, error: null });
+  // 计算每个预算分类的已花金额
+  const now = new Date();
+  const budgetsWithSpent = await Promise.all(
+    (budgets ?? []).map(async (budget) => {
+      const periodStart = new Date(now);
+      if (budget.period === "weekly") periodStart.setDate(now.getDate() - 7);
+      else if (budget.period === "monthly") periodStart.setMonth(now.getMonth() - 1);
+      else periodStart.setFullYear(now.getFullYear() - 1);
+
+      const { data: txs } = await supabase
+        .from("transactions")
+        .select("amount")
+        .eq("category_id", budget.category_id)
+        .eq("type", "expense")
+        .is("deleted_at", null)
+        .gte("occurred_at", periodStart.toISOString());
+
+      const spent = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
+      return { ...budget, spent };
+    })
+  );
+
+  return NextResponse.json({ success: true, data: budgetsWithSpent, error: null });
 }
 
 export async function POST(req: NextRequest) {
@@ -2028,13 +2078,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, data: { type: "nl_error", message: "无法理解，请换个问法" }, error: null });
       }
 
-      const injectedSql = sql.replace(
-        /WHERE/i,
-        `WHERE transactions.user_id = '${auth.userId}' AND`
-      );
+      // 安全注入 user_id：验证 UUID 格式后注入
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(auth.userId)) {
+        return NextResponse.json({ success: false, data: null, error: "Invalid user" }, { status: 403 });
+      }
+
+      // 将 GLM 生成的 SQL 包装在 CTE 中强制 user_id 过滤
+      const wrappedSql = `WITH scoped AS (SELECT * FROM transactions WHERE user_id = '${auth.userId}' AND deleted_at IS NULL) ${sql.replace(/\btransactions\b/gi, "scoped")}`;
 
       const serviceClient = createServiceClient();
-      const { data: queryResult } = await serviceClient.rpc("exec_readonly_sql", { sql_query: injectedSql });
+      const { data: queryResult } = await serviceClient.rpc("exec_readonly_sql", { sql_query: wrappedSql });
 
       const summaryResp = await callGlm(
         buildSummarizePrompt(text, JSON.stringify(queryResult ?? [])),
@@ -2043,6 +2097,11 @@ export async function POST(req: NextRequest) {
 
       await supabase.from("chat_messages").insert({
         user_id: auth.userId, role: "assistant", content_type: "nl_result", content: summaryResp.content,
+      });
+
+      // 记录 NL 查询日志
+      await createServiceClient().from("nl_query_logs").insert({
+        user_id: auth.userId, question: text, generated_sql: sql, result_summary: summaryResp.content,
       });
 
       return NextResponse.json({ success: true, data: { type: "nl_result", message: summaryResp.content }, error: null });
@@ -2077,7 +2136,7 @@ export async function POST(req: NextRequest) {
         user_id: auth.userId,
         category_id: categoryId,
         amount: parsed.amount,
-        type: "expense",
+        type: parsed.type,
         note: parsed.note,
         occurred_at: parsed.occurred_at ?? new Date().toISOString(),
         source: "text",
@@ -2157,7 +2216,7 @@ export async function POST(req: NextRequest) {
       .from("transactions")
       .insert({
         user_id: auth.userId, category_id: categoryId, amount: parsed.amount,
-        type: "expense", note: parsed.note,
+        type: parsed.type, note: parsed.note,
         occurred_at: parsed.occurred_at ?? new Date().toISOString(),
         source: "ocr", raw_input: ocrResult.text, ai_confidence: 0.75,
       })
@@ -2234,7 +2293,7 @@ export async function POST(req: NextRequest) {
       .from("transactions")
       .insert({
         user_id: auth.userId, category_id: categoryId, amount: parsed.amount,
-        type: "expense", note: parsed.note,
+        type: parsed.type, note: parsed.note,
         occurred_at: parsed.occurred_at ?? new Date().toISOString(),
         source: "asr", raw_input: asrResult.text, ai_confidence: 0.7,
       })
@@ -2291,11 +2350,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const injectedSql = sql.replace(/WHERE/i, `WHERE transactions.user_id = '${auth.userId}' AND`);
+    // 验证 UUID 格式防止注入
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(auth.userId)) {
+      return NextResponse.json({ success: false, data: null, error: "Invalid user" }, { status: 403 });
+    }
+
+    // CTE 包装：用 scoped 替换 transactions 强制 user_id 过滤
+    const wrappedSql = `WITH scoped AS (SELECT * FROM transactions WHERE user_id = '${auth.userId}' AND deleted_at IS NULL) ${sql.replace(/\btransactions\b/gi, "scoped")}`;
 
     const serviceClient = createServiceClient();
     const { data: queryResult, error: queryError } = await serviceClient.rpc("exec_readonly_sql", {
-      sql_query: injectedSql,
+      sql_query: wrappedSql,
     });
 
     if (queryError) {
@@ -2349,7 +2415,7 @@ cd apps && npx create-expo-app mobile --template tabs
 - [ ] **Step 2: 安装依赖**
 
 ```bash
-cd apps/mobile && npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill expo-camera expo-av expo-image-picker && pnpm add @tanstack/react-query zustand @coco/shared
+cd apps/mobile && npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill expo-camera expo-av expo-image-picker expo-localization expo-file-system expo-linear-gradient && pnpm add @tanstack/react-query zustand @coco/shared
 ```
 
 - [ ] **Step 3: 创建 Supabase 客户端**
@@ -2390,14 +2456,18 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     },
   });
 
-  return response.json();
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json?.error ?? `HTTP ${response.status}`);
+  }
+  return json;
 }
 ```
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add apps/mobile/
+git add apps/mobile/package.json apps/mobile/tsconfig.json apps/mobile/app.json apps/mobile/lib/supabase.ts apps/mobile/lib/api.ts apps/mobile/app/
 git commit -m "feat(mobile): init expo project with supabase + api client"
 ```
 
@@ -2500,9 +2570,61 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: 创建注册页（结构同登录页，调用 signUp）**
+- [ ] **Step 3: 创建注册页**
 
-注册页与登录页结构一致，将 `signIn` 替换为 `signUp`，标题改为"创建账号"，底部链接改为"已有账号？去登录"。
+```typescript
+// apps/mobile/app/(auth)/register.tsx
+import { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { useAuth } from "../../hooks/useAuth";
+import { router } from "expo-router";
+
+export default function RegisterScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const { signUp } = useAuth();
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      Alert.alert("注册失败", "两次密码不一致");
+      return;
+    }
+    try {
+      await signUp(email, password);
+      Alert.alert("注册成功", "请检查邮箱完成验证", [
+        { text: "好的", onPress: () => router.replace("/(auth)/login") },
+      ]);
+    } catch (e: any) {
+      Alert.alert("注册失败", e.message);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>创建账号</Text>
+      <TextInput style={styles.input} placeholder="邮箱" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#64748b" />
+      <TextInput style={styles.input} placeholder="密码" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#64748b" />
+      <TextInput style={styles.input} placeholder="确认密码" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry placeholderTextColor="#64748b" />
+      <TouchableOpacity style={styles.button} onPress={handleRegister}>
+        <Text style={styles.buttonText}>注册</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+        <Text style={styles.link}>已有账号？去登录</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#0f172a" },
+  title: { fontSize: 32, fontWeight: "800", color: "#fff", textAlign: "center", marginBottom: 40 },
+  input: { backgroundColor: "#1e293b", color: "#fff", padding: 14, borderRadius: 12, marginBottom: 12, fontSize: 16 },
+  button: { backgroundColor: "#6366f1", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  link: { color: "#818cf8", textAlign: "center", marginTop: 16 },
+});
+```
 
 - [ ] **Step 4: 修改根 _layout.tsx 加 auth guard**
 
@@ -2510,6 +2632,7 @@ const styles = StyleSheet.create({
 // apps/mobile/app/_layout.tsx
 import { Slot, router } from "expo-router";
 import { useEffect } from "react";
+import { View, Text } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 
@@ -2520,7 +2643,16 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!loading && !session) router.replace("/(auth)/login");
+    if (!loading && session) router.replace("/(tabs)");
   }, [session, loading]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0f172a" }}>
+        <Text style={{ color: "#818cf8", fontSize: 24, fontWeight: "800" }}>✦ CoCo AI</Text>
+      </View>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -2547,20 +2679,28 @@ git commit -m "feat(mobile): add auth screens and root layout with auth guard"
 ```typescript
 // apps/mobile/app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
 function DiamondButton() {
   return (
     <TouchableOpacity style={styles.diamondWrapper} onPress={() => router.push("/chat")}>
-      <View style={styles.diamond}>
+      <LinearGradient colors={["#f59e0b", "#ef4444"]} style={styles.diamond}>
         <View style={styles.diamondInner}>
-          <View style={styles.diamondText}>
-            {/* 旋转 45° 的菱形按钮 */}
-          </View>
+          <Text style={styles.diamondText}>✦ AI</Text>
         </View>
-      </View>
+      </LinearGradient>
+      <Text style={styles.diamondLabel}>记账</Text>
     </TouchableOpacity>
+  );
+}
+
+function TabIcon({ emoji }: { emoji: string }) {
+  return (
+    <View>
+      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+    </View>
   );
 }
 
@@ -2572,20 +2712,16 @@ export default function TabLayout() {
       tabBarInactiveTintColor: "#94a3b8",
       headerShown: false,
     }}>
-      <Tabs.Screen name="index" options={{ title: "首页", tabBarIcon: ({ color }) => <TabIcon emoji="🏠" color={color} /> }} />
-      <Tabs.Screen name="stats" options={{ title: "统计", tabBarIcon: ({ color }) => <TabIcon emoji="📊" color={color} /> }} />
+      <Tabs.Screen name="index" options={{ title: "首页", tabBarIcon: () => <TabIcon emoji="🏠" /> }} />
+      <Tabs.Screen name="stats" options={{ title: "统计", tabBarIcon: () => <TabIcon emoji="📊" /> }} />
       <Tabs.Screen name="ai-placeholder" options={{
         title: "",
         tabBarButton: () => <DiamondButton />,
       }} />
-      <Tabs.Screen name="budget" options={{ title: "预算", tabBarIcon: ({ color }) => <TabIcon emoji="🎯" color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: "我的", tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} /> }} />
+      <Tabs.Screen name="budget" options={{ title: "预算", tabBarIcon: () => <TabIcon emoji="🎯" /> }} />
+      <Tabs.Screen name="profile" options={{ title: "我的", tabBarIcon: () => <TabIcon emoji="👤" /> }} />
     </Tabs>
   );
-}
-
-function TabIcon({ emoji, color }: { emoji: string; color: string }) {
-  return <View><Text style={{ fontSize: 20 }}>{emoji}</Text></View>;
 }
 
 const styles = StyleSheet.create({
@@ -2594,13 +2730,13 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 16, transform: [{ rotate: "45deg" }],
     backgroundColor: "#f59e0b", justifyContent: "center", alignItems: "center",
     shadowColor: "#f59e0b", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10,
+    elevation: 8,
   },
-  diamondInner: { transform: [{ rotate: "-45deg" }] },
-  diamondText: {},
+  diamondInner: { transform: [{ rotate: "-45deg" }], alignItems: "center" },
+  diamondText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  diamondLabel: { color: "#fbbf24", fontSize: 9, fontWeight: "600", marginTop: 3 },
 });
 ```
-
-注意：需要导入 `Text` from react-native。菱形内显示 "✦ AI" 文字，旋转 -45° 抵消外层旋转。
 
 - [ ] **Step 2: 提交**
 
@@ -2643,11 +2779,107 @@ export function useDeleteTransaction() {
 
 - [ ] **Step 2: 创建 DailySummary 组件**
 
-显示今日收入/支出/结余的卡片，从 `useTransactions` 筛选今日数据计算。
+```typescript
+// apps/mobile/components/home/DailySummary.tsx
+import { View, Text, StyleSheet } from "react-native";
+import type { Transaction } from "@coco/shared";
+
+interface Props {
+  readonly transactions: readonly Transaction[];
+}
+
+export function DailySummary({ transactions }: Props) {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayTxs = transactions.filter((t) => t.occurred_at.slice(0, 10) === today);
+  const income = todayTxs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const expense = todayTxs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.title}>今日收支</Text>
+      <View style={styles.row}>
+        <View style={styles.item}>
+          <Text style={styles.label}>收入</Text>
+          <Text style={[styles.amount, { color: "#22c55e" }]}>+¥{income.toFixed(2)}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.item}>
+          <Text style={styles.label}>支出</Text>
+          <Text style={[styles.amount, { color: "#ef4444" }]}>-¥{expense.toFixed(2)}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.item}>
+          <Text style={styles.label}>结余</Text>
+          <Text style={styles.amount}>¥{(income - expense).toFixed(2)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { margin: 16, marginTop: 0, backgroundColor: "#1e293b", borderRadius: 16, padding: 16 },
+  title: { color: "#94a3b8", fontSize: 12, marginBottom: 12 },
+  row: { flexDirection: "row", justifyContent: "space-around" },
+  item: { alignItems: "center" },
+  label: { color: "#64748b", fontSize: 11, marginBottom: 4 },
+  amount: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  divider: { width: 1, backgroundColor: "#334155" },
+});
+```
 
 - [ ] **Step 3: 创建 TransactionList 组件**
 
-FlatList 渲染账单列表，每条显示 分类icon + 分类名 + 备注 + 金额（支出红色/收入绿色）。
+```typescript
+// apps/mobile/components/home/TransactionList.tsx
+import { FlatList, View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import type { Transaction } from "@coco/shared";
+
+interface Props {
+  readonly transactions: readonly Transaction[];
+  readonly isLoading: boolean;
+}
+
+export function TransactionList({ transactions, isLoading }: Props) {
+  if (isLoading) {
+    return <ActivityIndicator style={{ marginTop: 40 }} color="#818cf8" />;
+  }
+
+  return (
+    <FlatList
+      data={transactions}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.list}
+      renderItem={({ item }) => (
+        <View style={styles.item}>
+          <View style={styles.left}>
+            <Text style={styles.icon}>{item.categories?.icon ?? "📦"}</Text>
+            <View>
+              <Text style={styles.category}>{item.categories?.name ?? "未分类"}</Text>
+              {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
+            </View>
+          </View>
+          <Text style={[styles.amount, { color: item.type === "expense" ? "#ef4444" : "#22c55e" }]}>
+            {item.type === "expense" ? "-" : "+"}¥{item.amount.toFixed(2)}
+          </Text>
+        </View>
+      )}
+      ListEmptyComponent={<Text style={styles.empty}>暂无记录</Text>}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  list: { paddingHorizontal: 16 },
+  item: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#1e293b", borderRadius: 12, padding: 14, marginBottom: 8 },
+  left: { flexDirection: "row", alignItems: "center", gap: 10 },
+  icon: { fontSize: 24 },
+  category: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  note: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  amount: { fontSize: 16, fontWeight: "700" },
+  empty: { color: "#64748b", textAlign: "center", marginTop: 40 },
+});
+```
 
 - [ ] **Step 4: 实现首页**
 
@@ -2758,7 +2990,11 @@ export function useChat() {
       if (resp.data?.type === "bill") {
         addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "bill_card", content: JSON.stringify(resp.data.transaction), transaction_id: resp.data.transaction.id, created_at: new Date().toISOString() });
         qc.invalidateQueries({ queryKey: ["transactions"] });
+      } else {
+        addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "text", content: resp.data?.message ?? "小票识别失败，请手动记账。", transaction_id: null, created_at: new Date().toISOString() });
       }
+    } catch {
+      addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "text", content: "网络错误，OCR 识别失败。", transaction_id: null, created_at: new Date().toISOString() });
     } finally {
       setLoading(false);
     }
@@ -2772,7 +3008,11 @@ export function useChat() {
       if (resp.data?.type === "bill") {
         addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "bill_card", content: JSON.stringify(resp.data.transaction), transaction_id: resp.data.transaction.id, created_at: new Date().toISOString() });
         qc.invalidateQueries({ queryKey: ["transactions"] });
+      } else {
+        addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "text", content: resp.data?.message ?? "没听清，要不再说一次？", transaction_id: null, created_at: new Date().toISOString() });
       }
+    } catch {
+      addMessage({ id: Date.now().toString(), user_id: "", role: "assistant", content_type: "text", content: "网络错误，语音识别失败。", transaction_id: null, created_at: new Date().toISOString() });
     } finally {
       setLoading(false);
     }
@@ -2799,19 +3039,334 @@ git commit -m "feat(mobile): add chat store and useChat hook with text/ocr/asr s
 
 - [ ] **Step 1: 创建 BillCard 组件**
 
-账单卡片：显示分类 emoji + 名称 + 备注 + 金额（支出红色/收入绿色），底部有编辑/删除按钮。低置信度 (< 0.7) 时显示 ⚠️ 标记。从 content JSON 解析 transaction 数据。
+```typescript
+// apps/mobile/components/chat/BillCard.tsx
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import type { Transaction } from "@coco/shared";
+import { useDeleteTransaction } from "../../hooks/useTransactions";
+
+interface Props {
+  readonly transaction: Transaction;
+  readonly onEdit?: (tx: Transaction) => void;
+}
+
+export function BillCard({ transaction: tx, onEdit }: Props) {
+  const deleteMutation = useDeleteTransaction();
+  const isExpense = tx.type === "expense";
+  const lowConfidence = (tx.ai_confidence ?? 1) < 0.7;
+
+  const handleDelete = () => {
+    Alert.alert("删除记录", "确定要删除这条记录吗？", [
+      { text: "取消", style: "cancel" },
+      { text: "删除", style: "destructive", onPress: () => deleteMutation.mutate(tx.id) },
+    ]);
+  };
+
+  return (
+    <View style={[styles.card, { borderLeftColor: isExpense ? "#ef4444" : "#22c55e" }]}>
+      {lowConfidence && <Text style={styles.warning}>⚠️ 置信度较低，请确认</Text>}
+      <View style={styles.main}>
+        <View style={styles.left}>
+          <Text style={styles.icon}>{tx.categories?.icon ?? "📦"}</Text>
+          <View>
+            <Text style={styles.category}>{tx.categories?.name ?? "未分类"}</Text>
+            {tx.note ? <Text style={styles.note}>{tx.note}</Text> : null}
+          </View>
+        </View>
+        <Text style={[styles.amount, { color: isExpense ? "#ef4444" : "#22c55e" }]}>
+          {isExpense ? "-" : "+"}¥{tx.amount.toFixed(2)}
+        </Text>
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.date}>{tx.occurred_at.slice(0, 10)}</Text>
+        <View style={styles.actions}>
+          {onEdit && (
+            <TouchableOpacity onPress={() => onEdit(tx)}>
+              <Text style={styles.action}>✏️ 编辑</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleDelete}>
+            <Text style={styles.action}>🗑️ 删除</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, borderLeftWidth: 3, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  warning: { color: "#d97706", fontSize: 10, marginBottom: 6, fontWeight: "600" },
+  main: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  left: { flexDirection: "row", alignItems: "center", gap: 8 },
+  icon: { fontSize: 24 },
+  category: { fontWeight: "600", fontSize: 14, color: "#0f172a" },
+  note: { color: "#94a3b8", fontSize: 11, marginTop: 2 },
+  amount: { fontWeight: "700", fontSize: 18 },
+  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#f1f5f9" },
+  date: { color: "#94a3b8", fontSize: 10 },
+  actions: { flexDirection: "row", gap: 12 },
+  action: { color: "#94a3b8", fontSize: 10 },
+});
+```
 
 - [ ] **Step 2: 创建 ChatMessage 组件**
 
-根据 `role` 渲染左侧（assistant，带 ✦ 头像）或右侧（user）气泡。根据 `content_type` 渲染：text → 文字气泡，audio → 语音波形气泡，image → 图片缩略图，bill_card → BillCard 组件，nl_result → 文字回复卡片。
+```typescript
+// apps/mobile/components/chat/ChatMessage.tsx
+import { View, Text, StyleSheet } from "react-native";
+import type { ChatMessage as ChatMessageType } from "@coco/shared";
+import { BillCard } from "./BillCard";
+
+interface Props {
+  readonly message: ChatMessageType;
+}
+
+export function ChatMessage({ message }: Props) {
+  const isUser = message.role === "user";
+
+  const renderContent = () => {
+    switch (message.content_type) {
+      case "bill_card": {
+        const tx = JSON.parse(message.content);
+        return <BillCard transaction={tx} />;
+      }
+      case "audio":
+        return (
+          <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
+            <Text style={isUser ? styles.userText : styles.aiText}>🎙️ 语音消息</Text>
+          </View>
+        );
+      case "image":
+        return (
+          <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
+            <Text style={isUser ? styles.userText : styles.aiText}>🧾 图片</Text>
+          </View>
+        );
+      default:
+        return (
+          <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
+            <Text style={isUser ? styles.userText : styles.aiText}>{message.content}</Text>
+          </View>
+        );
+    }
+  };
+
+  return (
+    <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
+      {!isUser && (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>✦</Text>
+        </View>
+      )}
+      <View style={styles.contentWrapper}>
+        {renderContent()}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", marginBottom: 10, alignItems: "flex-start" },
+  rowLeft: { justifyContent: "flex-start" },
+  rowRight: { justifyContent: "flex-end" },
+  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#f59e0b", justifyContent: "center", alignItems: "center", marginRight: 8 },
+  avatarText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  contentWrapper: { maxWidth: "80%" },
+  bubble: { borderRadius: 12, padding: 10 },
+  userBubble: { backgroundColor: "#6366f1", borderTopRightRadius: 0 },
+  aiBubble: { backgroundColor: "#fff", borderTopLeftRadius: 0, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  userText: { color: "#fff", fontSize: 14 },
+  aiText: { color: "#0f172a", fontSize: 14 },
+});
+```
 
 - [ ] **Step 3: 创建 ChatInput 组件**
 
-底部输入栏：左侧 📷 按钮（调用 expo-image-picker），中间 TextInput，右侧 🎙️ 按钮（长按录音）。快捷操作 Chip 栏（手动记账、问一问）。
+```typescript
+// apps/mobile/components/chat/ChatInput.tsx
+import { useState, useRef } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { VoiceRecorder } from "./VoiceRecorder";
+
+interface Props {
+  readonly onSendText: (text: string) => void;
+  readonly onSendImage: (base64: string) => void;
+  readonly onSendAudio: (base64: string) => void;
+  readonly isLoading: boolean;
+  readonly onManualEntry?: () => void;
+}
+
+export function ChatInput({ onSendText, onSendImage, onSendAudio, isLoading, onManualEntry }: Props) {
+  const [text, setText] = useState("");
+  const inputRef = useRef<TextInput>(null);
+
+  const handleSend = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onSendText(trimmed);
+    setText("");
+  };
+
+  const handleCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      base64: true,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      onSendImage(result.assets[0].base64);
+    }
+  };
+
+  return (
+    <View style={styles.wrapper}>
+      <View style={styles.chips}>
+        <TouchableOpacity style={styles.chip} onPress={onManualEntry}>
+          <Text style={styles.chipText}>✏️ 手动记账</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.chip}>
+          <Text style={styles.chipText}>💬 问一问</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputRow}>
+        <TouchableOpacity style={styles.iconBtn} onPress={handleCamera}>
+          <Text style={{ fontSize: 20 }}>📷</Text>
+        </TouchableOpacity>
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          value={text}
+          onChangeText={setText}
+          placeholder="发消息或按住说话..."
+          placeholderTextColor="#94a3b8"
+          returnKeyType="send"
+          onSubmitEditing={handleSend}
+          editable={!isLoading}
+        />
+        {text.trim() ? (
+          <TouchableOpacity style={styles.sendBtn} onPress={handleSend} disabled={isLoading}>
+            <Text style={styles.sendText}>↑</Text>
+          </TouchableOpacity>
+        ) : (
+          <VoiceRecorder onRecorded={onSendAudio} disabled={isLoading} />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: { borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 8, paddingHorizontal: 12, paddingBottom: 20, backgroundColor: "#0f172a" },
+  chips: { flexDirection: "row", gap: 6, marginBottom: 8 },
+  chip: { backgroundColor: "#1e293b", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14 },
+  chipText: { color: "#818cf8", fontSize: 11 },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#1e293b", justifyContent: "center", alignItems: "center" },
+  input: { flex: 1, backgroundColor: "#1e293b", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: "#fff", fontSize: 14 },
+  sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#6366f1", justifyContent: "center", alignItems: "center" },
+  sendText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+});
+```
 
 - [ ] **Step 4: 创建 VoiceRecorder 组件**
 
-使用 expo-av Audio.Recording，长按开始录音，松手停止。转 Base64 后调用 sendAsr。录音时显示计时器 + 波形动画。
+```typescript
+// apps/mobile/components/chat/VoiceRecorder.tsx
+import { useState, useRef } from "react";
+import { TouchableOpacity, Text, StyleSheet, Animated } from "react-native";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+
+interface Props {
+  readonly onRecorded: (base64: string) => void;
+  readonly disabled: boolean;
+}
+
+export function VoiceRecorder({ onRecorded, disabled }: Props) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const startRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") return;
+
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync({
+        android: { extension: ".wav", sampleRate: 16000, numberOfChannels: 1, bitRate: 256000, outputFormat: Audio.AndroidOutputFormat.DEFAULT, audioEncoder: Audio.AndroidAudioEncoder.DEFAULT },
+        ios: { extension: ".wav", sampleRate: 16000, numberOfChannels: 1, bitRate: 256000, outputFormat: Audio.IOSOutputFormat.LINEARPCM, audioQuality: Audio.IOSAudioQuality.HIGH, linearPCMBitDepth: 16, linearPCMIsBigEndian: false, linearPCMIsFloat: false },
+        web: {},
+      });
+      await recording.startAsync();
+
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setDuration(0);
+      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 1.3, duration: 500, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration: 500, useNativeDriver: true }),
+        ])
+      ).start();
+    } catch (err) {
+      console.error("Recording failed:", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recordingRef.current) return;
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    scale.stopAnimation();
+    scale.setValue(1);
+    setIsRecording(false);
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (uri) {
+        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        onRecorded(base64);
+      }
+    } catch (err) {
+      console.error("Stop recording failed:", err);
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={[styles.btn, isRecording && styles.btnRecording]}
+      onPressIn={startRecording}
+      onPressOut={stopRecording}
+      disabled={disabled}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Text style={styles.icon}>{isRecording ? `${duration}"` : "🎙️"}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  btn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#6366f1", justifyContent: "center", alignItems: "center" },
+  btnRecording: { backgroundColor: "#ef4444" },
+  icon: { color: "#fff", fontSize: 16 },
+});
+```
 
 - [ ] **Step 5: 提交**
 
@@ -2830,16 +3385,28 @@ git commit -m "feat(mobile): add chat UI components (message, bill card, input, 
 
 ```typescript
 // apps/mobile/app/chat.tsx
+import { useState } from "react";
 import { View, FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { useChatStore } from "../store/chatStore";
 import { useChat } from "../hooks/useChat";
 import { ChatMessage } from "../components/chat/ChatMessage";
 import { ChatInput } from "../components/chat/ChatInput";
+import { ManualEntryForm } from "../components/ManualEntryForm";
 
 export default function ChatScreen() {
   const { messages, isLoading } = useChatStore();
   const { sendText, sendOcr, sendAsr } = useChat();
+  const [showManual, setShowManual] = useState(false);
+  const { addMessage } = useChatStore();
+
+  const handleManualSuccess = (tx: any) => {
+    addMessage({
+      id: Date.now().toString(), user_id: "", role: "assistant",
+      content_type: "bill_card", content: JSON.stringify(tx),
+      transaction_id: tx.id, created_at: new Date().toISOString(),
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -2867,6 +3434,14 @@ export default function ChatScreen() {
         onSendImage={sendOcr}
         onSendAudio={sendAsr}
         isLoading={isLoading}
+        onManualEntry={() => setShowManual(true)}
+      />
+
+      {/* 手动记账表单 */}
+      <ManualEntryForm
+        visible={showManual}
+        onClose={() => setShowManual(false)}
+        onSuccess={handleManualSuccess}
       />
     </View>
   );
@@ -2883,7 +3458,132 @@ const styles = StyleSheet.create({
 
 - [ ] **Step 2: 创建手动记账表单（Modal）**
 
-点击快捷栏"手动记账" → 弹出 Modal，含金额键盘、分类选择器（CategoryPicker）、备注输入、日期选择。提交后调用 `/api/record/manual`。
+```typescript
+// apps/mobile/components/ManualEntryForm.tsx
+import { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert } from "react-native";
+import { apiFetch } from "../lib/api";
+import { CategoryPicker } from "./CategoryPicker";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface Props {
+  readonly visible: boolean;
+  readonly onClose: () => void;
+  readonly onSuccess?: (tx: any) => void;
+}
+
+export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
+  const [amount, setAmount] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [type, setType] = useState<"expense" | "income">("expense");
+  const [date, setDate] = useState(new Date());
+  const [submitting, setSubmitting] = useState(false);
+  const qc = useQueryClient();
+
+  const handleSubmit = async () => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      Alert.alert("请输入有效金额");
+      return;
+    }
+    if (!categoryId) {
+      Alert.alert("请选择分类");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const resp = await apiFetch<any>("/api/record/manual", {
+        method: "POST",
+        body: JSON.stringify({ amount: numAmount, category_id: categoryId, note, type, occurred_at: date.toISOString() }),
+      });
+      if (resp.success) {
+        qc.invalidateQueries({ queryKey: ["transactions"] });
+        onSuccess?.(resp.data);
+        onClose();
+        setAmount("");
+        setNote("");
+        setCategoryId(null);
+      }
+    } catch {
+      Alert.alert("提交失败", "请重试");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.overlay}>
+        <View style={styles.sheet}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.cancel}>取消</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>手动记账</Text>
+            <TouchableOpacity onPress={handleSubmit} disabled={submitting}>
+              <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.body}>
+            {/* 收支切换 */}
+            <View style={styles.typeRow}>
+              <TouchableOpacity style={[styles.typeBtn, type === "expense" && styles.typeBtnActive]} onPress={() => setType("expense")}>
+                <Text style={[styles.typeText, type === "expense" && styles.typeTextActive]}>支出</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.typeBtn, type === "income" && styles.typeBtnIncome]} onPress={() => setType("income")}>
+                <Text style={[styles.typeText, type === "income" && styles.typeTextActive]}>收入</Text>
+              </TouchableOpacity>
+            </View>
+            {/* 金额 */}
+            <TextInput style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#64748b" keyboardType="decimal-pad" />
+            {/* 分类选择 */}
+            <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
+            {/* 日期选择（简易：显示当前日期，点击切换到昨天/前天/今天） */}
+            <View style={{ marginTop: 16 }}>
+              <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>选择日期</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {[0, -1, -2].map((offset) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + offset);
+                  const label = offset === 0 ? "今天" : offset === -1 ? "昨天" : "前天";
+                  const isSelected = date.toDateString() === d.toDateString();
+                  return (
+                    <TouchableOpacity key={offset} style={[styles.typeBtn, isSelected && styles.typeBtnActive]} onPress={() => setDate(d)}>
+                      <Text style={[styles.typeText, isSelected && styles.typeTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            {/* 备注 */}
+            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#64748b" />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: "#0f172a", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#1e293b" },
+  cancel: { color: "#94a3b8", fontSize: 16 },
+  title: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  save: { color: "#6366f1", fontSize: 16, fontWeight: "600" },
+  body: { padding: 16 },
+  typeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  typeBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#1e293b", alignItems: "center" },
+  typeBtnActive: { backgroundColor: "#ef4444" },
+  typeBtnIncome: { backgroundColor: "#22c55e" },
+  typeText: { color: "#94a3b8", fontSize: 14, fontWeight: "600" },
+  typeTextActive: { color: "#fff" },
+  amountInput: { fontSize: 36, fontWeight: "700", color: "#fff", textAlign: "center", marginBottom: 20, padding: 16, backgroundColor: "#1e293b", borderRadius: 12 },
+  noteInput: { backgroundColor: "#1e293b", color: "#fff", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
+});
+```
 
 - [ ] **Step 3: 提交**
 
@@ -2900,18 +3600,129 @@ git commit -m "feat(mobile): add AI chat screen with manual entry form"
 
 **Files:**
 - Create: `apps/mobile/app/(tabs)/stats.tsx`
-- Create: `apps/mobile/components/stats/PieChart.tsx`
-- Create: `apps/mobile/components/stats/TrendChart.tsx`
+
+> 注：MVP 阶段统计页使用纯 RN 组件（进度条）渲染分类排行，后续可引入 react-native-chart-kit 拆出 PieChart/TrendChart。
 
 - [ ] **Step 1: 实现统计页**
 
-调用 `GET /api/stats` 获取数据。渲染：周期选择器（周/月/年）、收支概览卡片、分类饼图（使用 react-native-chart-kit 或 victory-native）、趋势折线图。
+```typescript
+// apps/mobile/app/(tabs)/stats.tsx
+import { useState } from "react";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "../../lib/api";
+
+type Period = "week" | "month" | "year";
+
+function getDateRange(period: Period): { start: string; end: string } {
+  const now = new Date();
+  const end = now.toISOString().slice(0, 10);
+  const start = new Date(now);
+  if (period === "week") start.setDate(now.getDate() - 7);
+  else if (period === "month") start.setMonth(now.getMonth() - 1);
+  else start.setFullYear(now.getFullYear() - 1);
+  return { start: start.toISOString().slice(0, 10), end };
+}
+
+export default function StatsScreen() {
+  const [period, setPeriod] = useState<Period>("month");
+  const range = getDateRange(period);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["stats", period],
+    queryFn: () => apiFetch<any>(`/api/stats?start_date=${range.start}&end_date=${range.end}`),
+  });
+
+  const stats = data?.data;
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.pageTitle}>统计</Text>
+
+      {/* 周期选择器 */}
+      <View style={styles.periodRow}>
+        {(["week", "month", "year"] as const).map((p) => (
+          <TouchableOpacity key={p} style={[styles.periodBtn, period === p && styles.periodBtnActive]} onPress={() => setPeriod(p)}>
+            <Text style={[styles.periodText, period === p && styles.periodTextActive]}>
+              {{ week: "周", month: "月", year: "年" }[p]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#818cf8" />
+      ) : stats ? (
+        <>
+          {/* 收支概览卡片 */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>总收入</Text>
+              <Text style={[styles.summaryAmount, { color: "#22c55e" }]}>+¥{(stats.totalIncome ?? 0).toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>总支出</Text>
+              <Text style={[styles.summaryAmount, { color: "#ef4444" }]}>-¥{(stats.totalExpense ?? 0).toFixed(2)}</Text>
+            </View>
+          </View>
+
+          {/* 分类支出排行 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>分类支出排行</Text>
+            {(stats.categoryBreakdown ?? []).map((cat: any, i: number) => (
+              <View key={cat.name ?? i} style={styles.categoryRow}>
+                <View style={styles.categoryLeft}>
+                  <Text style={styles.categoryIcon}>{cat.icon ?? "📦"}</Text>
+                  <Text style={styles.categoryName}>{cat.name}</Text>
+                </View>
+                <View style={styles.categoryRight}>
+                  <View style={styles.barBg}>
+                    <View style={[styles.barFill, { width: `${(cat.percentage ?? 0)}%` }]} />
+                  </View>
+                  <Text style={styles.categoryAmount}>¥{(cat.amount ?? 0).toFixed(0)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : (
+        <Text style={styles.empty}>暂无数据</Text>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 50 },
+  pageTitle: { color: "#fff", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
+  periodRow: { flexDirection: "row", paddingHorizontal: 16, gap: 8, marginBottom: 16 },
+  periodBtn: { flex: 1, padding: 10, borderRadius: 10, backgroundColor: "#1e293b", alignItems: "center" },
+  periodBtnActive: { backgroundColor: "#6366f1" },
+  periodText: { color: "#94a3b8", fontSize: 14, fontWeight: "600" },
+  periodTextActive: { color: "#fff" },
+  summaryCard: { marginHorizontal: 16, backgroundColor: "#1e293b", borderRadius: 16, padding: 20, flexDirection: "row", justifyContent: "space-around", marginBottom: 20 },
+  summaryItem: { alignItems: "center" },
+  summaryLabel: { color: "#64748b", fontSize: 12, marginBottom: 6 },
+  summaryAmount: { fontSize: 20, fontWeight: "700" },
+  section: { marginHorizontal: 16, marginBottom: 20 },
+  sectionTitle: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 12 },
+  categoryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  categoryLeft: { flexDirection: "row", alignItems: "center", gap: 8, width: 80 },
+  categoryIcon: { fontSize: 18 },
+  categoryName: { color: "#cbd5e1", fontSize: 13 },
+  categoryRight: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 8 },
+  barBg: { flex: 1, height: 8, backgroundColor: "#334155", borderRadius: 4, overflow: "hidden" },
+  barFill: { height: 8, backgroundColor: "#6366f1", borderRadius: 4 },
+  categoryAmount: { color: "#94a3b8", fontSize: 12, width: 60, textAlign: "right" },
+  empty: { color: "#64748b", textAlign: "center", marginTop: 40 },
+});
+```
 
 - [ ] **Step 2: 提交**
 
 ```bash
-git add apps/mobile/app/\(tabs\)/stats.tsx apps/mobile/components/stats/
-git commit -m "feat(mobile): add stats screen with pie chart and trend chart"
+git add apps/mobile/app/\(tabs\)/stats.tsx
+git commit -m "feat(mobile): add stats screen with category breakdown"
 ```
 
 ### Task 21: 预算页
@@ -2944,7 +3755,90 @@ export function useCreateBudget() {
 
 - [ ] **Step 2: 实现预算页**
 
-显示总预算进度条 + 分类预算卡片列表。每个 BudgetCard 显示：分类名 + 已花/预算金额 + 进度百分比条（超支变红）。底部"添加预算"按钮弹出 BudgetForm。
+```typescript
+// apps/mobile/app/(tabs)/budget.tsx
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useBudgets } from "../../hooks/useBudgets";
+
+export default function BudgetScreen() {
+  const { data, isLoading } = useBudgets();
+  const budgets = data?.data ?? [];
+
+  const totalBudget = budgets.reduce((s: number, b: any) => s + b.amount, 0);
+  const totalSpent = budgets.reduce((s: number, b: any) => s + (b.spent ?? 0), 0);
+  const totalPercent = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.pageTitle}>预算</Text>
+
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#818cf8" />
+      ) : (
+        <>
+          {/* 总预算概览 */}
+          <View style={styles.totalCard}>
+            <Text style={styles.totalLabel}>本月总预算</Text>
+            <Text style={styles.totalAmount}>¥{totalSpent.toFixed(0)} / ¥{totalBudget.toFixed(0)}</Text>
+            <View style={styles.progressBg}>
+              <View style={[styles.progressFill, { width: `${totalPercent}%`, backgroundColor: totalPercent > 90 ? "#ef4444" : "#6366f1" }]} />
+            </View>
+            <Text style={styles.totalPercent}>{totalPercent.toFixed(0)}%</Text>
+          </View>
+
+          {/* 分类预算卡片列表 */}
+          {budgets.map((budget: any) => {
+            const spent = budget.spent ?? 0;
+            const percent = budget.amount > 0 ? Math.min((spent / budget.amount) * 100, 100) : 0;
+            const overBudget = spent > budget.amount;
+
+            return (
+              <View key={budget.id} style={styles.budgetCard}>
+                <View style={styles.budgetHeader}>
+                  <View style={styles.budgetLeft}>
+                    <Text style={styles.budgetIcon}>{budget.categories?.icon ?? "📦"}</Text>
+                    <Text style={styles.budgetName}>{budget.categories?.name ?? "未分类"}</Text>
+                  </View>
+                  <Text style={[styles.budgetAmount, overBudget && { color: "#ef4444" }]}>
+                    ¥{spent.toFixed(0)} / ¥{budget.amount.toFixed(0)}
+                  </Text>
+                </View>
+                <View style={styles.progressBg}>
+                  <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: overBudget ? "#ef4444" : "#22c55e" }]} />
+                </View>
+              </View>
+            );
+          })}
+
+          {/* 添加预算按钮 */}
+          <TouchableOpacity style={styles.addBtn}>
+            <Text style={styles.addBtnText}>+ 添加预算</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 50 },
+  pageTitle: { color: "#fff", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
+  totalCard: { margin: 16, backgroundColor: "#1e293b", borderRadius: 16, padding: 20 },
+  totalLabel: { color: "#94a3b8", fontSize: 12, marginBottom: 8 },
+  totalAmount: { color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 12 },
+  totalPercent: { color: "#94a3b8", fontSize: 12, textAlign: "right", marginTop: 4 },
+  progressBg: { height: 8, backgroundColor: "#334155", borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: 8, borderRadius: 4 },
+  budgetCard: { marginHorizontal: 16, marginBottom: 10, backgroundColor: "#1e293b", borderRadius: 12, padding: 14 },
+  budgetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  budgetLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  budgetIcon: { fontSize: 20 },
+  budgetName: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  budgetAmount: { color: "#cbd5e1", fontSize: 13 },
+  addBtn: { margin: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#334155", borderStyle: "dashed", alignItems: "center" },
+  addBtnText: { color: "#818cf8", fontSize: 14, fontWeight: "600" },
+});
+```
 
 - [ ] **Step 3: 提交**
 
@@ -2976,15 +3870,155 @@ export function useCategories() {
 }
 ```
 
-- [ ] **Step 2: 实现我的页面**
+- [ ] **Step 2: 创建 CategoryPicker 组件**
 
-分区列表：账号信息（邮箱 + 登录时间）、分类管理（跳转分类管理页，可增删改自定义分类）、数据导出（选日期范围 → 调用 `/api/export` 下载 CSV）、退出登录。
+```typescript
+// apps/mobile/components/CategoryPicker.tsx
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { useCategories } from "../hooks/useCategories";
 
-- [ ] **Step 3: 提交**
+interface Props {
+  readonly selectedId: string | null;
+  readonly onSelect: (id: string) => void;
+  readonly type: "expense" | "income";
+}
+
+export function CategoryPicker({ selectedId, onSelect, type }: Props) {
+  const { data } = useCategories();
+  const categories = (data?.data ?? []).filter((c: any) => c.type === type);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>选择分类</Text>
+      <ScrollView horizontal={false} contentContainerStyle={styles.grid}>
+        {categories.map((cat: any) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[styles.item, selectedId === cat.id && styles.itemActive]}
+            onPress={() => onSelect(cat.id)}
+          >
+            <Text style={styles.icon}>{cat.icon}</Text>
+            <Text style={[styles.name, selectedId === cat.id && styles.nameActive]}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { marginTop: 16 },
+  label: { color: "#94a3b8", fontSize: 12, marginBottom: 8 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  item: { width: "22%", alignItems: "center", padding: 10, borderRadius: 12, backgroundColor: "#1e293b" },
+  itemActive: { backgroundColor: "#6366f1" },
+  icon: { fontSize: 24, marginBottom: 4 },
+  name: { color: "#94a3b8", fontSize: 10 },
+  nameActive: { color: "#fff" },
+});
+```
+
+- [ ] **Step 3: 实现我的页面**
+
+```typescript
+// apps/mobile/app/(tabs)/profile.tsx
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
+import { useAuth } from "../../hooks/useAuth";
+import { supabase } from "../../lib/supabase";
+
+export default function ProfileScreen() {
+  const { session, signOut } = useAuth();
+
+  const handleExport = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().slice(0, 10);
+      const endDate = now.toISOString().slice(0, 10);
+      const API_BASE = process.env.EXPO_PUBLIC_API_URL!;
+
+      const resp = await fetch(`${API_BASE}/api/export?start_date=${startDate}&end_date=${endDate}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (resp.ok) {
+        const csv = await resp.text();
+        Alert.alert("导出成功", `已导出 ${csv.split("\\n").length - 1} 条记录`);
+        // TODO: 后续可用 expo-sharing 分享 CSV 文件
+      } else {
+        Alert.alert("导出失败", "请重试");
+      }
+    } catch {
+      Alert.alert("导出失败", "网络错误");
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("退出登录", "确定要退出吗？", [
+      { text: "取消", style: "cancel" },
+      { text: "退出", style: "destructive", onPress: signOut },
+    ]);
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.pageTitle}>我的</Text>
+
+      {/* 账号信息 */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>账号信息</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>邮箱</Text>
+          <Text style={styles.infoValue}>{session?.user?.email ?? "-"}</Text>
+        </View>
+      </View>
+
+      {/* 功能列表 */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>📂</Text>
+          <Text style={styles.menuText}>分类管理</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleExport}>
+          <Text style={styles.menuIcon}>📥</Text>
+          <Text style={styles.menuText}>导出数据 (CSV)</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 退出登录 */}
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
+        <Text style={styles.logoutText}>退出登录</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 50 },
+  pageTitle: { color: "#fff", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
+  section: { marginHorizontal: 16, marginBottom: 16, backgroundColor: "#1e293b", borderRadius: 12, overflow: "hidden" },
+  sectionTitle: { color: "#94a3b8", fontSize: 12, padding: 14, paddingBottom: 0 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", padding: 14 },
+  infoLabel: { color: "#94a3b8", fontSize: 14 },
+  infoValue: { color: "#fff", fontSize: 14 },
+  menuItem: { flexDirection: "row", alignItems: "center", padding: 14, borderBottomWidth: 1, borderBottomColor: "#334155" },
+  menuIcon: { fontSize: 18, marginRight: 12 },
+  menuText: { color: "#fff", fontSize: 14, flex: 1 },
+  menuArrow: { color: "#64748b", fontSize: 18 },
+  logoutBtn: { margin: 16, padding: 14, borderRadius: 12, backgroundColor: "#1e293b", alignItems: "center" },
+  logoutText: { color: "#ef4444", fontSize: 16, fontWeight: "600" },
+});
+```
+
+- [ ] **Step 4: 提交**
 
 ```bash
 git add apps/mobile/app/\(tabs\)/profile.tsx apps/mobile/hooks/useCategories.ts apps/mobile/components/CategoryPicker.tsx
-git commit -m "feat(mobile): add profile screen with category management and export"
+git commit -m "feat(mobile): add profile screen with category picker and data export"
 ```
 
 ### Task 23: 最终集成验证
@@ -3019,5 +4053,6 @@ Expected: Metro bundler 启动成功
 - [ ] **Step 5: 提交最终状态**
 
 ```bash
-git add -A && git commit -m "chore: final integration verification"
+git add turbo.json pnpm-workspace.yaml package.json pnpm-lock.yaml
+git commit -m "chore: final integration verification and lockfile update"
 ```
