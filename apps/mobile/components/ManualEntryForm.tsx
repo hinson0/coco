@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert } from "react-native";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { CategoryPicker } from "./CategoryPicker";
 
 interface Props {
   readonly visible: boolean;
@@ -15,6 +16,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   const [type, setType] = useState<"expense" | "income">("expense");
   const [date, setDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const handleSubmit = async () => {
@@ -23,12 +25,16 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
       Alert.alert("请输入有效金额");
       return;
     }
+    if (!categoryId) {
+      Alert.alert("请选择分类");
+      return;
+    }
 
     setSubmitting(true);
     try {
       const resp = await apiFetch<any>("/api/record/manual", {
         method: "POST",
-        body: JSON.stringify({ amount: numAmount, note, type, occurred_at: date.toISOString() }),
+        body: JSON.stringify({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId }),
       });
       if (resp.success) {
         qc.invalidateQueries({ queryKey: ["transactions"] });
@@ -36,6 +42,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
         onClose();
         setAmount("");
         setNote("");
+        setCategoryId(null);
       }
     } catch {
       Alert.alert("提交失败", "请重试");
@@ -69,6 +76,8 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
             </View>
             {/* Amount */}
             <TextInput style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#64748b" keyboardType="decimal-pad" />
+            {/* Category Picker */}
+            <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
             {/* Date quick select */}
             <View style={{ marginTop: 16 }}>
               <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>选择日期</Text>
