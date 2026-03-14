@@ -12,7 +12,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.access_token}`,
-      "X-Timezone": Localization.timezone ?? "Asia/Shanghai",
+      "X-Timezone": Localization.getCalendars()[0]?.timeZone ?? "Asia/Shanghai",
       ...options?.headers,
     },
   });
