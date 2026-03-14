@@ -1763,6 +1763,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await supabase
     .from("chat_messages")
     .select("*", { count: "exact" })
+    .eq("user_id", auth.userId)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -1861,6 +1862,7 @@ export async function GET(req: NextRequest) {
   const { data: budgets, error } = await supabase
     .from("budgets")
     .select("*, categories(name, icon)")
+    .eq("user_id", auth.userId)
     .order("created_at");
 
   if (error) {
