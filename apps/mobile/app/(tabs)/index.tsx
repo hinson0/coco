@@ -1,31 +1,21 @@
-import { StyleSheet } from 'react-native';
+import { View, StyleSheet, TextInput } from "react-native";
+import { DailySummary } from "../../components/home/DailySummary";
+import { TransactionList } from "../../components/home/TransactionList";
+import { useTransactions } from "../../hooks/useTransactions";
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+export default function HomeScreen() {
+  const { data, isLoading } = useTransactions();
 
-export default function TabOneScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+      <TextInput style={styles.search} placeholder="问一问：上周花了多少钱？" placeholderTextColor="#64748b" />
+      <DailySummary transactions={data?.data ?? []} />
+      <TransactionList transactions={data?.data ?? []} isLoading={isLoading} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
+  container: { flex: 1, backgroundColor: "#0f172a" },
+  search: { margin: 16, padding: 12, backgroundColor: "#1e293b", borderRadius: 20, color: "#fff", fontSize: 14 },
 });
