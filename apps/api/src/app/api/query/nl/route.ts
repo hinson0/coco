@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Save NL query log
-    await createServiceClient().from("nl_query_logs").insert({
+    await serviceClient.from("nl_query_logs").insert({
       user_id: auth.userId, question, generated_sql: sql, result_summary: summaryResp.content,
     });
 

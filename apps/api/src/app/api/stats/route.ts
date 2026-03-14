@@ -46,12 +46,13 @@ export async function GET(req: NextRequest) {
 
   const categoryBreakdown = Object.values(categoryMap)
     .sort((a, b) => b.amount - a.amount)
-    .map((cat) => ({
-      ...cat,
-      percentage: totalExpense > 0 ? Math.round((cat.amount / totalExpense) * 100) : 0,
-    }));
-
-  void period;
+    .map((cat) => {
+      const total = cat.type === "income" ? totalIncome : totalExpense;
+      return {
+        ...cat,
+        percentage: total > 0 ? Math.round((cat.amount / total) * 100) : 0,
+      };
+    });
 
   return NextResponse.json({
     success: true,

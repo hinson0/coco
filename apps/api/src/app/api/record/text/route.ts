@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Log NL query
-      await createServiceClient().from("nl_query_logs").insert({
+      await serviceClient.from("nl_query_logs").insert({
         user_id: auth.userId, question: text, generated_sql: sql, result_summary: summaryResp.content,
       });
 
