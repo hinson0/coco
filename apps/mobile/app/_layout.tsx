@@ -16,8 +16,8 @@ export default function RootLayout() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0f172a" }}>
-        <Text style={{ color: "#818cf8", fontSize: 24, fontWeight: "800" }}>✦ CoCo AI</Text>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F5F5" }}>
+        <Text style={{ color: "#2D9B83", fontSize: 28, fontWeight: "800" }}>CoCo</Text>
       </View>
     );
   }

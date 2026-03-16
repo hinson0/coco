@@ -19,9 +19,10 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>✦ CoCo AI</Text>
-      <TextInput style={styles.input} placeholder="邮箱" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="密码" value={password} onChangeText={setPassword} secureTextEntry />
+      <Text style={styles.title}>CoCo</Text>
+      <Text style={styles.subtitle}>智能记账助手</Text>
+      <TextInput style={styles.input} placeholder="邮箱" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+      <TextInput style={styles.input} placeholder="密码" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>登录</Text>
       </TouchableOpacity>
@@ -33,10 +34,11 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#0f172a" },
-  title: { fontSize: 32, fontWeight: "800", color: "#fff", textAlign: "center", marginBottom: 40 },
-  input: { backgroundColor: "#1e293b", color: "#fff", padding: 14, borderRadius: 12, marginBottom: 12, fontSize: 16 },
-  button: { backgroundColor: "#6366f1", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
+  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#F5F5F5" },
+  title: { fontSize: 36, fontWeight: "800", color: "#2D9B83", textAlign: "center", marginBottom: 4 },
+  subtitle: { fontSize: 14, color: "#94a3b8", textAlign: "center", marginBottom: 40 },
+  input: { backgroundColor: "#fff", color: "#1e293b", padding: 14, borderRadius: 12, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
+  button: { backgroundColor: "#2D9B83", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  link: { color: "#818cf8", textAlign: "center", marginTop: 16 },
+  link: { color: "#2D9B83", textAlign: "center", marginTop: 16 },
 });

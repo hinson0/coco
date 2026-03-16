@@ -1,7 +1,30 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { TouchableOpacity, Text, StyleSheet, Animated } from "react-native";
-import { Audio } from "expo-av";
+import {
+  useAudioRecorder,
+  AudioModule,
+  setAudioModeAsync,
+  useAudioRecorderState,
+  IOSOutputFormat,
+  AudioQuality,
+} from "expo-audio";
 import * as FileSystem from "expo-file-system";
+
+const WAV_PRESET = {
+  extension: ".wav",
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 256000,
+  android: { outputFormat: "default" as const, audioEncoder: "default" as const },
+  ios: {
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.HIGH,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {},
+};
 
 interface Props {
   readonly onRecorded: (base64: string) => void;
@@ -9,29 +32,25 @@ interface Props {
 }
 
 export function VoiceRecorder({ onRecorded, disabled }: Props) {
-  const [isRecording, setIsRecording] = useState(false);
+  const audioRecorder = useAudioRecorder(WAV_PRESET);
+  const recorderState = useAudioRecorderState(audioRecorder);
   const [duration, setDuration] = useState(0);
-  const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scale = useRef(new Animated.Value(1)).current;
 
+  useEffect(() => {
+    (async () => {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) return;
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+    })();
+  }, []);
+
   const startRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") return;
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
 
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync({
-        android: { extension: ".wav", sampleRate: 16000, numberOfChannels: 1, bitRate: 256000, outputFormat: Audio.AndroidOutputFormat.DEFAULT, audioEncoder: Audio.AndroidAudioEncoder.DEFAULT },
-        ios: { extension: ".wav", sampleRate: 16000, numberOfChannels: 1, bitRate: 256000, outputFormat: Audio.IOSOutputFormat.LINEARPCM, audioQuality: Audio.IOSAudioQuality.HIGH, linearPCMBitDepth: 16, linearPCMIsBigEndian: false, linearPCMIsFloat: false },
-        web: {},
-      });
-      await recording.startAsync();
-
-      recordingRef.current = recording;
-      setIsRecording(true);
       setDuration(0);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
 
@@ -47,20 +66,18 @@ export function VoiceRecorder({ onRecorded, disabled }: Props) {
   };
 
   const stopRecording = async () => {
-    if (!recordingRef.current) return;
-
     if (timerRef.current) clearInterval(timerRef.current);
     scale.stopAnimation();
     scale.setValue(1);
-    setIsRecording(false);
 
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
 
       if (uri) {
-        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         onRecorded(base64);
       }
     } catch (err) {
@@ -70,20 +87,22 @@ export function VoiceRecorder({ onRecorded, disabled }: Props) {
 
   return (
     <TouchableOpacity
-      style={[styles.btn, isRecording && styles.btnRecording]}
+      style={[styles.btn, recorderState.isRecording && styles.btnRecording]}
       onPressIn={startRecording}
       onPressOut={stopRecording}
       disabled={disabled}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <Text style={styles.icon}>{isRecording ? `${duration}"` : "🎙️"}</Text>
+        <Text style={styles.icon}>
+          {recorderState.isRecording ? `${duration}"` : "\uD83C\uDF99\uFE0F"}
+        </Text>
       </Animated.View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#6366f1", justifyContent: "center", alignItems: "center" },
-  btnRecording: { backgroundColor: "#ef4444" },
+  btn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#2D9B83", justifyContent: "center", alignItems: "center" },
+  btnRecording: { backgroundColor: "#DC2626" },
   icon: { color: "#fff", fontSize: 16 },
 });

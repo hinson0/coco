@@ -75,7 +75,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
               </TouchableOpacity>
             </View>
             {/* Amount */}
-            <TextInput style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#64748b" keyboardType="decimal-pad" />
+            <TextInput style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#cbd5e1" keyboardType="decimal-pad" />
             {/* Category Picker */}
             <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
             {/* Date quick select */}
@@ -96,7 +96,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
               </View>
             </View>
             {/* Note */}
-            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#64748b" />
+            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" />
           </ScrollView>
         </View>
       </View>
@@ -105,19 +105,19 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: "#0f172a", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#1e293b" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
   cancel: { color: "#94a3b8", fontSize: 16 },
-  title: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  save: { color: "#6366f1", fontSize: 16, fontWeight: "600" },
+  title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
+  save: { color: "#2D9B83", fontSize: 16, fontWeight: "600" },
   body: { padding: 16 },
   typeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  typeBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#1e293b", alignItems: "center" },
-  typeBtnActive: { backgroundColor: "#ef4444" },
-  typeBtnIncome: { backgroundColor: "#22c55e" },
-  typeText: { color: "#94a3b8", fontSize: 14, fontWeight: "600" },
+  typeBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#F0F2F5", alignItems: "center" },
+  typeBtnActive: { backgroundColor: "#DC2626" },
+  typeBtnIncome: { backgroundColor: "#059669" },
+  typeText: { color: "#64748b", fontSize: 14, fontWeight: "600" },
   typeTextActive: { color: "#fff" },
-  amountInput: { fontSize: 36, fontWeight: "700", color: "#fff", textAlign: "center", marginBottom: 20, padding: 16, backgroundColor: "#1e293b", borderRadius: 12 },
-  noteInput: { backgroundColor: "#1e293b", color: "#fff", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
+  amountInput: { fontSize: 36, fontWeight: "700", color: "#1e293b", textAlign: "center", marginBottom: 20, padding: 16, backgroundColor: "#F0F2F5", borderRadius: 12 },
+  noteInput: { backgroundColor: "#F0F2F5", color: "#1e293b", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
 });

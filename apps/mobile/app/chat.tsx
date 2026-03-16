@@ -28,7 +28,7 @@ export default function ChatScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.back}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>✦ CoCo AI</Text>
+        <Text style={styles.title}>CoCo AI</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -61,8 +61,12 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: "#1e1b4b" },
+  container: { flex: 1, backgroundColor: "#F5F5F5" },
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12,
+    backgroundColor: "#2D9B83",
+  },
   back: { color: "#fff", fontSize: 20 },
   title: { color: "#fff", fontSize: 18, fontWeight: "700" },
   list: { padding: 12 },

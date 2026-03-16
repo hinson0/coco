@@ -74,13 +74,13 @@ export function ChatInput({ onSendText, onSendImage, onSendAudio, isLoading, onM
 }
 
 const styles = StyleSheet.create({
-  wrapper: { borderTopWidth: 1, borderTopColor: "#334155", paddingTop: 8, paddingHorizontal: 12, paddingBottom: 20, backgroundColor: "#0f172a" },
+  wrapper: { borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, paddingHorizontal: 12, paddingBottom: 20, backgroundColor: "#fff" },
   chips: { flexDirection: "row", gap: 6, marginBottom: 8 },
-  chip: { backgroundColor: "#1e293b", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14 },
-  chipText: { color: "#818cf8", fontSize: 11 },
+  chip: { backgroundColor: "#F0F2F5", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14 },
+  chipText: { color: "#2D9B83", fontSize: 11, fontWeight: "500" },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#1e293b", justifyContent: "center", alignItems: "center" },
-  input: { flex: 1, backgroundColor: "#1e293b", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: "#fff", fontSize: 14 },
-  sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#6366f1", justifyContent: "center", alignItems: "center" },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F0F2F5", justifyContent: "center", alignItems: "center" },
+  input: { flex: 1, backgroundColor: "#F0F2F5", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: "#1e293b", fontSize: 14 },
+  sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#2D9B83", justifyContent: "center", alignItems: "center" },
   sendText: { color: "#fff", fontSize: 18, fontWeight: "700" },
 });

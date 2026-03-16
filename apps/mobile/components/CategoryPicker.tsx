@@ -34,9 +34,9 @@ const styles = StyleSheet.create({
   container: { marginTop: 16 },
   label: { color: "#94a3b8", fontSize: 12, marginBottom: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  item: { width: "22%", alignItems: "center", padding: 10, borderRadius: 12, backgroundColor: "#1e293b" },
-  itemActive: { backgroundColor: "#6366f1" },
+  item: { width: "22%", alignItems: "center", padding: 10, borderRadius: 12, backgroundColor: "#F0F2F5" },
+  itemActive: { backgroundColor: "#2D9B83" },
   icon: { fontSize: 24, marginBottom: 4 },
-  name: { color: "#94a3b8", fontSize: 10 },
+  name: { color: "#64748b", fontSize: 10 },
   nameActive: { color: "#fff" },
 });

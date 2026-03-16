@@ -40,7 +40,7 @@ export function ChatMessage({ message }: Props) {
     <View style={[styles.row, isUser ? styles.rowRight : styles.rowLeft]}>
       {!isUser && (
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>✦</Text>
+          <Text style={styles.avatarText}>AI</Text>
         </View>
       )}
       <View style={styles.contentWrapper}>
@@ -54,12 +54,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", marginBottom: 10, alignItems: "flex-start" },
   rowLeft: { justifyContent: "flex-start" },
   rowRight: { justifyContent: "flex-end" },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#f59e0b", justifyContent: "center", alignItems: "center", marginRight: 8 },
-  avatarText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#2D9B83", justifyContent: "center", alignItems: "center", marginRight: 8 },
+  avatarText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   contentWrapper: { maxWidth: "80%" },
   bubble: { borderRadius: 12, padding: 10 },
-  userBubble: { backgroundColor: "#6366f1", borderTopRightRadius: 0 },
-  aiBubble: { backgroundColor: "#fff", borderTopLeftRadius: 0, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  userBubble: { backgroundColor: "#2D9B83", borderTopRightRadius: 0 },
+  aiBubble: {
+    backgroundColor: "#fff", borderTopLeftRadius: 0,
+    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1,
+  },
   userText: { color: "#fff", fontSize: 14 },
-  aiText: { color: "#0f172a", fontSize: 14 },
+  aiText: { color: "#1e293b", fontSize: 14 },
 });

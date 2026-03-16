@@ -14,7 +14,7 @@ export default function BudgetScreen() {
       <Text style={styles.pageTitle}>预算</Text>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#818cf8" />
+        <ActivityIndicator style={{ marginTop: 40 }} color="#2D9B83" />
       ) : (
         <>
           {/* Total budget overview */}
@@ -22,7 +22,7 @@ export default function BudgetScreen() {
             <Text style={styles.totalLabel}>本月总预算</Text>
             <Text style={styles.totalAmount}>¥{totalSpent.toFixed(0)} / ¥{totalBudget.toFixed(0)}</Text>
             <View style={styles.progressBg}>
-              <View style={[styles.progressFill, { width: `${totalPercent}%`, backgroundColor: totalPercent > 90 ? "#ef4444" : "#6366f1" }]} />
+              <View style={[styles.progressFill, { width: `${totalPercent}%`, backgroundColor: totalPercent > 90 ? "#DC2626" : "#2D9B83" }]} />
             </View>
             <Text style={styles.totalPercent}>{totalPercent.toFixed(0)}%</Text>
           </View>
@@ -40,12 +40,12 @@ export default function BudgetScreen() {
                     <Text style={styles.budgetIcon}>{budget.categories?.icon ?? "📦"}</Text>
                     <Text style={styles.budgetName}>{budget.categories?.name ?? "未分类"}</Text>
                   </View>
-                  <Text style={[styles.budgetAmount, overBudget && { color: "#ef4444" }]}>
+                  <Text style={[styles.budgetAmount, overBudget && { color: "#DC2626" }]}>
                     ¥{spent.toFixed(0)} / ¥{budget.amount.toFixed(0)}
                   </Text>
                 </View>
                 <View style={styles.progressBg}>
-                  <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: overBudget ? "#ef4444" : "#22c55e" }]} />
+                  <View style={[styles.progressFill, { width: `${percent}%`, backgroundColor: overBudget ? "#DC2626" : "#059669" }]} />
                 </View>
               </View>
             );
@@ -62,20 +62,29 @@ export default function BudgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 50 },
-  pageTitle: { color: "#fff", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
-  totalCard: { margin: 16, backgroundColor: "#1e293b", borderRadius: 16, padding: 20 },
+  container: { flex: 1, backgroundColor: "#F5F5F5", paddingTop: 50 },
+  pageTitle: { color: "#1e293b", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
+  totalCard: {
+    margin: 16, backgroundColor: "#fff", borderRadius: 16, padding: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
   totalLabel: { color: "#94a3b8", fontSize: 12, marginBottom: 8 },
-  totalAmount: { color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 12 },
+  totalAmount: { color: "#1e293b", fontSize: 22, fontWeight: "700", marginBottom: 12 },
   totalPercent: { color: "#94a3b8", fontSize: 12, textAlign: "right", marginTop: 4 },
-  progressBg: { height: 8, backgroundColor: "#334155", borderRadius: 4, overflow: "hidden" },
+  progressBg: { height: 8, backgroundColor: "#E5E7EB", borderRadius: 4, overflow: "hidden" },
   progressFill: { height: 8, borderRadius: 4 },
-  budgetCard: { marginHorizontal: 16, marginBottom: 10, backgroundColor: "#1e293b", borderRadius: 12, padding: 14 },
+  budgetCard: {
+    marginHorizontal: 16, marginBottom: 10, backgroundColor: "#fff", borderRadius: 12, padding: 14,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3, elevation: 1,
+  },
   budgetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   budgetLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   budgetIcon: { fontSize: 20 },
-  budgetName: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  budgetAmount: { color: "#cbd5e1", fontSize: 13 },
-  addBtn: { margin: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#334155", borderStyle: "dashed", alignItems: "center" },
-  addBtnText: { color: "#818cf8", fontSize: 14, fontWeight: "600" },
+  budgetName: { color: "#1e293b", fontSize: 14, fontWeight: "600" },
+  budgetAmount: { color: "#64748b", fontSize: 13 },
+  addBtn: {
+    margin: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#D1D5DB",
+    borderStyle: "dashed", alignItems: "center", backgroundColor: "#fff",
+  },
+  addBtnText: { color: "#2D9B83", fontSize: 14, fontWeight: "600" },
 });

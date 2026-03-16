@@ -57,7 +57,7 @@ export default function ProfileScreen() {
           <Text style={styles.menuText}>分类管理</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleExport}>
+        <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={handleExport}>
           <Text style={styles.menuIcon}>📥</Text>
           <Text style={styles.menuText}>导出数据 (CSV)</Text>
           <Text style={styles.menuArrow}>›</Text>
@@ -73,17 +73,24 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", paddingTop: 50 },
-  pageTitle: { color: "#fff", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
-  section: { marginHorizontal: 16, marginBottom: 16, backgroundColor: "#1e293b", borderRadius: 12, overflow: "hidden" },
+  container: { flex: 1, backgroundColor: "#F5F5F5", paddingTop: 50 },
+  pageTitle: { color: "#1e293b", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
+  section: {
+    marginHorizontal: 16, marginBottom: 16, backgroundColor: "#fff", borderRadius: 12, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
   sectionTitle: { color: "#94a3b8", fontSize: 12, padding: 14, paddingBottom: 0 },
   infoRow: { flexDirection: "row", justifyContent: "space-between", padding: 14 },
   infoLabel: { color: "#94a3b8", fontSize: 14 },
-  infoValue: { color: "#fff", fontSize: 14 },
-  menuItem: { flexDirection: "row", alignItems: "center", padding: 14, borderBottomWidth: 1, borderBottomColor: "#334155" },
+  infoValue: { color: "#1e293b", fontSize: 14 },
+  menuItem: { flexDirection: "row", alignItems: "center", padding: 14, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  menuItemLast: { borderBottomWidth: 0 },
   menuIcon: { fontSize: 18, marginRight: 12 },
-  menuText: { color: "#fff", fontSize: 14, flex: 1 },
-  menuArrow: { color: "#64748b", fontSize: 18 },
-  logoutBtn: { margin: 16, padding: 14, borderRadius: 12, backgroundColor: "#1e293b", alignItems: "center" },
-  logoutText: { color: "#ef4444", fontSize: 16, fontWeight: "600" },
+  menuText: { color: "#1e293b", fontSize: 14, flex: 1 },
+  menuArrow: { color: "#cbd5e1", fontSize: 18 },
+  logoutBtn: {
+    margin: 16, padding: 14, borderRadius: 12, backgroundColor: "#fff", alignItems: "center",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+  logoutText: { color: "#DC2626", fontSize: 16, fontWeight: "600" },
 });
