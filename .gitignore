@@ -6,3 +6,17 @@ dist/
 .expo/
 *.tsbuildinfo
 .superpowers/
+
+# Local tooling
+.claude/
+.playwright-mcp/
+
+# Design previews
+design-preview.*
+design-final.*
+
+# IDE
+.vscode/
+
+# Duplicate lockfile (using pnpm)
+apps/mobile/package-lock.json
