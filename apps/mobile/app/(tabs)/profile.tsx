@@ -1,96 +1,175 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
-import { useAuth } from "../../hooks/useAuth";
-import { supabase } from "../../lib/supabase";
+import { ScrollView, View, StyleSheet, Alert } from 'react-native';
+import { useAuth } from '../../hooks/useAuth';
+import { useTransactions } from '../../hooks/useTransactions';
+import { ProfileHeader } from '../../components/profile/ProfileHeader';
+import { StatsStrip } from '../../components/profile/StatsStrip';
+import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
+import { MenuItem } from '../../components/shared/MenuItem';
+import { Card } from '../../components/ui/Card';
+import { AppText } from '../../components/ui/AppText';
+import { colors } from '../../constants/theme';
+import type { Transaction } from '@coco/shared'; // used in computeStats param type
+
+function computeStats(transactions: readonly Transaction[]) {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthlyCount = transactions.filter((t) => {
+    const d = new Date(t.occurred_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+
+  // compute consecutive days streak
+  const uniqueDays = new Set(
+    transactions.map((t) => new Date(t.occurred_at).toDateString())
+  );
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    if (uniqueDays.has(d.toDateString())) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+
+  // compute months with transactions (as budget-target proxy)
+  const months = new Set(
+    transactions.map((t) => {
+      const d = new Date(t.occurred_at);
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    })
+  );
+  const budgetMonths = months.size;
+
+  return { monthlyCount, streak, budgetMonths };
+}
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
+  const { data } = useTransactions(1);
+  const transactions = data?.data ?? [];
+  const { monthlyCount, streak, budgetMonths } = computeStats(transactions);
 
-  const handleExport = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().slice(0, 10);
-      const endDate = now.toISOString().slice(0, 10);
-      const API_BASE = process.env.EXPO_PUBLIC_API_URL!;
-
-      const resp = await fetch(`${API_BASE}/api/export?start_date=${startDate}&end_date=${endDate}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (resp.ok) {
-        const csv = await resp.text();
-        Alert.alert("导出成功", `已导出 ${csv.split("\\n").length - 1} 条记录`);
-      } else {
-        Alert.alert("导出失败", "请重试");
-      }
-    } catch {
-      Alert.alert("导出失败", "网络错误");
-    }
-  };
+  const userName = session?.user?.email?.split('@')[0] ?? '棉花用户';
 
   const handleSignOut = () => {
-    Alert.alert("退出登录", "确定要退出吗？", [
-      { text: "取消", style: "cancel" },
-      { text: "退出", style: "destructive", onPress: signOut },
+    Alert.alert('退出登录', '确定要退出吗？', [
+      { text: '取消', style: 'cancel' },
+      { text: '退出', style: 'destructive', onPress: signOut },
     ]);
   };
 
+  const statsItems = [
+    { value: String(monthlyCount), label: '本月笔数' },
+    { value: String(streak), label: '连续记账' },
+    { value: String(budgetMonths), label: '预算达标月' },
+  ];
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.pageTitle}>我的</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ProfileHeader name={userName} daysCount={streak} />
 
-      {/* Account info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>账号信息</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>邮箱</Text>
-          <Text style={styles.infoValue}>{session?.user?.email ?? "-"}</Text>
-        </View>
-      </View>
+      <StatsStrip items={statsItems} />
 
-      {/* Menu items */}
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>📂</Text>
-          <Text style={styles.menuText}>分类管理</Text>
-          <Text style={styles.menuArrow}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={handleExport}>
-          <Text style={styles.menuIcon}>📥</Text>
-          <Text style={styles.menuText}>导出数据 (CSV)</Text>
-          <Text style={styles.menuArrow}>›</Text>
-        </TouchableOpacity>
-      </View>
+      <AiAssistantCard />
 
-      {/* Sign out */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
-        <Text style={styles.logoutText}>退出登录</Text>
-      </TouchableOpacity>
+      {/* 资产管理 */}
+      <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+        资产管理
+      </AppText>
+      <Card padding={0} style={styles.menuCard}>
+        <MenuItem icon="💳" iconBg={colors.sagePale} title="我的账户" />
+        <View style={styles.separator} />
+        <MenuItem icon="🎯" iconBg={colors.honeyPale} title="预算设置" />
+        <View style={styles.separator} />
+        <MenuItem icon="🏷️" iconBg={colors.coralPale} title="分类管理" />
+      </Card>
+
+      {/* 工具 */}
+      <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+        工具
+      </AppText>
+      <Card padding={0} style={styles.menuCard}>
+        <MenuItem
+          icon="📸"
+          iconBg={colors.lavenderPale}
+          title="小票识别"
+          badge={{ text: 'NEW', variant: 'new' }}
+        />
+        <View style={styles.separator} />
+        <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" />
+        <View style={styles.separator} />
+        <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" />
+      </Card>
+
+      {/* 其他 */}
+      <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+        其他
+      </AppText>
+      <Card padding={0} style={styles.menuCard}>
+        <MenuItem
+          icon="🌟"
+          iconBg={colors.coralPale}
+          title="升级Pro"
+          badge={{ text: 'PRO', variant: 'pro' }}
+        />
+        <View style={styles.separator} />
+        <MenuItem icon="💬" iconBg={colors.creamDark} title="意见反馈" />
+        <View style={styles.separator} />
+        <MenuItem icon="ℹ️" iconBg={colors.creamDark} title="关于棉花记" />
+      </Card>
+
+      {/* 退出登录 */}
+      <Card style={styles.logoutCard}>
+        <AppText
+          size="2xl"
+          weight="semibold"
+          color="#DC2626"
+          style={styles.logoutText}
+          onPress={handleSignOut}
+        >
+          退出登录
+        </AppText>
+      </Card>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5", paddingTop: 50 },
-  pageTitle: { color: "#1e293b", fontSize: 24, fontWeight: "700", paddingHorizontal: 16, marginBottom: 16 },
-  section: {
-    marginHorizontal: 16, marginBottom: 16, backgroundColor: "#fff", borderRadius: 12, overflow: "hidden",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  container: {
+    flex: 1,
+    backgroundColor: colors.cream,
   },
-  sectionTitle: { color: "#94a3b8", fontSize: 12, padding: 14, paddingBottom: 0 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", padding: 14 },
-  infoLabel: { color: "#94a3b8", fontSize: 14 },
-  infoValue: { color: "#1e293b", fontSize: 14 },
-  menuItem: { flexDirection: "row", alignItems: "center", padding: 14, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
-  menuItemLast: { borderBottomWidth: 0 },
-  menuIcon: { fontSize: 18, marginRight: 12 },
-  menuText: { color: "#1e293b", fontSize: 14, flex: 1 },
-  menuArrow: { color: "#cbd5e1", fontSize: 18 },
-  logoutBtn: {
-    margin: 16, padding: 14, borderRadius: 12, backgroundColor: "#fff", alignItems: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  content: {
+    paddingBottom: 40,
   },
-  logoutText: { color: "#DC2626", fontSize: 16, fontWeight: "600" },
+  sectionTitle: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 6,
+    marginHorizontal: 20,
+  },
+  menuCard: {
+    marginHorizontal: 20,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.creamDark,
+    marginHorizontal: 18,
+  },
+  logoutCard: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  logoutText: {
+    textAlign: 'center',
+  },
 });
