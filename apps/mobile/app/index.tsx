@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -134,16 +134,19 @@ export default function ChatScreen() {
   const { sendText, sendOcr: _sendOcr, sendAsr: _sendAsr } = useChat();
   const hasInitialized = useRef(false);
 
-  // Track keyboard height for bottom panel offset
+  // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, (e) => {
       keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
+      setKeyboardVisible(true);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       keyboardHeight.value = withTiming(0, { duration: 250 });
+      setKeyboardVisible(false);
     });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [keyboardHeight]);
@@ -223,7 +226,7 @@ export default function ChatScreen() {
 
       {/* ── Bottom panel ── */}
       <Animated.View style={[styles.bottomPanel, bottomPanelAnimatedStyle]}>
-        <ChatToolBar onSelectTool={handleSelectTool} />
+        {!keyboardVisible && <ChatToolBar onSelectTool={handleSelectTool} />}
         <ChatInputBar
           onSendText={sendText}
           onCamera={() => {/* OCR handled via camera picker */}}
