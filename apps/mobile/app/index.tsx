@@ -152,7 +152,7 @@ export default function ChatScreen() {
   }, [keyboardHeight]);
 
   const bottomPanelAnimatedStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 8 : insets.bottom,
+    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
 
   // Add welcome message once on mount if messages are empty
