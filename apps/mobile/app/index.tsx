@@ -152,7 +152,7 @@ export default function ChatScreen() {
   }, [keyboardHeight]);
 
   const bottomPanelAnimatedStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value : insets.bottom,
+    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 8 : insets.bottom,
   }));
 
   // Add welcome message once on mount if messages are empty
@@ -226,7 +226,7 @@ export default function ChatScreen() {
 
       {/* ── Bottom panel ── */}
       <Animated.View style={[styles.bottomPanel, bottomPanelAnimatedStyle]}>
-        {!keyboardVisible && <ChatToolBar onSelectTool={handleSelectTool} />}
+        <ChatToolBar onSelectTool={handleSelectTool} />
         <ChatInputBar
           onSendText={sendText}
           onCamera={() => {/* OCR handled via camera picker */}}
