@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Text,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -167,7 +169,11 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView
+      style={[styles.screen, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
       {/* ── Top bar ── */}
@@ -211,7 +217,7 @@ export default function ChatScreen() {
           onPlus={() => {/* expand tool panel */}}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
