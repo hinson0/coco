@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import { ScrollView, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
 import type { Transaction, Category, Budget } from '@coco/shared';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useBudgets } from '../../hooks/useBudgets';
@@ -12,9 +10,6 @@ import { DayGroup } from '../../components/shared/DayGroup';
 import { TransactionItem } from '../../components/shared/TransactionItem';
 import { AppText } from '../../components/ui/AppText';
 import { colors, getCategoryColor } from '../../constants/theme';
-
-// Module-level flag — survives component remounts, resets on app restart
-let hasAutoNavigated = false;
 
 // ─── Helper: date label ──────────────────────────────────────────────────────
 
@@ -149,14 +144,6 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  // Auto-navigate to AI chat on first app launch only
-  useEffect(() => {
-    if (!hasAutoNavigated) {
-      hasAutoNavigated = true;
-      router.push('/chat');
-    }
-  }, []);
-
   const { data: txData, isLoading: txLoading } = useTransactions();
   const { data: budgetData } = useBudgets();
   const { data: catData } = useCategories();
