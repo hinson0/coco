@@ -7,7 +7,7 @@ export default function TabLayout() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: '首页' }} />
+      <Tabs.Screen name="index" options={{ title: '日记' }} />
       <Tabs.Screen name="stats" options={{ title: '统计' }} />
       <Tabs.Screen name="ai-placeholder" options={{ title: '' }} />
       <Tabs.Screen name="bills" options={{ title: '账单' }} />

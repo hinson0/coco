@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { colors } from '../../constants/theme';
 
 const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
-  index: { emoji: '🏡', label: '首页' },
+  index: { emoji: '📖', label: '日记' },
   stats: { emoji: '📊', label: '统计' },
   'ai-placeholder': { emoji: '', label: '' },
   bills: { emoji: '📋', label: '账单' },
