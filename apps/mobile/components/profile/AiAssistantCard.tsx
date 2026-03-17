@@ -6,7 +6,7 @@ import { colors, shadows } from '../../constants/theme';
 
 export function AiAssistantCard() {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/chat')}>
+    <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/')}>
       <LinearGradient
         colors={[colors.sagePale, '#edf6f0']}
         style={styles.container}

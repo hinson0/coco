@@ -60,7 +60,7 @@ export function AiBubbleEntry() {
 
   return (
     <View style={styles.wrapper}>
-      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/chat')}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/')}>
         <LinearGradient
           colors={[colors.sagePale, '#edf6f0']}
           start={{ x: 0, y: 0 }}

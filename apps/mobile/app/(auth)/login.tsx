@@ -22,7 +22,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (e: any) {
       Alert.alert('登录失败', e.message);
     } finally {

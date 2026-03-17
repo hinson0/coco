@@ -4,11 +4,10 @@ import { BottomTabBar } from '../../components/shared/BottomTabBar';
 export default function TabLayout() {
   return (
     <Tabs
-      initialRouteName="ai-placeholder"
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="index" options={{ title: '日记' }} />
+      <Tabs.Screen name="diary" options={{ title: '日记' }} />
       <Tabs.Screen name="stats" options={{ title: '统计' }} />
       <Tabs.Screen name="ai-placeholder" options={{ title: '' }} />
       <Tabs.Screen name="bills" options={{ title: '账单' }} />
