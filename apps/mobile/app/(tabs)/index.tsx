@@ -1,11 +1,12 @@
+import { useEffect, useRef } from 'react';
 import { ScrollView, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import type { Transaction, Category, Budget } from '@coco/shared';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useBudgets } from '../../hooks/useBudgets';
 import { useCategories } from '../../hooks/useCategories';
 import { HeaderGreeting } from '../../components/home/HeaderGreeting';
-import { AiBubbleEntry } from '../../components/home/AiBubbleEntry';
 import { OverviewCard } from '../../components/shared/OverviewCard';
 import { DayGroup } from '../../components/shared/DayGroup';
 import { TransactionItem } from '../../components/shared/TransactionItem';
@@ -145,6 +146,15 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  // Auto-navigate to AI chat on first mount only
+  const hasAutoNavigated = useRef(false);
+  useEffect(() => {
+    if (!hasAutoNavigated.current) {
+      hasAutoNavigated.current = true;
+      router.push('/chat');
+    }
+  }, []);
+
   const { data: txData, isLoading: txLoading } = useTransactions();
   const { data: budgetData } = useBudgets();
   const { data: catData } = useCategories();
@@ -169,9 +179,6 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <HeaderGreeting />
-
-        {/* AI entry bubble */}
-        <AiBubbleEntry />
 
         {/* Overview stats card */}
         <View style={styles.cardWrapper}>
