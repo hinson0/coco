@@ -4,6 +4,7 @@ import { BottomTabBar } from '../../components/shared/BottomTabBar';
 export default function TabLayout() {
   return (
     <Tabs
+      initialRouteName="ai-placeholder"
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >

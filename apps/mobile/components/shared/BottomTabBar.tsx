@@ -1,7 +1,6 @@
 import { Pressable, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { router } from 'expo-router';
 import { colors } from '../../constants/theme';
 
 const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
@@ -12,7 +11,7 @@ const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
   profile: { emoji: '🌿', label: '我的' },
 };
 
-function AIButton() {
+function AIButton({ onPress }: { onPress: () => void }) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -23,7 +22,7 @@ function AIButton() {
     <Pressable
       onPressIn={() => { scale.value = withSpring(0.92, { damping: 15, stiffness: 200 }); }}
       onPressOut={() => { scale.value = withSpring(1, { damping: 15, stiffness: 200 }); }}
-      onPress={() => router.push('/chat')}
+      onPress={onPress}
       style={styles.aiPressable}
     >
       <Animated.View style={animatedStyle}>
@@ -54,7 +53,7 @@ export function BottomTabBar({ state, descriptors, navigation }: any) {
         const isAI = route.name === 'ai-placeholder';
 
         if (isAI) {
-          return <AIButton key={route.key} />;
+          return <AIButton key={route.key} onPress={() => navigation.navigate(route.name)} />;
         }
 
         const isFocused = state.index === index;

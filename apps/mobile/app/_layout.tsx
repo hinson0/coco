@@ -11,7 +11,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!loading && !session) router.replace("/(auth)/login");
-    if (!loading && session) router.replace("/chat");
+    if (!loading && session) router.replace("/(tabs)");
   }, [session, loading]);
 
   if (loading) {
