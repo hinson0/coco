@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   StatusBar,
   Text,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
-  withSequence,
   withTiming,
+  withSequence,
 } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -134,6 +134,24 @@ export default function ChatScreen() {
   const { sendText, sendOcr: _sendOcr, sendAsr: _sendAsr } = useChat();
   const hasInitialized = useRef(false);
 
+  // Track keyboard height for bottom panel offset
+  const keyboardHeight = useSharedValue(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      keyboardHeight.value = withTiming(0, { duration: 250 });
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, [keyboardHeight]);
+
+  const bottomPanelAnimatedStyle = useAnimatedStyle(() => ({
+    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value : insets.bottom,
+  }));
+
   // Add welcome message once on mount if messages are empty
   useEffect(() => {
     if (!hasInitialized.current) {
@@ -169,11 +187,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-    >
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
       {/* ── Top bar ── */}
@@ -208,7 +222,7 @@ export default function ChatScreen() {
       />
 
       {/* ── Bottom panel ── */}
-      <View style={[styles.bottomPanel, { paddingBottom: insets.bottom }]}>
+      <Animated.View style={[styles.bottomPanel, bottomPanelAnimatedStyle]}>
         <ChatToolBar onSelectTool={handleSelectTool} />
         <ChatInputBar
           onSendText={sendText}
@@ -216,8 +230,8 @@ export default function ChatScreen() {
           onVoice={() => {/* ASR handled via voice recorder */}}
           onPlus={() => {/* expand tool panel */}}
         />
-      </View>
-    </KeyboardAvoidingView>
+      </Animated.View>
+    </View>
   );
 }
 
