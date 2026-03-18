@@ -28,3 +28,6 @@ apps/mobile/package-lock.json
 .claude/settings.local.json
 .claude/CLAUDE.local.md
 .claude/worktrees/
+
+*.swp
+
