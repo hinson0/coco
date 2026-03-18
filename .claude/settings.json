@@ -1,10 +1,19 @@
 {
     "permissions": {
         "allow": [
-            "Bash(*)",
             "Edit(*)",
             "Read(*)",
-            "Write(*)"
+            "Write(*)",
+            "Bash(*)"
+        ],
+        "deny": [
+          "Bash(rm *)",
+          "Bash(sudo *)",
+          "Bash(git push --force *)",
+          "Bash(git push -f *)",
+          "Bash(git reset --hard *)",
+          "Bash(git checkout -- *)",
+          "Bash(git branch -D *)"
         ]
     }
 }
