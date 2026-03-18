@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 
-export async function GET(req: NextRequest) {
+export const GET = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -52,4 +53,4 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": "attachment; filename=coco-export.csv",
     },
   });
-}
+});
