@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 import type { PaginatedResponse, Transaction, CreateTransactionInput } from "@coco/shared";
 
-export async function GET(req: NextRequest) {
+export const GET = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -33,9 +34,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     success: true, data: data ?? [], total: count ?? 0, page, limit,
   } satisfies PaginatedResponse<Transaction>);
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -57,4 +58,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, data, error: null }, { status: 201 });
-}
+});

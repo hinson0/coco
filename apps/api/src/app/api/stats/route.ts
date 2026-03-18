@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 
-export async function GET(req: NextRequest) {
+export const GET = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
   const url = new URL(req.url);
-  const period = url.searchParams.get("period") ?? "monthly";
   const startDate = url.searchParams.get("start_date");
   const endDate = url.searchParams.get("end_date");
 
@@ -59,4 +59,4 @@ export async function GET(req: NextRequest) {
     data: { totalIncome, totalExpense, balance: totalIncome - totalExpense, categoryBreakdown },
     error: null,
   });
-}
+});

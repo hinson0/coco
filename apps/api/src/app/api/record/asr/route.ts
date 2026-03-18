@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient } from "@/lib/supabase";
 import { getTimezone, getCurrentTimeInZone } from "@/lib/timezone";
+import { withLogger } from "@/lib/logger";
 import { callGlm, buildAsrExtractPrompt, parseRecordResponse, recognizeSpeech } from "@coco/ai";
 
-export async function POST(req: NextRequest) {
+export const POST = withLogger(async (req, { tracker }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -14,20 +15,21 @@ export async function POST(req: NextRequest) {
   const tz = getTimezone(req);
   const now = getCurrentTimeInZone(tz);
 
-  // Save user voice message
   await supabase.from("chat_messages").insert({
     user_id: auth.userId, role: "user", content_type: "audio", content: "[voice message]",
   });
 
   try {
-    // Step 1: Tencent Cloud ASR
-    const asrResult = await recognizeSpeech(audioBase64, {
-      secretId: process.env.TENCENT_SECRET_ID!,
-      secretKey: process.env.TENCENT_SECRET_KEY!,
-    });
+    const asrResult = await tracker.step("Tencent ASR", () =>
+      recognizeSpeech(audioBase64, {
+        secretId: process.env.TENCENT_SECRET_ID!,
+        secretKey: process.env.TENCENT_SECRET_KEY!,
+      })
+    );
 
-    // Step 2: GLM parsing
-    const glmResp = await callGlm(buildAsrExtractPrompt(asrResult.text, now), { apiKey: process.env.GLM_API_KEY! });
+    const glmResp = await tracker.step("GLM extract", () =>
+      callGlm(buildAsrExtractPrompt(asrResult.text, now), { apiKey: process.env.GLM_API_KEY! })
+    );
     const parsed = parseRecordResponse(glmResp.content);
 
     if (!parsed) {
@@ -41,16 +43,18 @@ export async function POST(req: NextRequest) {
     const matchedCat = (categories ?? []).find((c) => c.name === parsed.category);
     const categoryId = matchedCat?.id ?? (categories ?? []).find((c) => c.name === "其他支出")?.id;
 
-    const { data: tx, error: txError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: auth.userId, category_id: categoryId, amount: parsed.amount,
-        type: parsed.type, note: parsed.note,
-        occurred_at: parsed.occurred_at ?? new Date().toISOString(),
-        source: "asr", raw_input: asrResult.text, ai_confidence: 0.7,
-      })
-      .select("*, categories(name, icon)")
-      .single();
+    const { data: tx, error: txError } = await tracker.step("DB insert", () =>
+      supabase
+        .from("transactions")
+        .insert({
+          user_id: auth.userId, category_id: categoryId, amount: parsed.amount,
+          type: parsed.type, note: parsed.note,
+          occurred_at: parsed.occurred_at ?? new Date().toISOString(),
+          source: "asr", raw_input: asrResult.text, ai_confidence: 0.7,
+        })
+        .select("*, categories(name, icon)")
+        .single()
+    );
 
     if (txError) {
       return NextResponse.json({ success: false, data: null, error: txError.message }, { status: 500 });
@@ -68,4 +72,4 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ success: false, data: null, error: "ASR failed" }, { status: 500 });
   }
-}
+});

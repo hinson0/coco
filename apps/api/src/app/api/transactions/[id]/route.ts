@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PATCH = withLogger(async (req, { params }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -13,7 +11,6 @@ export async function PATCH(
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
-  // Field whitelist to prevent overwriting sensitive fields
   const { amount, category_id, note, type, occurred_at } = body;
   const safeBody = { amount, category_id, note, type, occurred_at };
 
@@ -30,19 +27,15 @@ export async function PATCH(
   }
 
   return NextResponse.json({ success: true, data, error: null });
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const DELETE = withLogger(async (req, { params }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
-  // Soft delete with user_id verification
   const { error } = await supabase
     .from("transactions")
     .update({ deleted_at: new Date().toISOString() })
@@ -54,4 +47,4 @@ export async function DELETE(
   }
 
   return NextResponse.json({ success: true, data: null, error: null });
-}
+});

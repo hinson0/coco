@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 import type { CreateBudgetInput } from "@coco/shared";
 
-export async function GET(req: NextRequest) {
+export const GET = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -20,7 +21,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, data: null, error: error.message }, { status: 500 });
   }
 
-  // Calculate spent amount per budget category
   const now = new Date();
   const budgetsWithSpent = await Promise.all(
     (budgets ?? []).map(async (budget) => {
@@ -43,9 +43,9 @@ export async function GET(req: NextRequest) {
   );
 
   return NextResponse.json({ success: true, data: budgetsWithSpent, error: null });
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withLogger(async (req) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
   const token = req.headers.get("Authorization")!.slice(7);
   const supabase = createAuthClient(token);
 
-  // Upsert: unique on (user_id, category_id, period)
   const { data, error } = await supabase
     .from("budgets")
     .upsert(
@@ -68,4 +67,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, data, error: null }, { status: 201 });
-}
+});

@@ -1,12 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient } from "@/lib/supabase";
+import { withLogger } from "@/lib/logger";
 import type { ApiResponse, Category } from "@coco/shared";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PATCH = withLogger(async (req, { params }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -30,12 +28,9 @@ export async function PATCH(
   }
 
   return NextResponse.json({ success: true, data, error: null } satisfies ApiResponse<Category>);
-}
+});
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const DELETE = withLogger(async (req, { params }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -56,4 +51,4 @@ export async function DELETE(
   }
 
   return NextResponse.json({ success: true, data: null, error: null } satisfies ApiResponse<null>);
-}
+});

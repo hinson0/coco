@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/auth";
 import { createAuthClient, createServiceClient } from "@/lib/supabase";
 import { getTimezone, getCurrentTimeInZone } from "@/lib/timezone";
+import { withLogger } from "@/lib/logger";
 import {
   callGlm,
   buildIntentClassifyPrompt,
@@ -14,7 +15,7 @@ import {
   validateSql,
 } from "@coco/ai";
 
-export async function POST(req: NextRequest) {
+export const POST = withLogger(async (req, { tracker }) => {
   const auth = await authenticateRequest(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -25,19 +26,20 @@ export async function POST(req: NextRequest) {
   const tz = getTimezone(req);
   const now = getCurrentTimeInZone(tz);
 
-  // Save user message
   await supabase.from("chat_messages").insert({
     user_id: auth.userId, role: "user", content_type: "text", content: text,
   });
 
-  // Step 1: Intent classification
-  const intentResp = await callGlm(buildIntentClassifyPrompt(text), glmOptions);
+  const intentResp = await tracker.step("GLM intent", () =>
+    callGlm(buildIntentClassifyPrompt(text), glmOptions)
+  );
   const intent = parseIntentResponse(intentResp.content);
 
   if (intent === "query") {
-    // NL query branch
     try {
-      const sqlResp = await callGlm(buildText2SqlPrompt(text, now), glmOptions);
+      const sqlResp = await tracker.step("GLM text2sql", () =>
+        callGlm(buildText2SqlPrompt(text, now), glmOptions)
+      );
       const sql = parseSqlResponse(sqlResp.content);
 
       if (!validateSql(sql)) {
@@ -48,28 +50,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, data: { type: "nl_error", message: "无法理解，请换个问法" }, error: null });
       }
 
-      // Validate UUID format to prevent injection
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(auth.userId)) {
         return NextResponse.json({ success: false, data: null, error: "Invalid user" }, { status: 403 });
       }
 
-      // Wrap GLM-generated SQL in CTE to enforce user_id filtering
       const wrappedSql = `WITH scoped AS (SELECT * FROM transactions WHERE user_id = '${auth.userId}' AND deleted_at IS NULL) ${sql.replace(/\btransactions\b/gi, "scoped")}`;
 
       const serviceClient = createServiceClient();
-      const { data: queryResult } = await serviceClient.rpc("exec_readonly_sql", { sql_query: wrappedSql });
+      const { data: queryResult } = await tracker.step("DB query", () =>
+        serviceClient.rpc("exec_readonly_sql", { sql_query: wrappedSql })
+      );
 
-      const summaryResp = await callGlm(
-        buildSummarizePrompt(text, JSON.stringify(queryResult ?? [])),
-        glmOptions
+      const summaryResp = await tracker.step("GLM summarize", () =>
+        callGlm(buildSummarizePrompt(text, JSON.stringify(queryResult ?? [])), glmOptions)
       );
 
       await supabase.from("chat_messages").insert({
         user_id: auth.userId, role: "assistant", content_type: "nl_result", content: summaryResp.content,
       });
 
-      // Log NL query
       await serviceClient.from("nl_query_logs").insert({
         user_id: auth.userId, question: text, generated_sql: sql, result_summary: summaryResp.content,
       });
@@ -83,9 +83,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Step 2: Record intent → parse
   try {
-    const extractResp = await callGlm(buildAsrExtractPrompt(text, now), glmOptions);
+    const extractResp = await tracker.step("GLM extract", () =>
+      callGlm(buildAsrExtractPrompt(text, now), glmOptions)
+    );
     const parsed = parseRecordResponse(extractResp.content);
 
     if (!parsed) {
@@ -95,26 +96,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, data: { type: "parse_error" }, error: null });
     }
 
-    // Find matching category
     const { data: categories } = await supabase.from("categories").select("id, name");
     const matchedCat = (categories ?? []).find((c) => c.name === parsed.category);
     const categoryId = matchedCat?.id ?? (categories ?? []).find((c) => c.name === "其他支出")?.id;
 
-    const { data: tx, error: txError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: auth.userId,
-        category_id: categoryId,
-        amount: parsed.amount,
-        type: parsed.type,
-        note: parsed.note,
-        occurred_at: parsed.occurred_at ?? new Date().toISOString(),
-        source: "text",
-        raw_input: text,
-        ai_confidence: 0.8,
-      })
-      .select("*, categories(name, icon)")
-      .single();
+    const { data: tx, error: txError } = await tracker.step("DB insert", () =>
+      supabase
+        .from("transactions")
+        .insert({
+          user_id: auth.userId,
+          category_id: categoryId,
+          amount: parsed.amount,
+          type: parsed.type,
+          note: parsed.note,
+          occurred_at: parsed.occurred_at ?? new Date().toISOString(),
+          source: "text",
+          raw_input: text,
+          ai_confidence: 0.8,
+        })
+        .select("*, categories(name, icon)")
+        .single()
+    );
 
     if (txError) {
       return NextResponse.json({ success: false, data: null, error: txError.message }, { status: 500 });
@@ -132,4 +134,4 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ success: false, data: null, error: "Parse failed" }, { status: 500 });
   }
-}
+});
