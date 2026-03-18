@@ -6,9 +6,9 @@ dist/
 .expo/
 *.tsbuildinfo
 .superpowers/
+.turbo/
 
 # Local tooling
-.claude/
 .playwright-mcp/
 
 # Design previews
@@ -22,4 +22,9 @@ design-final.*
 apps/mobile/package-lock.json
 
 .DS_Store
+.claire/
 
+# Claude Code local files (machine-specific)
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+.claude/worktrees/
