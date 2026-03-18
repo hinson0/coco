@@ -1,10 +1,20 @@
 {
     "permissions": {
         "allow": [
-            "Bash(*)",
             "Edit(*)",
             "Read(*)",
-            "Write(*)"
+            "Write(*)",
+            "Bash(pnpm *)",
+            "Bash(npm *)",
+            "Bash(ls *)",
+            "Bash(cd * && pnpm *)",
+            "Bash(cd * && npx *)",
+            "Bash(git *)",
+            "Bash(npx *)"
+        ],
+        "deny": [
+          "Bash(rm -rf *)",
+          "Bash(sudo *)"
         ]
     }
 }
