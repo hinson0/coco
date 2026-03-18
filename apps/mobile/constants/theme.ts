@@ -53,7 +53,7 @@ export type CategoryColorName = keyof typeof categoryColors;
 export const CATEGORY_COLOR_MAP: Record<string, CategoryColorName> = {
   '餐饮': 'coral', '交通': 'sage', '购物': 'honey', '娱乐': 'lavender',
   '饮品': 'honey', '生活': 'coral', '医疗': 'coral', '教育': 'lavender',
-  '通讯': 'sage', '住房': 'honey', '收入': 'sage', '工资': 'sage',
+  '住房': 'honey', '收入': 'sage', '工资': 'sage',
 };
 
 export function getCategoryColor(categoryName: string): CategoryColorName {
