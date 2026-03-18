@@ -24,6 +24,7 @@ import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
+import { ManualEntryForm } from '../components/ManualEntryForm';
 import { colors, spacing, radii, shadows } from '../constants/theme';
 import type { ChatMessage } from '@coco/shared';
 
@@ -133,20 +134,18 @@ export default function ChatScreen() {
   const { messages, isLoading, addMessage } = useChatStore();
   const { sendText, sendOcr: _sendOcr, sendAsr: _sendAsr } = useChat();
   const hasInitialized = useRef(false);
+  const [manualEntryVisible, setManualEntryVisible] = useState(false);
 
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, (e) => {
       keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
-      setKeyboardVisible(true);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       keyboardHeight.value = withTiming(0, { duration: 250 });
-      setKeyboardVisible(false);
     });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [keyboardHeight]);
@@ -168,6 +167,10 @@ export default function ChatScreen() {
   const listItems = buildListItems(messages, isLoading);
 
   function handleSelectTool(tool: string) {
+    if (tool === '手动记账') {
+      setManualEntryVisible(true);
+      return;
+    }
     sendText(tool);
   }
 
@@ -234,6 +237,11 @@ export default function ChatScreen() {
           onPlus={() => {/* expand tool panel */}}
         />
       </Animated.View>
+
+      <ManualEntryForm
+        visible={manualEntryVisible}
+        onClose={() => setManualEntryVisible(false)}
+      />
     </View>
   );
 }

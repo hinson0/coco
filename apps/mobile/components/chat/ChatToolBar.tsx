@@ -8,10 +8,8 @@ interface ToolItem {
 }
 
 const TOOLS: ToolItem[] = [
-  { icon: '⚡', label: '快速记账' },
-  { icon: '📸', label: '拍小票' },
+  { icon: '✏️', label: '手动记账' },
   { icon: '📊', label: '月度报告' },
-  { icon: '📋', label: '记账模板' },
   { icon: '🔄', label: '重复记' },
 ];
 
