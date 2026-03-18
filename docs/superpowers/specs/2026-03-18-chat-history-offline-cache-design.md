@@ -21,8 +21,9 @@
 
 消息数据源从 Zustand 迁移到 React Query。
 
-- 新建 `hooks/useChatMessages.ts`，使用 `useInfiniteQuery` 调用 `GET /api/chat/messages`
-- 每页 30 条，按 `created_at DESC` 排序（API 已支持分页）
+- 新建 `hooks/useChatMessages.ts`，使用 `useInfiniteQuery` 调用 `GET /api/chat/messages?page={n}&limit=30`
+- 客户端固定传 `limit=30`（API 默认 50，但 30 条更适合移动端首屏加载量）
+- 按 `created_at DESC` 排序（API 已支持分页）
 - `getNextPageParam`：基于 `page * limit < total` 判断是否还有下一页，有则返回 `page + 1`
 - FlatList 的 `onEndReached` 触发 `fetchNextPage`（列表 inverted，"到底"即加载更早的消息）
 - 加载更多时在列表顶部（inverted 后视觉顶部）显示一个轻量 spinner
@@ -35,9 +36,11 @@ chatStore 简化为：
 ```typescript
 interface PendingMessage extends ChatMessage {
   readonly status: 'pending' | 'failed';
-  readonly clientId: string; // 用于去重
+  readonly clientId: string; // 用于去重，同时作为 ChatMessage.id 的值
 }
 ```
+
+> `PendingMessage.id` 使用 `clientId` 的值（UUID v4），在消息确认入库后由服务端分配真正的 UUID。
 
 消息合并逻辑：展示时将 `query.data.pages` 扁平化 + `pendingMessages` 合并，按 `created_at` 排序。
 
@@ -48,11 +51,15 @@ interface PendingMessage extends ChatMessage {
 发送消息的完整流程：
 
 1. 用户输入 → 创建 `PendingMessage`（status: 'pending'，clientId: uuid）→ 加入 `pendingMessages` → 立即展示
-2. 调用 API（如 `/api/record/text`）
-3. **成功**：API 响应中拿到 assistant 消息 → 用 `queryClient.setQueryData` 将 assistant 消息直接插入第一页缓存 → 从 `pendingMessages` 中移除该 pending 消息 → 避免 invalidate 导致的竞态和闪烁
+2. 调用 API（如 `/api/record/text`、`/api/record/ocr`、`/api/record/asr`）
+3. **成功**：API 响应中拿到 assistant 消息 → 用 `queryClient.setQueryData` 将**用户消息（从 pending 转为正式，使用服务端已生成的数据）和 assistant 消息**一起插入第一页缓存 → 从 `pendingMessages` 中移除该 pending 消息
 4. **失败**：将该 pending 消息的 status 改为 'failed' → 气泡上显示红色感叹号 → 点击触发重试（复用原 clientId）
 
+> **三个发送方法（sendText / sendOcr / sendAsr）遵循相同的 pending → setQueryData → failed 流程**，区别仅在 API 端点和 content_type 不同。
+
 错误消息（如"网络错误，请重试"）不持久化到服务端，仅作为 failed 状态的 pendingMessage 存在于客户端。
+
+> 注意：用户消息已由 API 端写入 Supabase（如 `route.ts` 第 29-31 行），所以成功后 setQueryData 插入的用户消息数据可信。如果不立即插入，用户消息要等到下次 refetch（最长 30 秒）才出现在正式缓存中。
 
 ### 3. 离线缓存：React Query 持久化
 
@@ -112,5 +119,6 @@ interface PendingMessage extends ChatMessage {
 
 ## 新增依赖
 
-- `@tanstack/react-query-persist-client`（v5 中也可能需要 `@tanstack/query-async-storage-persister`，实现时确认包名）
+- `@tanstack/react-query-persist-client`
+- `@tanstack/query-async-storage-persister`（TanStack Query v5 的 AsyncStorage persister）
 - `@react-native-async-storage/async-storage`（如项目尚未安装）
