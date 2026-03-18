@@ -173,12 +173,16 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../lib/api";
 import { useChatStore } from "../store/chatStore";
+import type { InfiniteData } from "@tanstack/react-query";
 import type { ChatMessage, PendingMessage, PaginatedResponse } from "@coco/shared";
+
+type ChatInfiniteData = InfiniteData<PaginatedResponse<ChatMessage>>;
 
 function createPendingMessage(
   overrides: Pick<ChatMessage, "content_type" | "content">
 ): PendingMessage {
-  const clientId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // React Native 支持 crypto.randomUUID()（Hermes 引擎）
+  const clientId = crypto.randomUUID();
   return {
     id: clientId,
     user_id: "",
@@ -198,25 +202,23 @@ function insertMessagesIntoCache(
   userMsg: ChatMessage,
   assistantMsg: ChatMessage
 ) {
-  qc.setQueryData<{ pages: PaginatedResponse<ChatMessage>[]; pageParams: number[] }>(
-    ["chat-messages"],
-    (old) => {
-      if (!old) return old;
-      const firstPage = old.pages[0];
-      if (!firstPage) return old;
-      return {
-        ...old,
-        pages: [
-          {
-            ...firstPage,
-            data: [assistantMsg, userMsg, ...firstPage.data],
-            total: firstPage.total + 2,
-          },
-          ...old.pages.slice(1),
-        ],
-      };
-    }
-  );
+  qc.setQueryData<ChatInfiniteData>(["chat-messages"], (old) => {
+    if (!old) return old;
+    const firstPage = old.pages[0];
+    if (!firstPage) return old;
+    // 第一页按 created_at DESC 排序，新消息插入头部
+    return {
+      ...old,
+      pages: [
+        {
+          ...firstPage,
+          data: [assistantMsg, userMsg, ...firstPage.data],
+          total: firstPage.total + 2,
+        },
+        ...old.pages.slice(1).map((p) => ({ ...p, total: p.total + 2 })),
+      ],
+    };
+  });
 }
 
 export function useChat() {
@@ -499,10 +501,13 @@ git commit -m "feat(api): add DELETE endpoints for chat messages"
 - [ ] **Step 1: 创建删除 hook（单条 + 清空）**
 
 ```typescript
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../lib/api";
 import type { ApiResponse, ChatMessage, PaginatedResponse } from "@coco/shared";
+
+type ChatInfiniteData = InfiniteData<PaginatedResponse<ChatMessage>>;
 
 export function useDeleteChatMessage() {
   const qc = useQueryClient();
@@ -512,20 +517,21 @@ export function useDeleteChatMessage() {
       apiFetch<ApiResponse<null>>(`/api/chat/messages/${id}`, { method: "DELETE" }),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["chat-messages"] });
-      const previous = qc.getQueryData<{
-        pages: PaginatedResponse<ChatMessage>[];
-        pageParams: number[];
-      }>(["chat-messages"]);
+      const previous = qc.getQueryData<ChatInfiniteData>(["chat-messages"]);
 
-      qc.setQueryData<typeof previous>(["chat-messages"], (old) => {
+      qc.setQueryData<ChatInfiniteData>(["chat-messages"], (old) => {
         if (!old) return old;
+        // 找到消息所在的页，仅该页移除；total 全局减 1
+        let found = false;
+        const newPages = old.pages.map((page) => {
+          const filtered = page.data.filter((msg) => msg.id !== id);
+          if (filtered.length < page.data.length) found = true;
+          return { ...page, data: filtered };
+        });
+        if (!found) return old;
         return {
           ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            data: page.data.filter((msg) => msg.id !== id),
-            total: page.total - 1,
-          })),
+          pages: newPages.map((p) => ({ ...p, total: p.total - 1 })),
         };
       });
 
@@ -546,11 +552,13 @@ export function useClearChatMessages() {
   return useMutation({
     mutationFn: () =>
       apiFetch<ApiResponse<null>>("/api/chat/messages", { method: "DELETE" }),
-    onSuccess: () => {
-      qc.setQueryData(["chat-messages"], {
+    onSuccess: async () => {
+      qc.setQueryData<ChatInfiniteData>(["chat-messages"], {
         pages: [{ success: true, data: [], total: 0, page: 1, limit: 30 }],
         pageParams: [1],
       });
+      // 清除 AsyncStorage 持久化缓存，防止冷启动时恢复已删除的消息
+      await AsyncStorage.removeItem("REACT_QUERY_OFFLINE_CACHE");
     },
     onError: () => {
       Alert.alert("清空失败", "请稍后重试");
@@ -616,8 +624,33 @@ const queryClient = new QueryClient({
   },
 });
 
+const MAX_CHAT_PAGES_TO_PERSIST = 3;
+
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
+  // 自定义序列化：截断 chat-messages 只保留最近 3 页
+  serialize: (data) => {
+    const client = data as any;
+    if (client?.clientState?.queries) {
+      client.clientState.queries = client.clientState.queries.map((q: any) => {
+        if (q.queryKey?.[0] === "chat-messages" && q.state?.data?.pages) {
+          return {
+            ...q,
+            state: {
+              ...q.state,
+              data: {
+                ...q.state.data,
+                pages: q.state.data.pages.slice(0, MAX_CHAT_PAGES_TO_PERSIST),
+                pageParams: q.state.data.pageParams.slice(0, MAX_CHAT_PAGES_TO_PERSIST),
+              },
+            },
+          };
+        }
+        return q;
+      });
+    }
+    return JSON.stringify(data);
+  },
 });
 
 export default function RootLayout() {
@@ -792,8 +825,11 @@ const clearMutation = useClearChatMessages();
 替换现有的 `buildListItems` 调用：
 
 ```typescript
-// 将所有页扁平化（API 返回 DESC，reverse 变为 ASC）
-const serverMessages: ChatMessage[] = data?.pages.flatMap((p) => [...p.data].reverse()) ?? [];
+// 将所有页扁平化并转为 ASC（时间正序）
+// pages[0] = 最新一页（DESC），pages[1] = 更旧一页...
+// 先整体 flatMap 保持 DESC，再 reverse 得到 ASC
+const serverMessages: ChatMessage[] =
+  data?.pages.flatMap((p) => p.data).reverse() ?? [];
 const total = data?.pages[0]?.total ?? 0;
 
 // 合并 pending messages（排在最后 = 最新）
@@ -866,8 +902,11 @@ function renderItem({ item }: { item: ListItem }) {
         status={pendingStatus}
         onDelete={() => deleteMutation.mutate(msg.id)}
         onRetry={pendingStatus === 'failed' ? () => {
-          // 重试：移除 failed pending，重新发送
-          // 根据 content_type 调用对应的 send 方法
+          const pm = msg as PendingMessage;
+          useChatStore.getState().removePending(pm.clientId);
+          if (pm.content_type === 'text') sendText(pm.content);
+          else if (pm.content_type === 'image') sendOcr(pm.content);
+          else if (pm.content_type === 'audio') sendAsr(pm.content);
         } : undefined}
       />
     </View>
