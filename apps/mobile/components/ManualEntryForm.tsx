@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
+import { useCategories } from "../hooks/useCategories";
 
 interface Props {
   readonly visible: boolean;
@@ -17,7 +18,33 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   const [date, setDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const amountRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
   const qc = useQueryClient();
+  const { data: catData } = useCategories();
+  const categories = catData?.data ?? [];
+
+  const DEFAULT_NAMES: Record<string, string> = { expense: '购物', income: '工资' };
+
+  useEffect(() => {
+    const defaultName = DEFAULT_NAMES[type];
+    const match = categories.find((c: any) => c.type === type && c.name === defaultName);
+    if (match) setCategoryId(match.id);
+  }, [type, categories]);
+
+  useEffect(() => {
+    if (visible) {
+      const timer = setTimeout(() => amountRef.current?.focus(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   const handleSubmit = async () => {
     const numAmount = parseFloat(amount);
@@ -54,6 +81,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
@@ -64,7 +92,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
               <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.body}>
+          <ScrollView ref={scrollRef} style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? 20 : 10 }}>
             {/* Type toggle */}
             <View style={styles.typeRow}>
               <TouchableOpacity style={[styles.typeBtn, type === "expense" && styles.typeBtnActive]} onPress={() => setType("expense")}>
@@ -75,7 +103,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
               </TouchableOpacity>
             </View>
             {/* Amount */}
-            <TextInput style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#cbd5e1" keyboardType="decimal-pad" />
+            <TextInput ref={amountRef} style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#cbd5e1" keyboardType="decimal-pad" />
             {/* Category Picker */}
             <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
             {/* Date quick select */}
@@ -96,7 +124,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
               </View>
             </View>
             {/* Note */}
-            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" />
+            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
         </View>
       </View>
@@ -118,6 +146,6 @@ const styles = StyleSheet.create({
   typeBtnIncome: { backgroundColor: "#059669" },
   typeText: { color: "#64748b", fontSize: 14, fontWeight: "600" },
   typeTextActive: { color: "#fff" },
-  amountInput: { fontSize: 36, fontWeight: "700", color: "#1e293b", textAlign: "center", marginBottom: 20, padding: 16, backgroundColor: "#F0F2F5", borderRadius: 12 },
+  amountInput: { fontSize: 36, fontWeight: "700", color: "#1e293b", textAlign: "left", marginBottom: 20, padding: 16, backgroundColor: "#F0F2F5", borderRadius: 12 },
   noteInput: { backgroundColor: "#F0F2F5", color: "#1e293b", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
 });
