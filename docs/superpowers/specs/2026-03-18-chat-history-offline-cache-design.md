@@ -23,54 +23,78 @@
 
 - 新建 `hooks/useChatMessages.ts`，使用 `useInfiniteQuery` 调用 `GET /api/chat/messages`
 - 每页 30 条，按 `created_at DESC` 排序（API 已支持分页）
-- `getNextPageParam` 基于当前页码和 total 判断是否还有更多
+- `getNextPageParam`：基于 `page * limit < total` 判断是否还有下一页，有则返回 `page + 1`
 - FlatList 的 `onEndReached` 触发 `fetchNextPage`（列表 inverted，"到底"即加载更早的消息）
+- 加载更多时在列表顶部（inverted 后视觉顶部）显示一个轻量 spinner
 
 chatStore 简化为：
 
 - `isLoading`：发送中状态
-- `pendingMessages`：乐观插入的、还没被服务端确认的消息
-- `addPendingMessage` / `removePendingMessage`
+- `pendingMessages`：乐观插入的、还没被服务端确认的消息，类型为 `PendingMessage`
 
-消息合并逻辑：展示时将 `query.data.pages` 扁平化 + `pendingMessages` 合并，按 `created_at` 排序。欢迎消息作为固定首条拼在最前面（纯前端，不入库）。
+```typescript
+interface PendingMessage extends ChatMessage {
+  readonly status: 'pending' | 'failed';
+  readonly clientId: string; // 用于去重
+}
+```
 
-### 2. 离线缓存：React Query 持久化
+消息合并逻辑：展示时将 `query.data.pages` 扁平化 + `pendingMessages` 合并，按 `created_at` 排序。
 
-使用 `@tanstack/react-query-persist-client` + `createAsyncStoragePersister`（基于 `@react-native-async-storage/async-storage`）。
+**欢迎消息**：不参与排序，而是在渲染时硬编码为 inverted FlatList 的最后一项（视觉上的最顶部）。仅当服务端返回 total === 0 且无 pendingMessages 时显示。
 
-在 app 入口（`_layout.tsx`）配置 `PersistQueryClient`，通过 `shouldDehydrateQuery` 白名单持久化以下 query keys：
+### 2. 消息发送流程（useChat 改造）
 
-| Query Key | 数据 |
-|-----------|------|
-| `["chat-messages"]` | 聊天记录 |
-| `["transactions", page]` | 交易列表 |
-| `["budgets"]` | 预算 |
-| `["categories"]` | 分类 |
+发送消息的完整流程：
 
+1. 用户输入 → 创建 `PendingMessage`（status: 'pending'，clientId: uuid）→ 加入 `pendingMessages` → 立即展示
+2. 调用 API（如 `/api/record/text`）
+3. **成功**：API 响应中拿到 assistant 消息 → 用 `queryClient.setQueryData` 将 assistant 消息直接插入第一页缓存 → 从 `pendingMessages` 中移除该 pending 消息 → 避免 invalidate 导致的竞态和闪烁
+4. **失败**：将该 pending 消息的 status 改为 'failed' → 气泡上显示红色感叹号 → 点击触发重试（复用原 clientId）
+
+错误消息（如"网络错误，请重试"）不持久化到服务端，仅作为 failed 状态的 pendingMessage 存在于客户端。
+
+### 3. 离线缓存：React Query 持久化
+
+使用 `PersistQueryClientProvider`（替换现有的 `QueryClientProvider`）+ `createAsyncStoragePersister`（基于 `@react-native-async-storage/async-storage`）。
+
+在 app 入口（`_layout.tsx`）配置，`queryClient` 的 `defaultOptions.queries.gcTime` 设为 7 天。
+
+通过 `shouldDehydrateQuery` 白名单持久化以下 query keys（**前缀匹配**，即 `queryKey[0]` 匹配）：
+
+| Query Key 前缀 | 数据 | 持久化限制 |
+|----------------|------|-----------|
+| `"chat-messages"` | 聊天记录 | 最多 3 页（90 条） |
+| `"transactions"` | 交易列表 | 全部已加载页 |
+| `"budgets"` | 预算 | 全部 |
+| `"categories"` | 分类 | 全部 |
+
+- `staleTime`：30 秒（避免 inverted list 因立即 refetch 导致内容跳变）
 - `gcTime`：7 天（缓存保留周期）
-- `staleTime`：0（每次打开都尝试刷新，无网时降级到缓存）
 
-效果：打开 app → 立即展示缓存 → 后台静默刷新 → 无感更新。
+效果：打开 app → 立即展示缓存（30 秒内不触发 refetch）→ 超过 30 秒或手动刷新时后台静默更新 → 无感替换。
 
-### 3. 消息删除 / 清空聊天记录
+### 4. 消息删除 / 清空聊天记录
 
-新增 API 端点：`DELETE /api/chat/messages`
+**API 端点设计**（与项目现有 transactions 的 `[id]` 模式一致）：
 
-- 删除单条：`DELETE /api/chat/messages?id={messageId}` — 硬删除
-- 清空全部：`DELETE /api/chat/messages?all=true` — 删除当前用户所有消息
+- 单条删除：`DELETE /api/chat/messages/[id]`（新建 `apps/api/src/app/api/chat/messages/[id]/route.ts`）
+- 清空全部：`DELETE /api/chat/messages`（在现有 `route.ts` 中新增 DELETE handler）
 
-前端交互：
+**删除策略**：硬删除。原因：聊天消息无审计需求，且 `chat_messages` 表的 RLS 策略是 `FOR ALL USING (user_id = auth.uid())`，已覆盖 DELETE 操作，无需额外调整。与 transactions 的软删除不同，聊天消息不需要恢复功能。
+
+**前端交互**：
 
 - 单条消息：长按 → 操作菜单 → "删除"（带确认）
 - 清空全部：顶部栏 `···` 按钮 → "清空聊天记录"（Alert 确认）
 
-乐观更新：删除时先从 React Query 缓存中移除，API 失败则回滚 + toast 提示。
+**乐观更新**：删除时先用 `queryClient.setQueryData` 从缓存中移除对应消息，API 失败则回滚 + toast 提示。清空全部成功后，额外清除 AsyncStorage 中 `chat-messages` 的持久化缓存。
 
-### 4. 错误处理
+### 5. 错误处理
 
-- 网络断开时发送消息失败：消息标记为"发送失败"，可点击重试
+- 网络断开时发送消息失败：pendingMessage 标记为 `status: 'failed'`，气泡显示红色感叹号，点击重试
 - 离线缓存过期（7 天 gcTime）：缓存自动清除，联网后重新拉取
-- 分页边界：total 为 0 时只显示欢迎消息
+- 分页边界：total 为 0 时只显示欢迎消息，不触发加载更多
 - 乐观更新冲突：删除失败时回滚缓存 + toast 提示
 
 ## 文件变更
@@ -78,15 +102,15 @@ chatStore 简化为：
 | 文件 | 变更类型 | 说明 |
 |------|---------|------|
 | `apps/mobile/hooks/useChatMessages.ts` | 新建 | `useInfiniteQuery` 拉取聊天历史 |
-| `apps/mobile/store/chatStore.ts` | 修改 | 简化为 pendingMessages + isLoading |
-| `apps/mobile/hooks/useChat.ts` | 修改 | 发送后 invalidate query 而非手动 addMessage |
-| `apps/mobile/app/index.tsx` | 修改 | 用 `useChatMessages` 替代 store.messages，FlatList 接 `onEndReached` |
-| `apps/mobile/app/_layout.tsx` | 修改 | 配置 `PersistQueryClient` + AsyncStorage |
-| `apps/api/src/app/api/chat/messages/route.ts` | 修改 | 新增 DELETE handler |
-| `apps/mobile/components/chat/ChatBubble.tsx` | 修改 | 长按菜单（删除单条） |
-| `apps/mobile/app/index.tsx` 顶栏 | 修改 | `···` 按钮接清空功能 |
+| `apps/mobile/store/chatStore.ts` | 修改 | 简化为 pendingMessages（含 status 字段）+ isLoading |
+| `apps/mobile/hooks/useChat.ts` | 修改 | 发送后用 setQueryData 插入缓存 + 管理 pendingMessages |
+| `apps/mobile/app/index.tsx` | 修改 | 用 `useChatMessages` 替代 store.messages，FlatList 接 `onEndReached`，`···` 按钮接清空 |
+| `apps/mobile/app/_layout.tsx` | 修改 | `PersistQueryClientProvider` 替换 `QueryClientProvider` + AsyncStorage |
+| `apps/api/src/app/api/chat/messages/route.ts` | 修改 | 新增 DELETE handler（清空全部） |
+| `apps/api/src/app/api/chat/messages/[id]/route.ts` | 新建 | DELETE handler（单条删除） |
+| `apps/mobile/components/chat/ChatBubble.tsx` | 修改 | 长按菜单（删除）+ 失败状态 UI |
 
 ## 新增依赖
 
-- `@tanstack/react-query-persist-client`
+- `@tanstack/react-query-persist-client`（v5 中也可能需要 `@tanstack/query-async-storage-persister`，实现时确认包名）
 - `@react-native-async-storage/async-storage`（如项目尚未安装）
