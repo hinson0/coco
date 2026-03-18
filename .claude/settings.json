@@ -4,17 +4,16 @@
             "Edit(*)",
             "Read(*)",
             "Write(*)",
-            "Bash(pnpm *)",
-            "Bash(npm *)",
-            "Bash(ls *)",
-            "Bash(cd * && pnpm *)",
-            "Bash(cd * && npx *)",
-            "Bash(git *)",
-            "Bash(npx *)"
+            "Bash(*)"
         ],
         "deny": [
-          "Bash(rm -rf *)",
-          "Bash(sudo *)"
+          "Bash(rm *)",
+          "Bash(sudo *)",
+          "Bash(git push --force *)",
+          "Bash(git push -f *)",
+          "Bash(git reset --hard *)",
+          "Bash(git checkout -- *)",
+          "Bash(git branch -D *)"
         ]
     }
 }
