@@ -10,3 +10,8 @@ export interface ChatMessage {
   readonly transaction_id: string | null;
   readonly created_at: string;
 }
+
+export interface PendingMessage extends ChatMessage {
+  readonly status: 'pending' | 'failed';
+  readonly clientId: string;
+}
