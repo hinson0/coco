@@ -1,52 +1,131 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { useAuth } from "../../hooks/useAuth";
-import { router } from "expo-router";
+import { useState } from 'react';
+import { View, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { useAuth } from '../../hooks/useAuth';
+import { AuthInput } from '../../components/auth/AuthInput';
+import { AuthButton } from '../../components/auth/AuthButton';
+import { Card } from '../../components/ui/Card';
+import { AppText } from '../../components/ui/AppText';
+import { colors } from '../../constants/theme';
 
 export default function RegisterScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
   const handleRegister = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert("注册失败", "两次密码不一致");
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      Alert.alert('注册失败', '请填写所有字段');
       return;
     }
+    if (password !== confirmPassword) {
+      Alert.alert('注册失败', '两次密码不一致');
+      return;
+    }
+    setLoading(true);
     try {
-      await signUp(email, password);
-      Alert.alert("注册成功", "请检查邮箱完成验证", [
-        { text: "好的", onPress: () => router.replace("/(auth)/login") },
+      await signUp(email.trim(), password);
+      Alert.alert('注册成功', '请检查邮箱完成验证', [
+        { text: '好的', onPress: () => router.replace('/(auth)/login') },
       ]);
     } catch (e: any) {
-      Alert.alert("注册失败", e.message);
+      Alert.alert('注册失败', e.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>创建账号</Text>
-      <Text style={styles.subtitle}>注册开始记账</Text>
-      <TextInput style={styles.input} placeholder="邮箱" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#94a3b8" />
-      <TextInput style={styles.input} placeholder="密码" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#94a3b8" />
-      <TextInput style={styles.input} placeholder="确认密码" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry placeholderTextColor="#94a3b8" />
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
-        <Text style={styles.buttonText}>注册</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-        <Text style={styles.link}>已有账号？去登录</Text>
-      </TouchableOpacity>
-    </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.hero}>
+        <AppText size="3xl" style={styles.logo}>🌿</AppText>
+        <AppText size="6xl" weight="bold" style={styles.appName}>棉花记</AppText>
+        <AppText size="lg" color={colors.textLighter} style={styles.tagline}>
+          AI 智能记账助手
+        </AppText>
+      </View>
+
+      <Card radius="xl" padding={24} style={styles.card}>
+        <View style={styles.inputGroup}>
+          <AuthInput
+            placeholder="邮箱"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <AuthInput
+            placeholder="密码"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <AuthInput
+            placeholder="确认密码"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+        </View>
+        <AuthButton title="注册" onPress={handleRegister} loading={loading} />
+      </Card>
+
+      <View style={styles.linkRow}>
+        <AppText size="xl" color={colors.textLight}>已有账号？</AppText>
+        <TouchableOpacity onPress={() => router.push('/(auth)/login')} activeOpacity={0.7}>
+          <AppText size="xl" color={colors.sage} weight="semibold">去登录</AppText>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#F5F5F5" },
-  title: { fontSize: 36, fontWeight: "800", color: "#2D9B83", textAlign: "center", marginBottom: 4 },
-  subtitle: { fontSize: 14, color: "#94a3b8", textAlign: "center", marginBottom: 40 },
-  input: { backgroundColor: "#fff", color: "#1e293b", padding: 14, borderRadius: 12, marginBottom: 12, fontSize: 16, borderWidth: 1, borderColor: "#E5E7EB" },
-  button: { backgroundColor: "#2D9B83", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  link: { color: "#2D9B83", textAlign: "center", marginTop: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.cream,
+  },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 40,
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: 32,
+    gap: 4,
+  },
+  logo: {
+    fontSize: 72,
+    lineHeight: 80,
+    textAlign: 'center',
+  },
+  appName: {
+    textAlign: 'center',
+  },
+  tagline: {
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  card: {
+    marginHorizontal: 24,
+  },
+  inputGroup: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 4,
+  },
 });
