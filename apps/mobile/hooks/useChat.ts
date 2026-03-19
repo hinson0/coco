@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { randomUUID } from 'expo-crypto';
 import { apiFetch } from '../lib/api';
 import { useChatStore } from '../store/chatStore';
 import type {
@@ -13,7 +14,7 @@ type ChatInfiniteData = InfiniteData<PaginatedResponse<ChatMessage>>;
 function createPendingMessage(
   overrides: Pick<ChatMessage, 'content_type' | 'content'>,
 ): PendingMessage {
-  const clientId = crypto.randomUUID();
+  const clientId = randomUUID();
   return {
     id: clientId,
     user_id: '',

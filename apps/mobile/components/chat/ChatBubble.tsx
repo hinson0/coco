@@ -1,7 +1,7 @@
 import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, radii, spacing, shadows } from '../../constants/theme';
-import type { ChatMessage, Transaction } from '@coco/shared';
+import type { ChatMessage, Transaction, Category } from '@coco/shared';
 import { VoiceBubble } from './VoiceBubble';
 import { OcrBubble } from './OcrBubble';
 import { RecordCard } from './RecordCard';
@@ -12,7 +12,7 @@ interface ChatBubbleProps {
   readonly onDelete?: () => void;
   readonly onRetry?: () => void;
   readonly transaction?: Transaction;
-  readonly onConfirmRecord?: () => void;
+  readonly categories?: readonly Category[];
   readonly onEditRecord?: () => void;
   readonly onSuggestion?: (label: string) => void;
 }
@@ -51,7 +51,7 @@ function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   );
 }
 
-export function ChatBubble({ message, status, onDelete, onRetry, transaction, onConfirmRecord, onEditRecord }: ChatBubbleProps) {
+export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
@@ -127,6 +127,9 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, on
       }
     }
     const variant = parsedTransaction?.source === 'ocr' ? 'ocr' : 'text';
+    const categoryName = parsedTransaction && categories
+      ? categories.find((c) => c.id === parsedTransaction.category_id)?.name
+      : undefined;
 
     return (
       <TouchableOpacity
@@ -139,9 +142,9 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, on
           {parsedTransaction ? (
             <RecordCard
               transaction={parsedTransaction}
-              status="pending"
-              onConfirm={onConfirmRecord}
+              categoryName={categoryName}
               onEdit={onEditRecord}
+              onDelete={onDelete}
               variant={variant}
             />
           ) : (
