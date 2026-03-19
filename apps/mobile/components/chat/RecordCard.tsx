@@ -1,6 +1,6 @@
 import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { AppText } from '../ui/AppText';
-import { colors, radii, spacing } from '../../constants/theme';
+import { colors, radii, spacing, shadows, getCategoryColor, categoryColors } from '../../constants/theme';
 import type { Transaction } from '@coco/shared';
 
 interface RecordCardProps {
@@ -11,63 +11,55 @@ interface RecordCardProps {
   readonly variant?: 'text' | 'ocr';
 }
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  '餐饮': '🍔', '交通': '🚗', '购物': '🛒', '娱乐': '🎮',
+  '居住': '🏠', '医疗': '💊', '教育': '📚', '通讯': '📱',
+  '工资': '💰', '理财': '📈', '其他收入': '💵', '其他支出': '📦',
+  '咖啡': '☕', '饮品': '🧋',
+};
+
 export function RecordCard({ transaction, categoryName, onEdit, onDelete, variant = 'text' }: RecordCardProps) {
+  const name = categoryName ?? '未知';
+  const colorKey = getCategoryColor(name);
+  const palette = categoryColors[colorKey];
+  const emoji = CATEGORY_EMOJI[name] ?? '📝';
+
   return (
-    <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <AppText size="lg">✅</AppText>
-          <AppText size="lg" weight="semibold" color={colors.text} style={styles.headerTitle}>
-            已记账
-          </AppText>
+    <View style={[styles.card, shadows.md]}>
+      {/* Amount hero section */}
+      <View style={styles.amountSection}>
+        <View style={[styles.categoryBadge, { backgroundColor: palette.bg }]}>
+          <AppText size="lg">{emoji}</AppText>
+          <AppText size="base" weight="semibold" color={palette.icon}>{name}</AppText>
         </View>
-        <View style={styles.doneBadge}>
-          <AppText size="xs" weight="medium" color={colors.sage}>已记录</AppText>
-        </View>
+        <AppText size="5xl" weight="bold" color={colors.text} style={styles.amount}>
+          ¥ {transaction.amount.toFixed(2)}
+        </AppText>
       </View>
 
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Rows */}
-      <View style={styles.rows}>
-        <Row label="金额">
-          <AppText size="2xl" weight="bold" color={colors.coral}>
-            ¥ {transaction.amount.toFixed(2)}
-          </AppText>
-        </Row>
-
-        <Row label="分类">
-          <AppText size="xl" color={colors.text}>{categoryName ?? '未知'}</AppText>
-        </Row>
-
-        {variant === 'text' && (
-          <Row label="备注">
-            <AppText size="xl" color={colors.text}>{transaction.note || '无'}</AppText>
-          </Row>
-        )}
+      {/* Detail rows */}
+      <View style={styles.details}>
+        {variant === 'text' && transaction.note ? (
+          <DetailRow label="备注" value={transaction.note} />
+        ) : null}
 
         {variant === 'ocr' && (
           <>
-            <Row label="商户">
-              <AppText size="xl" color={colors.text}>{transaction.raw_input || '未知'}</AppText>
-            </Row>
-            <Row label="明细">
-              <AppText size="xl" color={colors.text}>{transaction.note || '无'}</AppText>
-            </Row>
+            {transaction.raw_input ? <DetailRow label="商户" value={transaction.raw_input} /> : null}
+            {transaction.note ? <DetailRow label="明细" value={transaction.note} /> : null}
           </>
         )}
       </View>
 
-      {/* Footer buttons */}
+      {/* Action buttons */}
       <View style={styles.footer}>
         <Pressable
           onPress={onEdit}
-          style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
         >
-          <AppText size="lg" weight="medium" color={colors.textLight}>修改</AppText>
+          <AppText size="base" weight="medium" color={colors.textLight}>修改</AppText>
         </Pressable>
+        <View style={styles.btnDivider} />
         <Pressable
           onPress={() => {
             Alert.alert("删除记录", "确定要删除这笔记账吗？", [
@@ -75,96 +67,83 @@ export function RecordCard({ transaction, categoryName, onEdit, onDelete, varian
               { text: "删除", style: "destructive", onPress: onDelete },
             ]);
           }}
-          style={({ pressed }) => [styles.deleteBtn, pressed && styles.btnPressed]}
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
         >
-          <AppText size="lg" weight="medium" color="#E74C3C">删除</AppText>
+          <AppText size="base" weight="medium" color={colors.coral}>删除</AppText>
         </Pressable>
       </View>
     </View>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={rowStyles.row}>
-      <AppText size="xl" color={colors.textLighter} style={rowStyles.label}>{label}</AppText>
-      {children}
+    <View style={detailStyles.row}>
+      <AppText size="base" color={colors.textLighter}>{label}</AppText>
+      <AppText size="base" color={colors.text}>{value}</AppText>
     </View>
   );
 }
 
-const rowStyles = StyleSheet.create({
+const detailStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: spacing.sm,
-  },
-  label: {
-    flex: 1,
   },
 });
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.cream,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.creamDark,
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
     overflow: 'hidden',
+    minWidth: 220,
   },
-  header: {
+
+  // Amount hero
+  amountSection: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+  },
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.full,
+    marginBottom: spacing.lg,
   },
-  headerTitle: {
-    marginLeft: spacing.sm,
+  amount: {
+    letterSpacing: -0.5,
   },
-  doneBadge: {
-    backgroundColor: colors.sagePale,
-    borderRadius: radii.sm,
-    paddingVertical: 2,
-    paddingHorizontal: spacing.md,
+
+  // Details
+  details: {
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.md,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.creamDark,
-    marginHorizontal: spacing.xl,
-  },
-  rows: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  },
+
+  // Footer actions
   footer: {
     flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
   },
-  editBtn: {
+  actionBtn: {
     flex: 1,
-    backgroundColor: colors.creamDark,
-    borderRadius: radii.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     alignItems: 'center',
   },
-  deleteBtn: {
-    flex: 1,
+  btnDivider: {
+    width: 1,
     backgroundColor: colors.creamDark,
-    borderRadius: radii.md,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
   },
   btnPressed: {
-    opacity: 0.8,
+    backgroundColor: colors.cream,
   },
 });

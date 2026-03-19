@@ -114,26 +114,27 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
     return (
       <View style={styles.rowAssistant}>
         <Avatar emoji="🌿" style={styles.avatarAi} />
-        <TouchableOpacity
-          style={styles.bubbleArea}
-          activeOpacity={0.75}
-          onLongPress={() => handleLongPress(onDelete)}
-        >
-          <View style={[styles.bubble, styles.bubbleAssistant]}>
-            {parsedTransaction ? (
-              <RecordCard
-                transaction={parsedTransaction}
-                categoryName={categoryName}
-                onEdit={onEditRecord}
-                onDelete={onDelete}
-                variant={variant}
-              />
-            ) : (
-              <AppText size="xl" color={colors.text}>{content}</AppText>
-            )}
-          </View>
+        <View style={styles.bubbleArea}>
+          {parsedTransaction ? (
+            <RecordCard
+              transaction={parsedTransaction}
+              categoryName={categoryName}
+              onEdit={onEditRecord}
+              onDelete={onDelete}
+              variant={variant}
+            />
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onLongPress={() => handleLongPress(onDelete)}
+            >
+              <View style={[styles.bubble, styles.bubbleAssistant]}>
+                <AppText size="xl" color={colors.text}>{content}</AppText>
+              </View>
+            </TouchableOpacity>
+          )}
           <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
-        </TouchableOpacity>
+        </View>
       </View>
     );
   }
