@@ -22,8 +22,7 @@ export const POST = withLogger(async (req) => {
     return NextResponse.json({ success: false, data: null, error: txError.message }, { status: 500 });
   }
 
-  // Fire-and-forget: chat messages don't block the response
-  supabase.from("chat_messages").insert([
+  await supabase.from("chat_messages").insert([
     { user_id: auth.userId, role: "user", content_type: "text", content: `手动记账: ${body.note} ¥${body.amount}` },
     { user_id: auth.userId, role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id },
   ]);

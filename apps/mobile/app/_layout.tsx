@@ -1,7 +1,6 @@
 import { Slot, router } from "expo-router";
 import { useEffect } from "react";
 import { View, Text } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
@@ -70,22 +69,20 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{
-          persister: asyncStoragePersister,
-          maxAge: SEVEN_DAYS,
-          dehydrateOptions: {
-            shouldDehydrateQuery: (query) => {
-              const key = query.queryKey[0];
-              return typeof key === "string" && PERSISTED_KEY_PREFIXES.includes(key);
-            },
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        maxAge: SEVEN_DAYS,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            const key = query.queryKey[0];
+            return typeof key === "string" && PERSISTED_KEY_PREFIXES.includes(key);
           },
-        }}
-      >
-        <Slot />
-      </PersistQueryClientProvider>
-    </GestureHandlerRootView>
+        },
+      }}
+    >
+      <Slot />
+    </PersistQueryClientProvider>
   );
 }
