@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { runOnJS } from "react-native-reanimated";
+import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
@@ -29,15 +29,34 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // 水平滑动关闭手势（原生手势系统，不被 Modal/ScrollView 干扰）
+  // 水平滑动位移（跟手 + 松手判定）
+  const translateX = useSharedValue(0);
+
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
-    .failOffsetY([-10, 10])
+    .failOffsetY([-15, 15])
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+    })
     .onEnd((e) => {
       if (Math.abs(e.translationX) >= SWIPE_THRESHOLD) {
+        translateX.value = withTiming(e.translationX > 0 ? 400 : -400, { duration: 200 });
         runOnJS(onClose)();
+      } else {
+        translateX.value = withTiming(0, { duration: 150 });
       }
     });
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  // 每次打开时重置位移
+  useEffect(() => {
+    if (visible) {
+      translateX.value = 0;
+    }
+  }, [visible, translateX]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -59,7 +78,6 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
       setCategoryId(transaction.category_id);
       setDate(new Date(transaction.occurred_at));
     } else if (visible && !transaction) {
-      // Reset for new entry
       setAmount("");
       setNote("");
       setType("expense");
@@ -121,12 +139,13 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     }
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        <GestureDetector gesture={swipeGesture}>
-        <View style={styles.sheet}>
+    <View style={styles.overlay}>
+      <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+      <GestureDetector gesture={swipeGesture}>
+        <Animated.View style={[styles.sheet, sheetAnimatedStyle]}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
@@ -170,15 +189,19 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             {/* Note */}
             <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
-        </View>
-        </GestureDetector>
-      </View>
-    </Modal>
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+    zIndex: 100,
+  },
   sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
   cancel: { color: "#94a3b8", fontSize: 16 },
