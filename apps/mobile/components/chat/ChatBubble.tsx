@@ -112,29 +112,28 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
       : undefined;
 
     return (
-      <View style={styles.rowAssistant}>
+      <View style={[styles.rowAssistant, styles.rowCard]}>
         <Avatar emoji="🌿" style={styles.avatarAi} />
-        <View style={styles.bubbleArea}>
-          {parsedTransaction ? (
-            <RecordCard
-              transaction={parsedTransaction}
-              categoryName={categoryName}
-              onEdit={onEditRecord}
-              onDelete={onDelete}
-              variant={variant}
-            />
-          ) : (
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onLongPress={() => handleLongPress(onDelete)}
-            >
-              <View style={[styles.bubble, styles.bubbleAssistant]}>
-                <AppText size="xl" color={colors.text}>{content}</AppText>
-              </View>
-            </TouchableOpacity>
-          )}
+        <TouchableOpacity
+          style={styles.bubbleArea}
+          activeOpacity={0.75}
+          onLongPress={() => handleLongPress(onDelete)}
+        >
+          <View style={[styles.bubble, styles.bubbleAssistant]}>
+            {parsedTransaction ? (
+              <RecordCard
+                transaction={parsedTransaction}
+                categoryName={categoryName}
+                onEdit={onEditRecord}
+                onDelete={onDelete}
+                variant={variant}
+              />
+            ) : (
+              <AppText size="xl" color={colors.text}>{content}</AppText>
+            )}
+          </View>
           <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
-        </View>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -170,6 +169,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     alignSelf: 'flex-start',
     maxWidth: '85%',
+  },
+  rowCard: {
+    maxWidth: '95%',
   },
 
   // Avatars
