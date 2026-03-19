@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard, Animated, PanResponder, Dimensions } from "react-native";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
@@ -13,6 +13,9 @@ interface Props {
   readonly transaction?: Transaction;
 }
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const SWIPE_THRESHOLD = 100;
+
 export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Props) {
   const isEdit = !!transaction;
   const [amount, setAmount] = useState("");
@@ -21,6 +24,36 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const [date, setDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+
+  // Swipe to dismiss
+  const translateX = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gestureState) =>
+        Math.abs(gestureState.dx) > 15 && Math.abs(gestureState.dy) < 30,
+      onPanResponderMove: (_evt, gestureState) => {
+        translateX.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (Math.abs(gestureState.dx) > SWIPE_THRESHOLD) {
+          const direction = gestureState.dx > 0 ? SCREEN_WIDTH : -SCREEN_WIDTH;
+          Animated.timing(translateX, {
+            toValue: direction,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            translateX.setValue(0);
+            onClose();
+          });
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
   const amountRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -111,7 +144,10 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet}>
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateX }] }]}
+          {...panResponder.panHandlers}
+        >
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
@@ -155,7 +191,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             {/* Note */}
             <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
