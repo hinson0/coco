@@ -28,9 +28,19 @@ function AiAvatar() {
   return (
     <View style={styles.avatarRow}>
       <View style={styles.avatar}>
-        <AppText size="base">🤖</AppText>
+        <AppText size="base">🌿</AppText>
       </View>
       <AppText size="base" color={colors.textLighter}>棉花助手</AppText>
+    </View>
+  );
+}
+
+function UserAvatar() {
+  return (
+    <View style={styles.userAvatarRow}>
+      <View style={styles.userAvatar}>
+        <AppText size="base">😊</AppText>
+      </View>
     </View>
   );
 }
@@ -68,6 +78,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
+          <UserAvatar />
           <VoiceBubble
             role="user"
             duration={parseInt(content, 10) || 0}
@@ -90,6 +101,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
+          <UserAvatar />
           <OcrBubble imageUri={content || undefined} />
           <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
         </TouchableOpacity>
@@ -107,6 +119,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
+          <UserAvatar />
           <View style={[styles.bubble, styles.bubbleUser]}>
             <AppText size="xl" color={colors.white}>{content}</AppText>
           </View>
@@ -212,6 +225,21 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: radii.sm,
     backgroundColor: colors.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  userAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.sm,
+    backgroundColor: colors.creamDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
