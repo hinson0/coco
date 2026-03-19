@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.sm,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.sagePale,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
