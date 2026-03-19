@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# post-checkout — 在新 worktree 中自动创建 env symlink
+# 触发时机: git worktree add / git checkout
+
+set -euo pipefail
+
+# ---------- env 文件映射 ----------
+# 格式: "源文件(相对.env/):目标路径(相对worktree根)"
+ENV_MAP=(
+  "mobile.env:apps/mobile/.env"
+  "api.env.local:apps/api/.env.local"
+)
+
+# ---------- 定位主 worktree ----------
+git_common_dir="$(git rev-parse --path-format=absolute --git-common-dir)"
+# git-common-dir 返回 <主worktree>/.git，取其父目录
+main_worktree="${git_common_dir%/.git}"
+
+current_worktree="$(git rev-parse --show-toplevel)"
+
+if [ "$current_worktree" = "$main_worktree" ]; then
+  exit 0  # 主 worktree 已有 symlink，跳过
+fi
+
+env_dir="$main_worktree/.env"
+
+# ---------- 创建 symlink ----------
+for entry in "${ENV_MAP[@]}"; do
+  src_name="${entry%%:*}"
+  dest_rel="${entry#*:}"
+
+  src="$env_dir/$src_name"
+  dest="$current_worktree/$dest_rel"
+
+  if [ ! -f "$src" ]; then
+    echo "⚠ post-checkout: 源文件不存在: $src"
+    exit 0
+  fi
+
+  if [ -L "$dest" ]; then
+    continue  # 已是 symlink，跳过
+  fi
+
+  if [ -f "$dest" ]; then
+    echo "⚠ $dest_rel 正在使用手动配置，而非主 worktree 的共享配置"
+    continue
+  fi
+
+  mkdir -p "$(dirname "$dest")"
+  ln -s "$src" "$dest"
+  echo "✓ linked $dest_rel → $src"
+done
