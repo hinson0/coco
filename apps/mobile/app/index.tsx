@@ -24,6 +24,7 @@ import { useChatStore } from '../store/chatStore';
 import { useChat } from '../hooks/useChat';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useDeleteChatMessage, useClearChatMessages } from '../hooks/useDeleteChatMessage';
+import { useCategories } from '../hooks/useCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
@@ -136,6 +137,8 @@ export default function ChatScreen() {
   const { pendingMessages, isLoading: isSending } = useChatStore();
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
+  const { data: catData } = useCategories();
+  const categories = catData?.data ?? [];
   const [manualEntryVisible, setManualEntryVisible] = useState(false);
 
   // Track keyboard height and visibility
@@ -200,6 +203,7 @@ export default function ChatScreen() {
         <ChatBubble
           message={msg}
           status={pendingStatus}
+          categories={categories}
           onDelete={() => deleteMutation.mutate(msg.id)}
           onRetry={pendingStatus === 'failed' ? () => {
             const pm = msg as PendingMessage;

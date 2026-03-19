@@ -5,30 +5,26 @@ import type { Transaction } from '@coco/shared';
 
 interface RecordCardProps {
   readonly transaction: Transaction;
-  readonly status: 'pending' | 'done';
-  readonly onConfirm?: () => void;
+  readonly categoryName?: string;
   readonly onEdit?: () => void;
+  readonly onDelete?: () => void;
   readonly variant?: 'text' | 'ocr';
 }
 
-export function RecordCard({ transaction, status, onConfirm, onEdit, variant = 'text' }: RecordCardProps) {
-  const emoji = transaction.note ? '📝' : '📝';
-
+export function RecordCard({ transaction, categoryName, onEdit, onDelete, variant = 'text' }: RecordCardProps) {
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <AppText size="lg">{emoji}</AppText>
+          <AppText size="lg">✅</AppText>
           <AppText size="lg" weight="semibold" color={colors.text} style={styles.headerTitle}>
-            记账确认
+            已记账
           </AppText>
         </View>
-        {status === 'done' && (
-          <View style={styles.doneBadge}>
-            <AppText size="xs" weight="medium" color={colors.sage}>已记录</AppText>
-          </View>
-        )}
+        <View style={styles.doneBadge}>
+          <AppText size="xs" weight="medium" color={colors.sage}>已记录</AppText>
+        </View>
       </View>
 
       {/* Divider */}
@@ -43,7 +39,7 @@ export function RecordCard({ transaction, status, onConfirm, onEdit, variant = '
         </Row>
 
         <Row label="分类">
-          <AppText size="xl" color={colors.text}>{transaction.category_id}</AppText>
+          <AppText size="xl" color={colors.text}>{categoryName ?? '未知'}</AppText>
         </Row>
 
         {variant === 'text' && (
@@ -65,22 +61,20 @@ export function RecordCard({ transaction, status, onConfirm, onEdit, variant = '
       </View>
 
       {/* Footer buttons */}
-      {status === 'pending' && (
-        <View style={styles.footer}>
-          <Pressable
-            onPress={onConfirm}
-            style={({ pressed }) => [styles.confirmBtn, pressed && styles.btnPressed]}
-          >
-            <AppText size="lg" weight="semibold" color={colors.white}>确认记录</AppText>
-          </Pressable>
-          <Pressable
-            onPress={onEdit}
-            style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
-          >
-            <AppText size="lg" weight="medium" color={colors.textLight}>修改</AppText>
-          </Pressable>
-        </View>
-      )}
+      <View style={styles.footer}>
+        <Pressable
+          onPress={onEdit}
+          style={({ pressed }) => [styles.editBtn, pressed && styles.btnPressed]}
+        >
+          <AppText size="lg" weight="medium" color={colors.textLight}>修改</AppText>
+        </Pressable>
+        <Pressable
+          onPress={onDelete}
+          style={({ pressed }) => [styles.deleteBtn, pressed && styles.btnPressed]}
+        >
+          <AppText size="lg" weight="medium" color="#E74C3C">删除</AppText>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -151,14 +145,14 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
   },
-  confirmBtn: {
+  editBtn: {
     flex: 1,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.creamDark,
     borderRadius: radii.md,
     paddingVertical: spacing.lg,
     alignItems: 'center',
   },
-  editBtn: {
+  deleteBtn: {
     backgroundColor: colors.creamDark,
     borderRadius: radii.md,
     paddingVertical: spacing.lg,
