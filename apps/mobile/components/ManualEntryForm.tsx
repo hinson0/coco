@@ -30,11 +30,14 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // 边缘滑动关闭手势（左右各一个独立的 PanResponder）
+  // 关键：capture 阶段拦截 + 拒绝让出响应权，防止 ScrollView 抢走手势
   const makeEdgePan = (direction: 'left' | 'right') =>
     PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => true,
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_evt, gs) =>
-        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onMoveShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderRelease: (_evt, gs) => {
         const ok = direction === 'left'
           ? gs.dx >= SWIPE_THRESHOLD
