@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -29,7 +29,6 @@ import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
-import { ManualEntryForm } from '../components/ManualEntryForm';
 import { colors, spacing, radii, shadows } from '../constants/theme';
 import type { ChatMessage, PendingMessage, Transaction } from '@coco/shared';
 
@@ -139,8 +138,6 @@ export default function ChatScreen() {
   const clearMutation = useClearChatMessages();
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
-  const [manualEntryVisible, setManualEntryVisible] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
 
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
@@ -179,7 +176,7 @@ export default function ChatScreen() {
 
   function handleSelectTool(tool: string) {
     if (tool === '手动记账') {
-      setManualEntryVisible(true);
+      router.push('/manual-entry');
       return;
     }
     sendText(tool);
@@ -209,8 +206,7 @@ export default function ChatScreen() {
           onEditRecord={msg.content_type === 'bill_card' ? () => {
             try {
               const tx = JSON.parse(msg.content) as Transaction;
-              setEditingTransaction(tx);
-              setManualEntryVisible(true);
+              router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx) } });
             } catch { /* ignore parse errors */ }
           } : undefined}
           onRetry={pendingStatus === 'failed' ? () => {
@@ -293,14 +289,6 @@ export default function ChatScreen() {
         />
       </Animated.View>
 
-      <ManualEntryForm
-        visible={manualEntryVisible}
-        transaction={editingTransaction}
-        onClose={() => {
-          setManualEntryVisible(false);
-          setEditingTransaction(undefined);
-        }}
-      />
     </View>
   );
 }
