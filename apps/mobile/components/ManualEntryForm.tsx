@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
@@ -15,8 +13,6 @@ interface Props {
   readonly transaction?: Transaction;
 }
 
-const SWIPE_THRESHOLD = 80;
-
 export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Props) {
   const isEdit = !!transaction;
   const [amount, setAmount] = useState("");
@@ -28,35 +24,6 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const amountRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  // 水平滑动位移（跟手 + 松手判定）
-  const translateX = useSharedValue(0);
-
-  const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .failOffsetY([-15, 15])
-    .onUpdate((e) => {
-      translateX.value = e.translationX;
-    })
-    .onEnd((e) => {
-      if (Math.abs(e.translationX) >= SWIPE_THRESHOLD) {
-        translateX.value = withTiming(e.translationX > 0 ? 400 : -400, { duration: 200 });
-        runOnJS(onClose)();
-      } else {
-        translateX.value = withTiming(0, { duration: 150 });
-      }
-    });
-
-  const sheetAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  // 每次打开时重置位移
-  useEffect(() => {
-    if (visible) {
-      translateX.value = 0;
-    }
-  }, [visible, translateX]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -78,6 +45,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
       setCategoryId(transaction.category_id);
       setDate(new Date(transaction.occurred_at));
     } else if (visible && !transaction) {
+      // Reset for new entry
       setAmount("");
       setNote("");
       setType("expense");
@@ -139,13 +107,11 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     }
   };
 
-  if (!visible) return null;
-
   return (
-    <View style={styles.overlay}>
-      <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-      <GestureDetector gesture={swipeGesture}>
-        <Animated.View style={[styles.sheet, sheetAnimatedStyle]}>
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.overlay}>
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        <View style={styles.sheet}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
@@ -189,19 +155,14 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             {/* Note */}
             <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-    zIndex: 100,
-  },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
   cancel: { color: "#94a3b8", fontSize: 16 },
