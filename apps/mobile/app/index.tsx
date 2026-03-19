@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -8,6 +8,8 @@ import {
   Text,
   Keyboard,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -16,17 +18,19 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../store/chatStore';
 import { useChat } from '../hooks/useChat';
+import { useChatMessages } from '../hooks/useChatMessages';
+import { useDeleteChatMessage, useClearChatMessages } from '../hooks/useDeleteChatMessage';
+import { useCategories } from '../hooks/useCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
-import { ManualEntryForm } from '../components/ManualEntryForm';
 import { colors, spacing, radii, shadows } from '../constants/theme';
-import type { ChatMessage } from '@coco/shared';
+import type { ChatMessage, PendingMessage, Transaction } from '@coco/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,9 +57,6 @@ function buildListItems(
   messages: readonly ChatMessage[],
   isLoading: boolean,
 ): ListItem[] {
-  // FlatList is inverted, so items are rendered bottom→top.
-  // We build the list in chronological order then reverse it so the
-  // inverted FlatList displays them newest at bottom.
   const items: ListItem[] = [];
   let lastDateLabel = '';
 
@@ -72,7 +73,6 @@ function buildListItems(
     items.push({ type: 'typing', id: 'typing-indicator' });
   }
 
-  // Reverse for the inverted FlatList
   return items.reverse();
 }
 
@@ -131,10 +131,16 @@ function DateSeparator({ label }: { label: string }) {
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
-  const { messages, isLoading, addMessage } = useChatStore();
-  const { sendText, sendOcr: _sendOcr, sendAsr: _sendAsr } = useChat();
-  const hasInitialized = useRef(false);
-  const [manualEntryVisible, setManualEntryVisible] = useState(false);
+  const { sendText, sendOcr, sendAsr } = useChat();
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useChatMessages();
+  const { pendingMessages, isLoading: isSending } = useChatStore();
+  const deleteMutation = useDeleteChatMessage();
+  const clearMutation = useClearChatMessages();
+  const { data: catData } = useCategories();
+  const categories = catData?.data ?? [];
+
+  // Refetch chat messages when screen regains focus (e.g. after manual-entry)
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
@@ -154,21 +160,26 @@ export default function ChatScreen() {
     paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
 
-  // Add welcome message once on mount if messages are empty
-  useEffect(() => {
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      if (messages.length === 0) {
-        addMessage(WELCOME_MESSAGE);
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Merge server messages with pending messages
+  const serverMessages: ChatMessage[] =
+    data?.pages.flatMap((p) => p.data).reverse() ?? [];
+  const total = data?.pages[0]?.total ?? 0;
 
-  const listItems = buildListItems(messages, isLoading);
+  const allMessages: readonly ChatMessage[] = [
+    ...serverMessages,
+    ...pendingMessages,
+  ];
+
+  const listItems = buildListItems(allMessages, isSending);
+
+  // Show welcome message only when no messages and no pending
+  if (total === 0 && pendingMessages.length === 0) {
+    listItems.push({ type: 'message', data: WELCOME_MESSAGE });
+  }
 
   function handleSelectTool(tool: string) {
     if (tool === '手动记账') {
-      setManualEntryVisible(true);
+      router.push('/manual-entry');
       return;
     }
     sendText(tool);
@@ -185,9 +196,30 @@ export default function ChatScreen() {
         </View>
       );
     }
+    const msg = item.data;
+    const pendingStatus = 'status' in msg ? (msg as PendingMessage).status : undefined;
+
     return (
       <View style={styles.bubbleWrapper}>
-        <ChatBubble message={item.data} />
+        <ChatBubble
+          message={msg}
+          status={pendingStatus}
+          categories={categories}
+          onDelete={() => deleteMutation.mutate(msg.id)}
+          onEditRecord={msg.content_type === 'bill_card' ? () => {
+            try {
+              const tx = JSON.parse(msg.content) as Transaction;
+              router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx) } });
+            } catch { /* ignore parse errors */ }
+          } : undefined}
+          onRetry={pendingStatus === 'failed' ? () => {
+            const pm = msg as PendingMessage;
+            useChatStore.getState().removePending(pm.clientId);
+            if (pm.content_type === 'text') sendText(pm.content);
+            else if (pm.content_type === 'image') sendOcr(pm.content);
+            else if (pm.content_type === 'audio') sendAsr(pm.content);
+          } : undefined}
+        />
       </View>
     );
   }
@@ -211,7 +243,16 @@ export default function ChatScreen() {
           <Text style={styles.titleText}>棉花助手</Text>
         </View>
 
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.75}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          activeOpacity={0.75}
+          onPress={() => {
+            Alert.alert("清空聊天记录", "确定要删除所有聊天记录吗？此操作不可恢复。", [
+              { text: "取消", style: "cancel" },
+              { text: "清空", style: "destructive", onPress: () => clearMutation.mutate() },
+            ]);
+          }}
+        >
           <Text style={styles.moreIcon}>···</Text>
         </TouchableOpacity>
       </View>
@@ -225,6 +266,19 @@ export default function ChatScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator size="small" color={colors.sage} />
+            </View>
+          ) : null
+        }
       />
 
       {/* ── Bottom panel ── */}
@@ -238,10 +292,6 @@ export default function ChatScreen() {
         />
       </Animated.View>
 
-      <ManualEntryForm
-        visible={manualEntryVisible}
-        onClose={() => setManualEntryVisible(false)}
-      />
     </View>
   );
 }
@@ -307,7 +357,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   bubbleWrapper: {
-    // no additional wrapper styles needed; ChatBubble handles alignment
+    // no additional wrapper styles needed
   },
   typingWrapper: {
     paddingVertical: spacing.sm,
@@ -328,5 +378,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.creamDark,
+  },
+
+  // Loading more indicator
+  loadingMore: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
 });
