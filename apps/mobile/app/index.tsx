@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../store/chatStore';
 import { useChat } from '../hooks/useChat';
@@ -132,12 +132,15 @@ function DateSeparator({ label }: { label: string }) {
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr } = useChat();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useChatMessages();
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useChatMessages();
   const { pendingMessages, isLoading: isSending } = useChatStore();
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
+
+  // Refetch chat messages when screen regains focus (e.g. after manual-entry)
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
