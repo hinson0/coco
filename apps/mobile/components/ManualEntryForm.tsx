@@ -4,14 +4,17 @@ import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
 import { useCategories } from "../hooks/useCategories";
+import type { Transaction } from "@coco/shared";
 
 interface Props {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly onSuccess?: (tx: any) => void;
+  readonly transaction?: Transaction;
 }
 
-export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
+export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Props) {
+  const isEdit = !!transaction;
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -33,11 +36,33 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
 
   const DEFAULT_NAMES: Record<string, string> = { expense: '购物', income: '工资' };
 
+  // Pre-fill form when editing
   useEffect(() => {
-    const defaultName = DEFAULT_NAMES[type];
-    const match = categories.find((c: any) => c.type === type && c.name === defaultName);
-    if (match) setCategoryId(match.id);
-  }, [type, categories]);
+    if (visible && transaction) {
+      setAmount(String(transaction.amount));
+      setNote(transaction.note || "");
+      setType(transaction.type);
+      setCategoryId(transaction.category_id);
+      setDate(new Date(transaction.occurred_at));
+    } else if (visible && !transaction) {
+      // Reset for new entry
+      setAmount("");
+      setNote("");
+      setType("expense");
+      setDate(new Date());
+      const defaultName = DEFAULT_NAMES["expense"];
+      const match = categories.find((c: any) => c.type === "expense" && c.name === defaultName);
+      if (match) setCategoryId(match.id);
+    }
+  }, [visible, transaction]);
+
+  useEffect(() => {
+    if (!isEdit) {
+      const defaultName = DEFAULT_NAMES[type];
+      const match = categories.find((c: any) => c.type === type && c.name === defaultName);
+      if (match) setCategoryId(match.id);
+    }
+  }, [type, categories, isEdit]);
 
   useEffect(() => {
     if (visible) {
@@ -59,20 +84,24 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
 
     setSubmitting(true);
     try {
-      const resp = await apiFetch<any>("/api/record/manual", {
-        method: "POST",
-        body: JSON.stringify({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId }),
-      });
+      const payload = { amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId };
+      const resp = isEdit
+        ? await apiFetch<any>(`/api/transactions/${transaction.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await apiFetch<any>("/api/record/manual", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       if (resp.success) {
         qc.invalidateQueries({ queryKey: ["transactions"] });
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
         onSuccess?.(resp.data);
         onClose();
-        setAmount("");
-        setNote("");
-        setCategoryId(null);
       }
     } catch {
-      Alert.alert("提交失败", "请重试");
+      Alert.alert(isEdit ? "修改失败" : "提交失败", "请重试");
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +116,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>手动记账</Text>
+            <Text style={styles.title}>{isEdit ? "修改记账" : "手动记账"}</Text>
             <TouchableOpacity onPress={handleSubmit} disabled={submitting}>
               <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
             </TouchableOpacity>

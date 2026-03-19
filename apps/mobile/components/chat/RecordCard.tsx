@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, radii, spacing } from '../../constants/theme';
 import type { Transaction } from '@coco/shared';
@@ -69,7 +69,12 @@ export function RecordCard({ transaction, categoryName, onEdit, onDelete, varian
           <AppText size="lg" weight="medium" color={colors.textLight}>修改</AppText>
         </Pressable>
         <Pressable
-          onPress={onDelete}
+          onPress={() => {
+            Alert.alert("删除记录", "确定要删除这笔记账吗？", [
+              { text: "取消", style: "cancel" },
+              { text: "删除", style: "destructive", onPress: onDelete },
+            ]);
+          }}
           style={({ pressed }) => [styles.deleteBtn, pressed && styles.btnPressed]}
         >
           <AppText size="lg" weight="medium" color="#E74C3C">删除</AppText>
