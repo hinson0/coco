@@ -29,24 +29,21 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // 边缘滑动关闭手势
-  const panResponder = useMemo(() =>
+  // 边缘滑动关闭手势（左右各一个独立的 PanResponder）
+  const makeEdgePan = (direction: 'left' | 'right') =>
     PanResponder.create({
-      onStartShouldSetPanResponder: (_evt, _gestureState) => false,
-      onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        const startX = (gestureState.moveX ?? 0) - (gestureState.dx ?? 0);
-        const isFromLeftEdge = startX <= EDGE_ZONE;
-        const isFromRightEdge = startX >= SCREEN_WIDTH - EDGE_ZONE;
-        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5;
-        return (isFromLeftEdge || isFromRightEdge) && isHorizontal;
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_evt, gs) =>
+        Math.abs(gs.dx) > 10 && Math.abs(gs.dx) > Math.abs(gs.dy),
+      onPanResponderRelease: (_evt, gs) => {
+        const ok = direction === 'left'
+          ? gs.dx >= SWIPE_THRESHOLD
+          : gs.dx <= -SWIPE_THRESHOLD;
+        if (ok) onClose();
       },
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (Math.abs(gestureState.dx) >= SWIPE_THRESHOLD) {
-          onClose();
-        }
-      },
-    }),
-  [onClose]);
+    });
+  const leftEdgePan = useMemo(() => makeEdgePan('left'), [onClose]);
+  const rightEdgePan = useMemo(() => makeEdgePan('right'), [onClose]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -134,7 +131,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet} {...panResponder.panHandlers}>
+        <View style={styles.sheet}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
@@ -178,6 +175,9 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             {/* Note */}
             <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
+          {/* 左右边缘滑动关闭触摸区 */}
+          <View style={styles.edgeLeft} {...leftEdgePan.panHandlers} />
+          <View style={styles.edgeRight} {...rightEdgePan.panHandlers} />
         </View>
       </View>
     </Modal>
@@ -186,7 +186,9 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
+  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%", position: "relative" as const },
+  edgeLeft: { position: "absolute" as const, left: 0, top: 0, bottom: 0, width: EDGE_ZONE, zIndex: 10 },
+  edgeRight: { position: "absolute" as const, right: 0, top: 0, bottom: 0, width: EDGE_ZONE, zIndex: 10 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
   cancel: { color: "#94a3b8", fontSize: 16 },
   title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
