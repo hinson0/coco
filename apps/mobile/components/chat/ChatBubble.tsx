@@ -106,9 +106,8 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
         parsedTransaction = undefined;
       }
     }
-    const variant = parsedTransaction?.source === 'ocr' ? 'ocr' : 'text';
-    const categoryName = parsedTransaction && categories
-      ? categories.find((c) => c.id === parsedTransaction.category_id)?.name
+    const matchedCategory = parsedTransaction && categories
+      ? categories.find((c) => c.id === parsedTransaction.category_id)
       : undefined;
 
     return (
@@ -119,19 +118,19 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
-          <View style={[styles.bubble, styles.bubbleAssistant]}>
-            {parsedTransaction ? (
-              <RecordCard
-                transaction={parsedTransaction}
-                categoryName={categoryName}
-                onEdit={onEditRecord}
-                onDelete={onDelete}
-                variant={variant}
-              />
-            ) : (
+          {parsedTransaction ? (
+            <RecordCard
+              transaction={parsedTransaction}
+              categoryName={matchedCategory?.name}
+              categoryIcon={matchedCategory?.icon}
+              onEdit={onEditRecord}
+              onDelete={onDelete}
+            />
+          ) : (
+            <View style={[styles.bubble, styles.bubbleAssistant]}>
               <AppText size="xl" color={colors.text}>{content}</AppText>
-            )}
-          </View>
+            </View>
+          )}
           <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
         </TouchableOpacity>
       </View>
