@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, radii, spacing, shadows } from '../../constants/theme';
 import type { ChatMessage, Transaction } from '@coco/shared';
@@ -8,6 +8,9 @@ import { RecordCard } from './RecordCard';
 
 interface ChatBubbleProps {
   readonly message: ChatMessage;
+  readonly status?: 'pending' | 'failed';
+  readonly onDelete?: () => void;
+  readonly onRetry?: () => void;
   readonly transaction?: Transaction;
   readonly onConfirmRecord?: () => void;
   readonly onEditRecord?: () => void;
@@ -32,22 +35,47 @@ function AiAvatar() {
   );
 }
 
-export function ChatBubble({ message, transaction, onConfirmRecord, onEditRecord }: ChatBubbleProps) {
+function handleLongPress(onDelete?: () => void) {
+  if (!onDelete) return;
+  Alert.alert("消息操作", "", [
+    { text: "删除", style: "destructive", onPress: onDelete },
+    { text: "取消", style: "cancel" },
+  ]);
+}
+
+function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
+  return (
+    <TouchableOpacity onPress={onRetry} style={styles.failedIcon}>
+      <AppText size="base" color="#E74C3C">⚠</AppText>
+    </TouchableOpacity>
+  );
+}
+
+export function ChatBubble({ message, status, onDelete, onRetry, transaction, onConfirmRecord, onEditRecord }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
+  const isPending = status === 'pending';
+  const isFailed = status === 'failed';
 
   // User audio
   if (isUser && content_type === 'audio') {
     return (
-      <View style={styles.userWrapper}>
-        <VoiceBubble
-          role="user"
-          duration={parseInt(content, 10) || 0}
-          isPlaying={false}
-          onPlay={() => {}}
-        />
-        <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+      <View style={[styles.failedRow, isPending && styles.pendingOpacity]}>
+        {isFailed && <FailedIndicator onRetry={onRetry} />}
+        <TouchableOpacity
+          style={styles.userWrapper}
+          activeOpacity={0.75}
+          onLongPress={() => handleLongPress(onDelete)}
+        >
+          <VoiceBubble
+            role="user"
+            duration={parseInt(content, 10) || 0}
+            isPlaying={false}
+            onPlay={() => {}}
+          />
+          <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -55,9 +83,16 @@ export function ChatBubble({ message, transaction, onConfirmRecord, onEditRecord
   // User image (OCR)
   if (isUser && content_type === 'image') {
     return (
-      <View style={styles.userWrapper}>
-        <OcrBubble imageUri={content || undefined} />
-        <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+      <View style={[styles.failedRow, isPending && styles.pendingOpacity]}>
+        {isFailed && <FailedIndicator onRetry={onRetry} />}
+        <TouchableOpacity
+          style={styles.userWrapper}
+          activeOpacity={0.75}
+          onLongPress={() => handleLongPress(onDelete)}
+        >
+          <OcrBubble imageUri={content || undefined} />
+          <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -65,11 +100,18 @@ export function ChatBubble({ message, transaction, onConfirmRecord, onEditRecord
   // User text
   if (isUser && content_type === 'text') {
     return (
-      <View style={styles.userWrapper}>
-        <View style={[styles.bubble, styles.bubbleUser]}>
-          <AppText size="xl" color={colors.white}>{content}</AppText>
-        </View>
-        <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+      <View style={[styles.failedRow, isPending && styles.pendingOpacity]}>
+        {isFailed && <FailedIndicator onRetry={onRetry} />}
+        <TouchableOpacity
+          style={styles.userWrapper}
+          activeOpacity={0.75}
+          onLongPress={() => handleLongPress(onDelete)}
+        >
+          <View style={[styles.bubble, styles.bubbleUser]}>
+            <AppText size="xl" color={colors.white}>{content}</AppText>
+          </View>
+          <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -87,7 +129,11 @@ export function ChatBubble({ message, transaction, onConfirmRecord, onEditRecord
     const variant = parsedTransaction?.source === 'ocr' ? 'ocr' : 'text';
 
     return (
-      <View style={styles.assistantWrapper}>
+      <TouchableOpacity
+        style={styles.assistantWrapper}
+        activeOpacity={0.75}
+        onLongPress={() => handleLongPress(onDelete)}
+      >
         <AiAvatar />
         <View style={[styles.bubble, styles.bubbleAssistant]}>
           {parsedTransaction ? (
@@ -103,33 +149,41 @@ export function ChatBubble({ message, transaction, onConfirmRecord, onEditRecord
           )}
         </View>
         <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
-      </View>
+      </TouchableOpacity>
     );
   }
 
   // Assistant text / nl_result
   if (!isUser && (content_type === 'text' || content_type === 'nl_result')) {
     return (
-      <View style={styles.assistantWrapper}>
+      <TouchableOpacity
+        style={styles.assistantWrapper}
+        activeOpacity={0.75}
+        onLongPress={() => handleLongPress(onDelete)}
+      >
         <AiAvatar />
         <View style={[styles.bubble, styles.bubbleAssistant]}>
           <AppText size="xl" color={colors.text}>{content}</AppText>
         </View>
         <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
-      </View>
+      </TouchableOpacity>
     );
   }
 
   // Fallback
   return (
-    <View style={isUser ? styles.userWrapper : styles.assistantWrapper}>
+    <TouchableOpacity
+      style={isUser ? styles.userWrapper : styles.assistantWrapper}
+      activeOpacity={0.75}
+      onLongPress={() => handleLongPress(onDelete)}
+    >
       <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
         <AppText size="xl" color={isUser ? colors.white : colors.text}>{content}</AppText>
       </View>
       <AppText size="sm" color={colors.textLighter} style={isUser ? styles.timeRight : styles.timeLeft}>
         {time}
       </AppText>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -179,5 +233,17 @@ const styles = StyleSheet.create({
   timeRight: {
     marginTop: spacing.xs,
     paddingRight: spacing.xs,
+  },
+  failedIcon: {
+    marginHorizontal: spacing.xs,
+    justifyContent: 'center',
+  },
+  failedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+  },
+  pendingOpacity: {
+    opacity: 0.6,
   },
 });
