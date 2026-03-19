@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useCategories } from "../hooks/useCategories";
 
 const EXPENSE_ORDER = ['购物', '餐饮', '交通', '娱乐', '居住', '医疗', '教育', '其他支出'];
@@ -22,31 +22,40 @@ export function CategoryPicker({ selectedId, onSelect, type }: Props) {
     });
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>选择分类</Text>
-      <ScrollView horizontal={false} contentContainerStyle={styles.grid}>
-        {categories.map((cat: any) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[styles.item, selectedId === cat.id && styles.itemActive]}
-            onPress={() => onSelect(cat.id)}
-          >
-            <Text style={styles.icon}>{cat.icon}</Text>
-            <Text style={[styles.name, selectedId === cat.id && styles.nameActive]}>{cat.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}
+      style={styles.container}
+    >
+      {categories.map((cat: any) => (
+        <TouchableOpacity
+          key={cat.id}
+          style={[styles.item, selectedId === cat.id && styles.itemActive]}
+          onPress={() => onSelect(cat.id)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.icon}>{cat.icon}</Text>
+          <Text style={[styles.name, selectedId === cat.id && styles.nameActive]}>{cat.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { marginTop: 16 },
-  label: { color: "#94a3b8", fontSize: 12, marginBottom: 8 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  item: { width: "22%", alignItems: "center", padding: 10, borderRadius: 12, backgroundColor: "#F0F2F5" },
+  row: { flexDirection: "row", gap: 10, paddingVertical: 4 },
+  item: {
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#F0F2F5",
+    minWidth: 64,
+  },
   itemActive: { backgroundColor: "#2D9B83" },
-  icon: { fontSize: 24, marginBottom: 4 },
-  name: { color: "#64748b", fontSize: 10 },
+  icon: { fontSize: 22, marginBottom: 4 },
+  name: { color: "#64748b", fontSize: 11 },
   nameActive: { color: "#fff" },
 });
