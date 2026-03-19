@@ -89,9 +89,10 @@ export default function ManualEntryScreen() {
             body: JSON.stringify(payload),
           });
       if (resp.success) {
+        // Navigate back immediately for snappy UX, invalidate in background
+        router.back();
         qc.invalidateQueries({ queryKey: ["transactions"] });
         qc.invalidateQueries({ queryKey: ["chat-messages"] });
-        router.back();
       }
     } catch {
       Alert.alert(isEdit ? "修改失败" : "提交失败", "请重试");
