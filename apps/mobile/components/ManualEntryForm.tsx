@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard, PanResponder, Dimensions } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 import { apiFetch } from "../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
@@ -13,9 +15,7 @@ interface Props {
   readonly transaction?: Transaction;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const EDGE_ZONE = 30;        // 距离屏幕边缘 30px 以内算边缘触摸
-const SWIPE_THRESHOLD = 80;  // 水平滑动超过 80px 触发关闭
+const SWIPE_THRESHOLD = 80;
 
 export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Props) {
   const isEdit = !!transaction;
@@ -29,24 +29,15 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // 边缘滑动关闭手势（左右各一个独立的 PanResponder）
-  // 关键：capture 阶段拦截 + 拒绝让出响应权，防止 ScrollView 抢走手势
-  const makeEdgePan = (direction: 'left' | 'right') =>
-    PanResponder.create({
-      onStartShouldSetPanResponderCapture: () => true,
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderRelease: (_evt, gs) => {
-        const ok = direction === 'left'
-          ? gs.dx >= SWIPE_THRESHOLD
-          : gs.dx <= -SWIPE_THRESHOLD;
-        if (ok) onClose();
-      },
+  // 水平滑动关闭手势（原生手势系统，不被 Modal/ScrollView 干扰）
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-10, 10])
+    .onEnd((e) => {
+      if (Math.abs(e.translationX) >= SWIPE_THRESHOLD) {
+        runOnJS(onClose)();
+      }
     });
-  const leftEdgePan = useMemo(() => makeEdgePan('left'), [onClose]);
-  const rightEdgePan = useMemo(() => makeEdgePan('right'), [onClose]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -134,6 +125,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        <GestureDetector gesture={swipeGesture}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
@@ -178,10 +170,8 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             {/* Note */}
             <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
           </ScrollView>
-          {/* 左右边缘滑动关闭触摸区 */}
-          <View style={styles.edgeLeft} {...leftEdgePan.panHandlers} />
-          <View style={styles.edgeRight} {...rightEdgePan.panHandlers} />
         </View>
+        </GestureDetector>
       </View>
     </Modal>
   );
@@ -189,9 +179,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%", position: "relative" as const },
-  edgeLeft: { position: "absolute" as const, left: 0, top: 0, bottom: 0, width: EDGE_ZONE, zIndex: 10 },
-  edgeRight: { position: "absolute" as const, right: 0, top: 0, bottom: 0, width: EDGE_ZONE, zIndex: 10 },
+  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
   cancel: { color: "#94a3b8", fontSize: 16 },
   title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
