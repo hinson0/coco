@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtn: {
+    flex: 1,
     backgroundColor: colors.creamDark,
     borderRadius: radii.md,
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
     alignItems: 'center',
   },
   btnPressed: {
