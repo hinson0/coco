@@ -47,9 +47,11 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "@types/uuid": "^11.0.0",
+    "better-sqlite3": "^12.8.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.6",
     "typescript": "~5.9.2"
@@ -59,7 +61,9 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",
-      "^@coco/shared$": "<rootDir>/../../packages/shared/src"
+      "^@coco/shared$": "<rootDir>/../../packages/shared/src",
+      "^expo-sqlite$": "<rootDir>/__mocks__/expo-sqlite.ts",
+      "^uuid$": "<rootDir>/__mocks__/uuid.js"
     }
   },
   "private": true
