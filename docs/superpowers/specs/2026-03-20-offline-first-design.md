@@ -14,13 +14,16 @@
 | 决策点 | 结论 | 备选项 |
 |--------|------|--------|
 | 核心痛点 | 操作即时响应，不等 API 往返 | — |
-| 离线写入范围 | 创建交易 + 删除交易 | 全部 CRUD / 仅创建 |
+| 离线写入范围 | 创建 + 编辑 + 删除交易 | 仅创建+删除 / 全部 CRUD |
 | 冲突策略 | Last Write Wins（客户端赢） | 服务端赢 / 用户选择 |
 | 同步链路 | 保持现有 BFF，客户端加操作队列 | 绕过 BFF 直连 Supabase |
 | 本地存储 | expo-sqlite | AsyncStorage / MMKV |
 | GLM 场景 | BFF 原样处理（解析+写库一步完成） | 拆分为解析和写库两步 |
 | 离线+规则失败 | 引导手动填写 | 存入待处理队列联网后走 GLM |
 | 规则管理 | 内置固定规则 | 用户自定义 / 服务端下发 |
+| source 字段 | 规则引擎使用 `rule`，手动使用 `manual` | 统一 manual |
+| 聊天消息 | 客户端乐观插入 + BFF skip_chat | 延迟到同步后 |
+| BFF 改动 | 两处小改动（source 透传 + skip_chat） | 零改动 |
 
 ## 3. 整体架构
 
@@ -40,7 +43,7 @@
 │       ↓ (写入)                                        │
 │  ┌────────────────────────────────────────────┐       │
 │  │ Operation Queue (expo-sqlite)               │       │
-│  │  - 存储待同步操作 (create/delete)            │       │
+│  │  - 存储待同步操作 (create/update/delete)     │       │
 │  │  - app 启动时检查 & 恢复                     │       │
 │  │  - 联网时自动重放到 BFF API                  │       │
 │  └────────────────────────────────────────────┘       │
@@ -56,7 +59,7 @@
 - React Query 仍然是 UI 的数据源，不改变现有读取逻辑
 - Operation Queue 是写入的中间层，所有本地写操作先进队列
 - Rule Engine 是 BFF 的前置拦截器，能本地解决的不走网络
-- BFF 零改动，队列重放的就是现有 API 请求
+- BFF 两处小改动: source 透传 + skip_chat 参数
 
 ## 4. 写入路径分类
 
@@ -69,6 +72,7 @@
 | ASR（云端转文字 → 规则未命中） | BFF (GLM + 写库) | BFF 原样 |
 | OCR（云端识别 → 规则命中） | 本地 → 队列 → 后台同步 | 客户端队列 |
 | OCR（云端识别 → 规则未命中） | BFF (GLM + 写库) | BFF 原样 |
+| 编辑交易 | 本地 → 队列 → 后台同步 | 客户端队列 |
 | 删除交易 | 本地 → 队列 → 后台同步 | 客户端队列 |
 
 ## 5. 前置依赖
@@ -87,7 +91,7 @@ expo-sqlite          -- 本地 SQLite 数据库（Expo SDK 55 内置，无需 na
 ```sql
 CREATE TABLE IF NOT EXISTS operation_queue (
   id          TEXT PRIMARY KEY,        -- UUID
-  type        TEXT NOT NULL,           -- 'create_transaction' | 'delete_transaction'
+  type        TEXT NOT NULL,           -- 'create_transaction' | 'update_transaction' | 'delete_transaction'
   payload     TEXT NOT NULL,           -- JSON: API 请求体
   status      TEXT DEFAULT 'pending',  -- 'pending' | 'syncing' | 'failed'
   retries     INTEGER DEFAULT 0,
@@ -104,6 +108,11 @@ CREATE TABLE IF NOT EXISTS operation_queue (
 2. 写入队列: `{ type: 'create_transaction', payload: { amount, category_id, note, ... } }`
 3. React Query 乐观更新: 用临时 ID 插入缓存
 4. UI 立刻显示
+
+**编辑交易**:
+1. 入队: `{ type: 'update_transaction', payload: { id, amount?, category_id?, note?, type?, occurred_at? } }`
+2. React Query 乐观更新: 修改缓存中该交易的字段
+3. UI 立刻反映修改
 
 **删除交易**:
 1. 检查队列中该 ID 的 create 操作状态:
@@ -123,16 +132,33 @@ CREATE TABLE IF NOT EXISTS operation_queue (
 | 删除 syncing 的记录 | 入队 delete 并标记依赖，等 create 同步完成后执行 |
 | 网络超时后重试 create | 可能导致重复交易（已知限制，BFF 零改动约束下可接受；未来可加幂等 key） |
 
-### 6.4 聊天消息与队列同步的交互
+### 6.4 聊天消息即时显示
 
-**问题**: BFF `POST /api/record/manual` 会插入 2 条 `chat_messages`（用户消息 + 账单卡片）作为副作用。如果客户端在入队时也乐观插入了聊天消息，同步重放时 BFF 会再插一次，导致重复。
+**需求**: 用户发送文字/手动记账后，聊天记录必须**立刻**显示对应的消息和账单卡片，不能等待同步。
 
-**方案**: 客户端入队时**不插入聊天消息到 Zustand**。仅做 React Query 乐观更新（交易列表）。同步完成后 BFF 自然写入 chat_messages，客户端通过 `invalidateQueries(['chat-messages'])` 刷新聊天列表。
+**问题**: BFF `POST /api/record/manual` 会插入 2 条 `chat_messages`（用户消息 + 账单卡片）作为副作用。如果客户端也乐观插入了聊天消息，同步重放时 BFF 会再插一次，导致重复。
 
-用户体验影响:
-- 手动记账/规则命中 → 交易列表立刻出现新记录 ✅
-- 聊天界面 → 同步完成后才出现对应的聊天消息（延迟数秒到数分钟）
-- 可接受的折中: 用户关心的是"记账成功了没有"，不是"聊天记录是否立刻显示"
+**方案**: 客户端乐观插入 + BFF 加 `skip_chat` 参数
+
+1. 客户端入队时**立刻插入聊天消息到 Zustand**（用户消息 + 账单卡片），UI 即时反映
+2. 队列同步时，向 BFF 传递 `skip_chat: true` 参数
+3. BFF 收到 `skip_chat: true` 时，只写交易记录，**不写 chat_messages**
+4. 这样聊天消息只由客户端产生，不会重复
+
+**BFF 改动** (`apps/api/src/app/api/record/manual/route.ts`):
+```
+// 现有:
+await supabase.from("chat_messages").insert([...]);
+
+// 改为:
+if (!body.skip_chat) {
+  await supabase.from("chat_messages").insert([...]);
+}
+```
+
+**ASR/OCR/GLM 场景**: 这些仍走 BFF 原有流程（不传 skip_chat），BFF 正常写聊天消息。用户可以等待这些场景的网络响应。
+
+**TODO**: 后续采用流式对话方式优化 ASR/OCR/GLM 场景的等待体验。
 
 ## 7. Rule Engine（规则引擎）
 
@@ -174,7 +200,26 @@ Step 4: 生成备注
 
 ### 7.4 source 字段说明
 
-规则引擎解析的文字记账通过 `POST /api/record/manual` 入库，BFF 硬编码 `source: "manual"`。这意味着规则解析的记录与手动记账在数据库中无法区分。这是"BFF 零改动"约束下的已知折中。
+客户端在 payload 中传入 `source` 字段，BFF 透传到数据库：
+
+| 来源 | source 值 |
+|------|-----------|
+| 手动记账 | `manual` |
+| 规则引擎解析 | `rule` |
+| GLM 文字解析 | `text`（BFF 原有） |
+| OCR | `ocr`（BFF 原有） |
+| ASR | `asr`（BFF 原有） |
+
+**BFF 改动** (`apps/api/src/app/api/record/manual/route.ts`):
+```
+// 现有:
+{ ...body, user_id: auth.userId, source: "manual" }
+
+// 改为:
+{ ...body, user_id: auth.userId, source: body.source ?? "manual" }
+```
+
+**Supabase schema 改动**: `source` 字段的 CHECK 约束需新增 `'rule'` 值（如有约束）。
 
 ## 8. SyncManager（同步管理器）
 
@@ -203,9 +248,11 @@ sync():
     queue.markSyncing(op.id)
     try:
       if op.type === 'create_transaction':
-        response = POST /api/record/manual (op.payload)
+        response = POST /api/record/manual (op.payload + { skip_chat: true })
         → 用真实 ID 替换 React Query 缓存中的临时 ID
-        → 更新依赖此操作的 delete 的 payload.id 为真实 ID
+        → 更新依赖此操作的 delete/update 的 payload.id 为真实 ID
+      if op.type === 'update_transaction':
+        PATCH /api/transactions/{op.payload.id} (op.payload)
       if op.type === 'delete_transaction':
         DELETE /api/transactions/{op.payload.id}
       queue.remove(op.id)
@@ -292,11 +339,16 @@ apps/mobile/src/hooks/
   └── useOfflineQueue.ts    -- 队列操作 Hook        TODO (human)
 ```
 
-## 12. 不改动的部分
+## 12. BFF 改动清单（最小化）
 
-- `apps/api/` — BFF 零改动
-- `packages/` — shared/ai 包不变
-- `supabase/` — 数据库 schema 不变
+仅改动 `apps/api/src/app/api/record/manual/route.ts`:
+
+1. **source 透传**: `source: body.source ?? "manual"`（不再硬编码）
+2. **skip_chat 参数**: `if (!body.skip_chat) { await supabase.from("chat_messages").insert([...]); }`
+
+其余不变:
+- `packages/` — shared/ai 包不变（需在 shared types 中新增 `source: "rule"` 类型）
+- `supabase/` — 如有 source CHECK 约束需新增 `'rule'`
 - React Query 读取逻辑不变
 - AsyncStorage 持久化不变
 
@@ -304,10 +356,8 @@ apps/mobile/src/hooks/
 
 | 限制 | 说明 | 影响 |
 |------|------|------|
-| 编辑交易仍需联网 | 离线写入范围仅限创建+删除 | 用户离线时无法修改已有交易 |
 | create 重试可能产生重复 | 网络超时后重试，BFF 无幂等检查 | 极低概率；未来可通过幂等 key 解决 |
-| 规则解析的记录 source 为 "manual" | BFF 硬编码 source 字段 | 统计分析中无法区分手动和规则解析 |
-| 聊天消息延迟 | 队列记录同步前不产生聊天消息 | 聊天界面延迟数秒才出现对应消息 |
+| ASR/OCR/GLM 仍需等待 | 这些场景需要云端处理 | TODO: 后续引入流式对话优化等待体验 |
 
 ## 14. TODO (human) 标注说明
 
