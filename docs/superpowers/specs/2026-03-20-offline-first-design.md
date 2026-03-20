@@ -71,7 +71,16 @@
 | OCR（云端识别 → 规则未命中） | BFF (GLM + 写库) | BFF 原样 |
 | 删除交易 | 本地 → 队列 → 后台同步 | 客户端队列 |
 
-## 5. Operation Queue（操作队列）
+## 5. 前置依赖
+
+新增以下依赖到 `apps/mobile/package.json`:
+
+```
+expo-sqlite          -- 本地 SQLite 数据库（Expo SDK 55 内置，无需 native rebuild）
+@react-native-community/netinfo  -- 网络状态监听
+```
+
+## 6. Operation Queue（操作队列）
 
 ### 5.1 SQLite 表结构
 
@@ -96,23 +105,37 @@ CREATE TABLE IF NOT EXISTS operation_queue (
 4. UI 立刻显示
 
 **删除交易**:
-1. 检查队列中是否有该 ID 的 create 操作（未同步的新记录）
-   - 有 → 直接移除该 create 操作，不入队 delete
-   - 没有 → 入队: `{ type: 'delete_transaction', payload: { id } }`
+1. 检查队列中该 ID 的 create 操作状态:
+   - `status='pending'` → 直接移除该 create 操作，不入队 delete
+   - `status='syncing'` → 等待同步完成后再执行删除（入队一个 delete，标记 `depends_on` 为该 create 的 id）
+   - 不存在（已同步过）→ 正常入队: `{ type: 'delete_transaction', payload: { id } }`
 2. React Query 乐观移除
 3. UI 立刻消失
 
-### 5.3 边界处理
+### 6.3 边界处理
 
 | 场景 | 处理方式 |
 |------|---------|
 | 同步中 app 被杀 | `status='syncing'` 启动时回退为 `pending` |
 | 重试 3 次仍失败 | 标记 `status='failed'`，UI 提示用户 |
-| 删除未同步的记录 | 直接移除 create 操作，不发 delete |
+| 删除 pending 的记录 | 直接移除 create 操作，不发 delete |
+| 删除 syncing 的记录 | 入队 delete 并标记依赖，等 create 同步完成后执行 |
+| 网络超时后重试 create | 可能导致重复交易（已知限制，BFF 零改动约束下可接受；未来可加幂等 key） |
 
-## 6. Rule Engine（规则引擎）
+### 6.4 聊天消息与队列同步的交互
 
-### 6.1 接口
+**问题**: BFF `POST /api/record/manual` 会插入 2 条 `chat_messages`（用户消息 + 账单卡片）作为副作用。如果客户端在入队时也乐观插入了聊天消息，同步重放时 BFF 会再插一次，导致重复。
+
+**方案**: 客户端入队时**不插入聊天消息到 Zustand**。仅做 React Query 乐观更新（交易列表）。同步完成后 BFF 自然写入 chat_messages，客户端通过 `invalidateQueries(['chat-messages'])` 刷新聊天列表。
+
+用户体验影响:
+- 手动记账/规则命中 → 交易列表立刻出现新记录 ✅
+- 聊天界面 → 同步完成后才出现对应的聊天消息（延迟数秒到数分钟）
+- 可接受的折中: 用户关心的是"记账成功了没有"，不是"聊天记录是否立刻显示"
+
+## 7. Rule Engine（规则引擎）
+
+### 7.1 接口
 
 ```typescript
 interface ParseResult {
@@ -120,13 +143,12 @@ interface ParseResult {
   type: 'expense' | 'income'
   categoryName: string
   note: string
-  confidence: number     // 固定 1.0
 }
 
 function parse(text: string): ParseResult | null
 ```
 
-### 6.2 解析流程
+### 7.2 解析流程
 
 ```
 Step 1: 提取金额（必须成功，否则返回 null）
@@ -143,15 +165,19 @@ Step 4: 生成备注
   原始文本去掉金额和单位
 ```
 
-### 6.3 分类 ID 映射
+### 7.3 分类 ID 映射
 
 - 来源: React Query 缓存中的 categories 列表
 - 方式: `categoryName` 与 `category.name` 精确匹配
 - 未找到: 使用"其他"分类的 ID
 
-## 7. SyncManager（同步管理器）
+### 7.4 source 字段说明
 
-### 7.1 触发时机
+规则引擎解析的文字记账通过 `POST /api/record/manual` 入库，BFF 硬编码 `source: "manual"`。这意味着规则解析的记录与手动记账在数据库中无法区分。这是"BFF 零改动"约束下的已知折中。
+
+## 8. SyncManager（同步管理器）
+
+### 8.1 触发时机
 
 1. 网络恢复: `offline → online`（NetInfo）
 2. App 回到前台: `background → active`（AppState）
@@ -160,7 +186,7 @@ Step 4: 生成备注
 
 不做定时轮询。
 
-### 7.2 同步逻辑
+### 8.2 同步逻辑
 
 ```
 sync():
@@ -185,10 +211,10 @@ sync():
         op.retries >= 3 → markFailed
         否则 → markPending
 
-  invalidateQueries(['transactions'])
+  invalidateQueries(['transactions', 'chat-messages'])
 ```
 
-### 7.3 用户反馈
+### 8.3 用户反馈
 
 | 状态 | UI 表现 |
 |------|---------|
@@ -197,7 +223,7 @@ sync():
 | 全部完成 | 图标消失 |
 | 有失败操作 | 红色提示，可重试/删除 |
 
-## 8. App 启动恢复
+## 9. App 启动恢复
 
 ```
 App 启动
@@ -209,7 +235,7 @@ App 启动
   → React Query 从 AsyncStorage 恢复缓存（现有逻辑不变）
 ```
 
-## 9. 现有模块角色变化
+## 10. 现有模块角色变化
 
 | 模块 | 现在 | 重构后 |
 |------|------|--------|
@@ -218,7 +244,7 @@ App 启动
 | Zustand (chatStore) | 聊天消息状态 | 不变 |
 | apiFetch | 所有 API 调用 | 用于 GLM/ASR/OCR 和队列同步 |
 
-## 10. 新增代码清单
+## 11. 新增代码清单
 
 ```
 apps/mobile/src/lib/rule-engine/
@@ -238,7 +264,7 @@ apps/mobile/src/hooks/
   └── useOfflineQueue.ts    -- 队列操作 Hook        TODO (human)
 ```
 
-## 11. 不改动的部分
+## 12. 不改动的部分
 
 - `apps/api/` — BFF 零改动
 - `packages/` — shared/ai 包不变
@@ -246,7 +272,16 @@ apps/mobile/src/hooks/
 - React Query 读取逻辑不变
 - AsyncStorage 持久化不变
 
-## 12. TODO (human) 标注说明
+## 13. 已知限制
+
+| 限制 | 说明 | 影响 |
+|------|------|------|
+| 编辑交易仍需联网 | 离线写入范围仅限创建+删除 | 用户离线时无法修改已有交易 |
+| create 重试可能产生重复 | 网络超时后重试，BFF 无幂等检查 | 极低概率；未来可通过幂等 key 解决 |
+| 规则解析的记录 source 为 "manual" | BFF 硬编码 source 字段 | 统计分析中无法区分手动和规则解析 |
+| 聊天消息延迟 | 队列记录同步前不产生聊天消息 | 聊天界面延迟数秒才出现对应消息 |
+
+## 14. TODO (human) 标注说明
 
 以下模块标记为 `TODO (human)`，建议由用户亲手编写，Claude 提供指导和 review:
 
