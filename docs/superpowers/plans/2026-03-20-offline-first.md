@@ -1273,6 +1273,8 @@ useSync(syncManager);
 ```typescript
 // apps/mobile/lib/offline-context.ts
 import { createContext, useContext } from "react";
+import type * as SQLite from "expo-sqlite";
+import type { createSyncManager } from "@/lib/sync/sync-manager";
 
 interface OfflineContextValue {
   readonly db: SQLite.SQLiteDatabase | null;
@@ -1488,8 +1490,8 @@ git commit -m "feat: delete transactions via offline queue with optimistic remov
 ```typescript
 // apps/mobile/components/shared/SyncIndicator.tsx
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
-import { useOfflineContext } from "@/app/_layout";
+import { View, Text, StyleSheet } from "react-native";
+import { useOfflineContext } from "@/lib/offline-context";
 import { getCount } from "@/lib/queue/operation-queue";
 
 export function SyncIndicator() {
