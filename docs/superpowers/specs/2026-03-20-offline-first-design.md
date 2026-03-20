@@ -82,21 +82,22 @@ expo-sqlite          -- 本地 SQLite 数据库（Expo SDK 55 内置，无需 na
 
 ## 6. Operation Queue（操作队列）
 
-### 5.1 SQLite 表结构
+### 6.1 SQLite 表结构
 
 ```sql
 CREATE TABLE IF NOT EXISTS operation_queue (
-  id         TEXT PRIMARY KEY,        -- UUID
-  type       TEXT NOT NULL,           -- 'create_transaction' | 'delete_transaction'
-  payload    TEXT NOT NULL,           -- JSON: API 请求体
-  status     TEXT DEFAULT 'pending',  -- 'pending' | 'syncing' | 'failed'
-  retries    INTEGER DEFAULT 0,
-  created_at INTEGER NOT NULL,        -- 时间戳，保证重放顺序
-  error      TEXT                     -- 最后一次失败的错误信息
+  id          TEXT PRIMARY KEY,        -- UUID
+  type        TEXT NOT NULL,           -- 'create_transaction' | 'delete_transaction'
+  payload     TEXT NOT NULL,           -- JSON: API 请求体
+  status      TEXT DEFAULT 'pending',  -- 'pending' | 'syncing' | 'failed'
+  retries     INTEGER DEFAULT 0,
+  created_at  INTEGER NOT NULL,        -- 时间戳，保证重放顺序
+  depends_on  TEXT,                    -- 依赖的操作 ID（为 null 表示无依赖）
+  error       TEXT                     -- 最后一次失败的错误信息
 );
 ```
 
-### 5.2 操作写入
+### 6.2 操作写入
 
 **创建交易**:
 1. 生成临时 ID: `temp_${uuid()}`
@@ -195,11 +196,16 @@ sync():
 
   operations = queue.getPending()   -- 按 created_at 升序
   for (op of operations):
+    -- 依赖检查: 如果依赖的操作还在队列中，跳过本次
+    if (op.depends_on && queue.exists(op.depends_on)):
+      continue
+
     queue.markSyncing(op.id)
     try:
       if op.type === 'create_transaction':
         response = POST /api/record/manual (op.payload)
         → 用真实 ID 替换 React Query 缓存中的临时 ID
+        → 更新依赖此操作的 delete 的 payload.id 为真实 ID
       if op.type === 'delete_transaction':
         DELETE /api/transactions/{op.payload.id}
       queue.remove(op.id)
@@ -208,10 +214,32 @@ sync():
         queue.markPending(op.id)    -- 回退
         break                       -- 后面也不试了
       if (业务错误):
-        op.retries >= 3 → markFailed
+        op.retries >= 3:
+          queue.markFailed(op.id)
+          -- 级联失败: 依赖此操作的也标记为 failed
+          queue.markFailedByDependency(op.id)
         否则 → markPending
 
   invalidateQueries(['transactions', 'chat-messages'])
+```
+
+**depends_on 工作流程**:
+```
+用户离线创建 tx (temp_123) → create 入队 (id=op_A, status=pending)
+用户删除 temp_123          → create 仍在 syncing
+                           → delete 入队 (id=op_B, depends_on=op_A)
+
+同步时:
+  op_A (create): 执行成功 → 服务端返回真实 ID real_456
+    → 更新 op_B 的 payload.id 为 real_456
+    → 删除 op_A
+  op_B (delete): depends_on op_A 已不存在 → 可执行
+    → DELETE /api/transactions/real_456 → 成功
+
+如果 op_A 失败 3 次:
+  op_A → markFailed
+  op_B → markFailed (级联)
+  → UI 提示用户处理
 ```
 
 ### 8.3 用户反馈
