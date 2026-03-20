@@ -26,6 +26,7 @@
 | `apps/mobile/lib/sync/sync-manager.ts` | 核心同步逻辑（sync, 依赖检查, 级联失败） |
 | `apps/mobile/hooks/useSync.ts` | Hook: 监听网络/AppState，触发 sync |
 | `apps/mobile/hooks/useOfflineQueue.ts` | Hook: enqueue/delete 操作 + 乐观更新 **TODO (human)** |
+| `apps/mobile/lib/offline-context.ts` | OfflineContext (db + syncManager) React Context |
 | `apps/mobile/__tests__/lib/queue/operation-queue.test.ts` | 队列单元测试 |
 | `apps/mobile/__tests__/lib/rule-engine/extract-amount.test.ts` | 金额提取测试 **TODO (human)** |
 | `apps/mobile/__tests__/lib/rule-engine/match-category.test.ts` | 分类匹配测试 **TODO (human)** |
@@ -36,7 +37,7 @@
 
 | File | Change |
 |------|--------|
-| `apps/mobile/package.json` | 添加 expo-sqlite, @react-native-community/netinfo, uuid |
+| `apps/mobile/package.json` | 添加 expo-sqlite, @react-native-community/netinfo, uuid, jest 配置 |
 | `apps/mobile/app/_layout.tsx` | 初始化 SQLite + SyncManager |
 | `apps/mobile/components/ManualEntryForm.tsx` | 改用 useOfflineQueue.enqueueCreate 替代直接 API 调用 |
 | `apps/mobile/hooks/useChat.ts` | 文字记账路径加入规则引擎前置拦截 |
@@ -67,14 +68,38 @@ cd apps/mobile && npx expo install @react-native-community/netinfo
 cd apps/mobile && npm install uuid && npm install -D @types/uuid
 ```
 
-- [ ] **Step 4: 验证安装**
+- [ ] **Step 4: 安装 Jest 测试框架**
 
 ```bash
-cd apps/mobile && cat package.json | grep -E "expo-sqlite|netinfo|uuid"
+cd apps/mobile && npm install -D jest @testing-library/react-native @types/jest ts-jest
 ```
-Expected: 三个包都在 dependencies 中。
 
-- [ ] **Step 5: Commit**
+在 `package.json` 中添加 Jest 配置:
+
+```json
+{
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "^@coco/shared$": "<rootDir>/../../packages/shared/src"
+    }
+  }
+}
+```
+
+- [ ] **Step 5: 验证安装**
+
+```bash
+cd apps/mobile && cat package.json | grep -E "expo-sqlite|netinfo|uuid|jest"
+```
+Expected: 所有包都在 dependencies / devDependencies 中。
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add apps/mobile/package.json apps/mobile/package-lock.json
@@ -268,13 +293,25 @@ export async function markPending(
   );
 }
 
+export async function incrementRetry(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+  error: string
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE operation_queue SET status = 'pending', retries = retries + 1, error = ? WHERE id = ?`,
+    error,
+    id
+  );
+}
+
 export async function markFailed(
   db: SQLite.SQLiteDatabase,
   id: string,
   error: string
 ): Promise<void> {
   await db.runAsync(
-    `UPDATE operation_queue SET status = 'failed', retries = retries + 1, error = ? WHERE id = ?`,
+    `UPDATE operation_queue SET status = 'failed', error = ? WHERE id = ?`,
     error,
     id
   );
@@ -631,7 +668,7 @@ describe("rule engine parse()", () => {
     const result = parse("花了50块");
     expect(result).not.toBeNull();
     expect(result!.amount).toBe(50);
-    expect(result!.categoryName).toBe("其他");
+    expect(result!.categoryName).toBeNull();
   });
 
   it("收入识别: '工资3000'", () => {
@@ -667,7 +704,7 @@ import { INCOME_KEYWORDS } from "./keywords";
 export interface ParseResult {
   readonly amount: number;
   readonly type: "expense" | "income";
-  readonly categoryName: string;
+  readonly categoryName: string | null; // null = 未匹配到分类，调用方应使用对应的"其他支出"/"其他收入"
   readonly note: string;
 }
 
@@ -678,7 +715,7 @@ export function parse(text: string): ParseResult | null {
   if (amount === null) return null;
 
   const isIncome = INCOME_KEYWORDS.some((kw) => text.includes(kw));
-  const categoryName = matchCategory(text) ?? "其他";
+  const categoryName = matchCategory(text); // null = 未匹配，调用方负责 fallback
 
   // 生成备注: 去掉金额和单位部分
   const note = text
@@ -863,6 +900,7 @@ import {
   markPending,
   markFailed,
   markFailedByDependency,
+  incrementRetry,
   remove,
   exists,
   updatePayload,
@@ -873,7 +911,7 @@ import {
 interface SyncManagerConfig {
   readonly db: SQLite.SQLiteDatabase;
   readonly apiFetch: <T>(path: string, options?: RequestInit) => Promise<T>;
-  readonly invalidateQueries: (keys: readonly string[]) => void;
+  readonly invalidateQueries: (keys: readonly string[]) => Promise<void>;
   readonly isOnline: () => boolean;
 }
 
@@ -916,26 +954,19 @@ export function createSyncManager(config: SyncManagerConfig): SyncManager {
             break;
           }
 
-          const currentRetries = op.retries + 1;
-          if (currentRetries >= MAX_RETRIES) {
-            await markFailed(
-              db,
-              op.id,
-              error instanceof Error ? error.message : "Unknown error"
-            );
+          const errorMsg = error instanceof Error ? error.message : "Unknown error";
+          const nextRetries = op.retries + 1;
+          if (nextRetries >= MAX_RETRIES) {
+            await markFailed(db, op.id, errorMsg);
             await markFailedByDependency(db, op.id);
           } else {
-            await markFailed(
-              db,
-              op.id,
-              error instanceof Error ? error.message : "Unknown error"
-            );
-            await markPending(db, op.id);
+            // incrementRetry: retries++ 并保持 status='pending'
+            await incrementRetry(db, op.id, errorMsg);
           }
         }
       }
 
-      invalidateQueries(["transactions", "chat-messages"]);
+      await invalidateQueries(["transactions", "chat-messages"]);
     } finally {
       isSyncing = false;
     }
@@ -1135,7 +1166,9 @@ export function useOfflineQueue({
 
       // TODO (human): 实现以下逻辑
       // 1. 调用 enqueue() 写入 SQLite 队列
-      // 2. 构造一个临时 Transaction 对象
+      //    注意: payload 必须用 snake_case，匹配 BFF 的 CreateTransactionInput:
+      //    { amount, category_id: params.categoryId, type, note, occurred_at: params.occurredAt, temp_id: tempId }
+      // 2. 构造一个临时 Transaction 对象（用于乐观更新 UI）
       // 3. 用 queryClient.setQueryData 乐观更新 ["transactions", 1] 缓存
       //    提示: 将新 transaction 插入到 data.data 数组的开头
       // 4. 如果有网，触发 syncManager.sync()
@@ -1215,10 +1248,10 @@ useEffect(() => {
     const manager = createSyncManager({
       db: database,
       apiFetch,
-      invalidateQueries: (keys) => {
-        for (const key of keys) {
-          queryClient.invalidateQueries({ queryKey: [key] });
-        }
+      invalidateQueries: async (keys) => {
+        await Promise.all(
+          keys.map((key) => queryClient.invalidateQueries({ queryKey: [key] }))
+        );
       },
       isOnline: () => {
         // NetInfo 的同步检查需要缓存上一次状态
@@ -1235,10 +1268,10 @@ useEffect(() => {
 useSync(syncManager);
 ```
 
-需要通过 React Context 将 `db` 和 `syncManager` 传递给子组件。创建 Context：
+需要通过 React Context 将 `db` 和 `syncManager` 传递给子组件。创建独立文件（避免循环依赖）：
 
 ```typescript
-// 在 _layout.tsx 中或单独文件
+// apps/mobile/lib/offline-context.ts
 import { createContext, useContext } from "react";
 
 interface OfflineContextValue {
@@ -1340,7 +1373,7 @@ git commit -m "feat: ManualEntryForm uses offline queue for instant save"
 ```typescript
 import { parse } from "@/lib/rule-engine";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
-import { useOfflineContext } from "@/app/_layout";
+import { useOfflineContext } from "@/lib/offline-context";
 
 // 在 sendText 方法开头:
 const sendText = useCallback(async (text: string) => {
@@ -1350,9 +1383,15 @@ const sendText = useCallback(async (text: string) => {
   if (ruleResult) {
     // 规则命中 → 本地入队，不走 BFF
     const categories = queryClient.getQueryData<{ data: Category[] }>(["categories"]);
-    const category = categories?.data?.find(
-      (c) => c.name === ruleResult.categoryName && c.type === ruleResult.type
-    ) ?? categories?.data?.find((c) => c.name === "其他");
+
+    // 匹配分类: 先按名称精确匹配，未匹配到则 fallback 到"其他支出"/"其他收入"
+    const otherName = ruleResult.type === "expense" ? "其他支出" : "其他收入";
+    const category = (ruleResult.categoryName
+      ? categories?.data?.find(
+          (c) => c.name === ruleResult.categoryName && c.type === ruleResult.type
+        )
+      : null
+    ) ?? categories?.data?.find((c) => c.name === otherName);
 
     if (category) {
       await enqueueCreate({
@@ -1363,7 +1402,7 @@ const sendText = useCallback(async (text: string) => {
         type: ruleResult.type,
         occurredAt: new Date().toISOString(),
       });
-      // 不插入聊天消息（等 BFF 同步后自然产生）
+      // 不插入聊天消息（等 BFF 同步后自然产生，见 spec §6.4）
       return;
     }
   }
@@ -1542,8 +1581,4 @@ git commit -m "feat: add sync status indicator in tab bar"
 3. 刷新交易列表 → 离线创建的记录仍在，ID 已替换为真实 ID ✅
 4. 检查 Supabase → 数据已持久化 ✅
 
-- [ ] **Step 4: Final commit**
-
-```bash
-git commit -m "test: verify offline-first end-to-end flows"
-```
+验证通过后，离线优先架构实施完成。
