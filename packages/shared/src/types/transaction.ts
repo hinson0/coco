@@ -1,6 +1,6 @@
 import type { TransactionType } from "./category";
 
-export type RecordSource = "manual" | "ocr" | "asr" | "text";
+export type RecordSource = "manual" | "rule" | "ocr" | "asr" | "text";
 
 export interface Transaction {
   readonly id: string;
@@ -24,10 +24,11 @@ export interface CreateTransactionInput {
   readonly type: TransactionType;
   readonly note: string;
   readonly occurred_at: string;
-  readonly source: RecordSource;
+  readonly source?: RecordSource;
   readonly raw_input?: string;
   readonly receipt_url?: string;
   readonly ai_confidence?: number;
+  readonly skip_chat?: boolean;
 }
 
 export interface UpdateTransactionInput {
