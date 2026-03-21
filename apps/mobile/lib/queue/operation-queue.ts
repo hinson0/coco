@@ -4,7 +4,7 @@ import { v4 as uuid } from "uuid";
 
 export interface QueueOperation {
   readonly id: string;
-  readonly type: "create_transaction" | "delete_transaction";
+  readonly type: "create_transaction" | "update_transaction" | "delete_transaction";
   readonly payload: string;
   readonly status: "pending" | "syncing" | "failed";
   readonly retries: number;
