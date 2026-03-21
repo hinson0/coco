@@ -14,7 +14,7 @@ export const POST = withLogger(async (req) => {
 
   const { data: tx, error: txError } = await supabase
     .from("transactions")
-    .insert({ ...body, user_id: auth.userId, source: "manual" })
+    .insert({ ...body, user_id: auth.userId, source: body.source ?? "manual" })
     .select("*, categories(name, icon)")
     .single();
 
@@ -22,10 +22,12 @@ export const POST = withLogger(async (req) => {
     return NextResponse.json({ success: false, data: null, error: txError.message }, { status: 500 });
   }
 
-  await supabase.from("chat_messages").insert([
-    { user_id: auth.userId, role: "user", content_type: "text", content: `手动记账: ${body.note} ¥${body.amount}` },
-    { user_id: auth.userId, role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id },
-  ]);
+  if (!body.skip_chat) {
+    await supabase.from("chat_messages").insert([
+      { user_id: auth.userId, role: "user", content_type: "text", content: `手动记账: ${body.note} ¥${body.amount}` },
+      { user_id: auth.userId, role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id },
+    ]);
+  }
 
   return NextResponse.json({ success: true, data: tx, error: null }, { status: 201 });
 });

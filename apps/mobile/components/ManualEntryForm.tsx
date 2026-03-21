@@ -1,20 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
-import { apiFetch } from "../lib/api";
-import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
 import { useCategories } from "../hooks/useCategories";
-import type { Transaction } from "@coco/shared";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
+import { useChatStore } from "../store/chatStore";
 
 interface Props {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly onSuccess?: (tx: any) => void;
-  readonly transaction?: Transaction;
 }
 
-export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Props) {
-  const isEdit = !!transaction;
+export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -30,39 +27,18 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
-  const qc = useQueryClient();
+  const { enqueueCreate } = useOfflineQueue();
+  const { addMessage } = useChatStore();
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
   const DEFAULT_NAMES: Record<string, string> = { expense: '购物', income: '工资' };
 
-  // Pre-fill form when editing
   useEffect(() => {
-    if (visible && transaction) {
-      setAmount(String(transaction.amount));
-      setNote(transaction.note || "");
-      setType(transaction.type);
-      setCategoryId(transaction.category_id);
-      setDate(new Date(transaction.occurred_at));
-    } else if (visible && !transaction) {
-      // Reset for new entry
-      setAmount("");
-      setNote("");
-      setType("expense");
-      setDate(new Date());
-      const defaultName = DEFAULT_NAMES["expense"];
-      const match = categories.find((c: any) => c.type === "expense" && c.name === defaultName);
-      if (match) setCategoryId(match.id);
-    }
-  }, [visible, transaction]);
-
-  useEffect(() => {
-    if (!isEdit) {
-      const defaultName = DEFAULT_NAMES[type];
-      const match = categories.find((c: any) => c.type === type && c.name === defaultName);
-      if (match) setCategoryId(match.id);
-    }
-  }, [type, categories, isEdit]);
+    const defaultName = DEFAULT_NAMES[type];
+    const match = categories.find((c: any) => c.type === type && c.name === defaultName);
+    if (match) setCategoryId(match.id);
+  }, [type, categories]);
 
   useEffect(() => {
     if (visible) {
@@ -82,28 +58,32 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
       return;
     }
 
-    setSubmitting(true);
+    const category = categories.find((c: any) => c.id === categoryId);
+    const categoryName = category?.name ?? "其他";
+
     try {
-      const payload = { amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId };
-      const resp = isEdit
-        ? await apiFetch<any>(`/api/transactions/${transaction.id}`, {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          })
-        : await apiFetch<any>("/api/record/manual", {
-            method: "POST",
-            body: JSON.stringify(payload),
-          });
-      if (resp.success) {
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
-        onSuccess?.(resp.data);
-        onClose();
-      }
-    } catch {
-      Alert.alert(isEdit ? "修改失败" : "提交失败", "请重试");
-    } finally {
-      setSubmitting(false);
+      const tempId = await enqueueCreate({
+        amount: numAmount,
+        categoryId,
+        categoryName,
+        note,
+        type,
+        occurredAt: date.toISOString(),
+        source: "manual",
+      });
+
+      // 即时插入聊天消息
+      addMessage({ id: `${Date.now()}-user`, user_id: "", role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}`, transaction_id: null, created_at: new Date().toISOString() });
+      addMessage({ id: `${Date.now()}-bill`, user_id: "", role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: tempId, amount: numAmount, type, note, category: { name: categoryName } }), transaction_id: tempId, created_at: new Date().toISOString() });
+
+      onSuccess?.({ id: tempId, amount: numAmount, type, note });
+      onClose();
+      setAmount("");
+      setNote("");
+      setCategoryId(null);
+    } catch (err) {
+      console.error("ManualEntryForm submit error:", err);
+      Alert.alert("提交失败", err instanceof Error ? err.message : "请重试");
     }
   };
 
@@ -116,7 +96,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess, transaction }: Pr
             <TouchableOpacity onPress={onClose}>
               <Text style={styles.cancel}>取消</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>{isEdit ? "修改记账" : "手动记账"}</Text>
+            <Text style={styles.title}>手动记账</Text>
             <TouchableOpacity onPress={handleSubmit} disabled={submitting}>
               <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
             </TouchableOpacity>
