@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
-import { apiFetch } from "../lib/api";
-import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "./CategoryPicker";
 import { useCategories } from "../hooks/useCategories";
+import { useOfflineQueue } from "../hooks/useOfflineQueue";
+import { useChatStore } from "../store/chatStore";
 
 interface Props {
   readonly visible: boolean;
@@ -27,7 +27,8 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
-  const qc = useQueryClient();
+  const { enqueueCreate } = useOfflineQueue();
+  const { addMessage } = useChatStore();
   const { data: catData } = useCategories();
   const categories = catData?.data ?? [];
 
@@ -57,24 +58,31 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
       return;
     }
 
-    setSubmitting(true);
+    const category = categories.find((c: any) => c.id === categoryId);
+    const categoryName = category?.name ?? "其他";
+
     try {
-      const resp = await apiFetch<any>("/api/record/manual", {
-        method: "POST",
-        body: JSON.stringify({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId }),
+      const tempId = await enqueueCreate({
+        amount: numAmount,
+        categoryId,
+        categoryName,
+        note,
+        type,
+        occurredAt: date.toISOString(),
+        source: "manual",
       });
-      if (resp.success) {
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-        onSuccess?.(resp.data);
-        onClose();
-        setAmount("");
-        setNote("");
-        setCategoryId(null);
-      }
+
+      // 即时插入聊天消息
+      addMessage({ id: `${Date.now()}-user`, user_id: "", role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}`, transaction_id: null, created_at: new Date().toISOString() });
+      addMessage({ id: `${Date.now()}-bill`, user_id: "", role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: tempId, amount: numAmount, type, note, category: { name: categoryName } }), transaction_id: tempId, created_at: new Date().toISOString() });
+
+      onSuccess?.({ id: tempId, amount: numAmount, type, note });
+      onClose();
+      setAmount("");
+      setNote("");
+      setCategoryId(null);
     } catch {
       Alert.alert("提交失败", "请重试");
-    } finally {
-      setSubmitting(false);
     }
   };
 
