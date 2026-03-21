@@ -59,11 +59,17 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": false
+      }
+    },
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1",
       "^@coco/shared$": "<rootDir>/../../packages/shared/src",
       "^expo-sqlite$": "<rootDir>/__mocks__/expo-sqlite.ts",
-      "^uuid$": "<rootDir>/__mocks__/uuid.js"
+      "^uuid$": "<rootDir>/__mocks__/uuid.js",
+      "^expo-crypto$": "<rootDir>/__mocks__/expo-crypto.ts"
     }
   },
   "private": true

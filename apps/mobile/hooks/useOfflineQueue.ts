@@ -1,7 +1,7 @@
 // apps/mobile/hooks/useOfflineQueue.ts
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { v4 as uuid } from "uuid";
+import * as Crypto from "expo-crypto";
 import {
   enqueue,
   remove,
@@ -36,7 +36,7 @@ export function useOfflineQueue() {
     async (params: EnqueueCreateParams): Promise<string> => {
       if (!db) throw new Error("Database not initialized");
 
-      const tempId = `temp_${uuid()}`;
+      const tempId = `temp_${Crypto.randomUUID()}`;
 
       await enqueue(db, {
         type: "create_transaction",

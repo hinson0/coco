@@ -1,6 +1,6 @@
 // apps/mobile/lib/queue/operation-queue.ts
 import * as SQLite from "expo-sqlite";
-import { v4 as uuid } from "uuid";
+import * as Crypto from "expo-crypto";
 
 export interface QueueOperation {
   readonly id: string;
@@ -38,7 +38,7 @@ export async function enqueue(
   db: SQLite.SQLiteDatabase,
   params: EnqueueParams
 ): Promise<string> {
-  const id = uuid();
+  const id = Crypto.randomUUID();
   const now = Date.now();
   await db.runAsync(
     `INSERT INTO operation_queue (id, type, payload, status, retries, created_at, depends_on)

@@ -81,8 +81,9 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
       setAmount("");
       setNote("");
       setCategoryId(null);
-    } catch {
-      Alert.alert("提交失败", "请重试");
+    } catch (err) {
+      console.error("ManualEntryForm submit error:", err);
+      Alert.alert("提交失败", err instanceof Error ? err.message : "请重试");
     }
   };
 
