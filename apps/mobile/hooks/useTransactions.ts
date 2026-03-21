@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../lib/api";
-import type { PaginatedResponse, Transaction, ApiResponse } from "@coco/shared";
+import type { PaginatedResponse, Transaction } from "@coco/shared";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 
 export function useTransactions(page = 1) {
   return useQuery({
@@ -10,9 +11,8 @@ export function useTransactions(page = 1) {
 }
 
 export function useDeleteTransaction() {
-  const qc = useQueryClient();
+  const { enqueueDelete } = useOfflineQueue();
   return useMutation({
-    mutationFn: (id: string) => apiFetch<ApiResponse<null>>(`/api/transactions/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["transactions"] }),
+    mutationFn: (id: string) => enqueueDelete(id),
   });
 }

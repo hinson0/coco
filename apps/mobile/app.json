@@ -32,8 +32,7 @@
     "plugins": [
       "expo-router",
       "expo-audio",
-      "expo-localization",
-      "expo-web-browser"
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true
