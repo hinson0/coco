@@ -1,18 +1,29 @@
-import { create } from "zustand";
-import type { ChatMessage } from "@coco/shared";
+import { create } from 'zustand';
+import type { PendingMessage } from '@coco/shared';
 
 interface ChatState {
-  readonly messages: readonly ChatMessage[];
+  readonly pendingMessages: readonly PendingMessage[];
   readonly isLoading: boolean;
-  addMessage: (msg: ChatMessage) => void;
-  setMessages: (msgs: readonly ChatMessage[]) => void;
+  addPending: (msg: PendingMessage) => void;
+  removePending: (clientId: string) => void;
+  markFailed: (clientId: string) => void;
   setLoading: (loading: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
-  messages: [],
+  pendingMessages: [],
   isLoading: false,
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  setMessages: (messages) => set({ messages }),
+  addPending: (msg) =>
+    set((s) => ({ pendingMessages: [...s.pendingMessages, msg] })),
+  removePending: (clientId) =>
+    set((s) => ({
+      pendingMessages: s.pendingMessages.filter((m) => m.clientId !== clientId),
+    })),
+  markFailed: (clientId) =>
+    set((s) => ({
+      pendingMessages: s.pendingMessages.map((m) =>
+        m.clientId === clientId ? { ...m, status: 'failed' as const } : m,
+      ),
+    })),
   setLoading: (isLoading) => set({ isLoading }),
 }));
