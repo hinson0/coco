@@ -10,7 +10,6 @@ interface ToolItem {
 const TOOLS: ToolItem[] = [
   { icon: '✏️', label: '手动记账' },
   { icon: '📊', label: '月度报告' },
-  { icon: '🔄', label: '重复记' },
 ];
 
 interface ChatToolBarProps {
