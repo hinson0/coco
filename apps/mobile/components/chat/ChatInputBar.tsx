@@ -12,6 +12,7 @@ interface ChatInputBarProps {
 
 export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInputBarProps) {
   const [text, setText] = useState('');
+  const hasText = text.trim().length > 0;
 
   function handleSubmit() {
     const trimmed = text.trim();
@@ -22,12 +23,12 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInpu
 
   return (
     <View style={styles.container}>
-      {/* Camera button */}
-      <Pressable onPress={onCamera} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
-        <AppText size="2xl">📷</AppText>
-      </Pressable>
+      {!hasText && (
+        <Pressable onPress={onCamera} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
+          <AppText size="2xl">📷</AppText>
+        </Pressable>
+      )}
 
-      {/* Text input */}
       <TextInput
         value={text}
         onChangeText={setText}
@@ -38,20 +39,20 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInpu
         multiline
       />
 
-      {text.trim() ? (
+      {hasText ? (
         <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
-          <AppText size="sm" weight="semibold" color={colors.white}>发送</AppText>
+          <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
         </Pressable>
       ) : (
-        <Pressable onPress={onVoice} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
-          <AppText size="2xl">🎤</AppText>
-        </Pressable>
+        <>
+          <Pressable onPress={onVoice} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
+            <AppText size="2xl">🎤</AppText>
+          </Pressable>
+          <Pressable onPress={onPlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
+            <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
+          </Pressable>
+        </>
       )}
-
-      {/* Plus button */}
-      <Pressable onPress={onPlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
-        <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
-      </Pressable>
     </View>
   );
 }
@@ -73,10 +74,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendBtn: {
+    width: 38,
     height: 38,
-    paddingHorizontal: spacing.lg,
     borderRadius: 19,
-    backgroundColor: colors.sage,
+    backgroundColor: '#007AFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
