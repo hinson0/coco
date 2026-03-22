@@ -1,0 +1,129 @@
+<h2>UI 流程 + 测试策略</h2>
+<p class="subtitle">Section 4 / 4 — 核心页面流转与质量保障</p>
+
+<!-- 页面结构 -->
+<h3 style="margin-top:8px">📱 核心页面结构（5 个 Tab）</h3>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px">
+  <div style="border:2px solid #6366f1;border-radius:10px;overflow:hidden;text-align:center">
+    <div style="background:#6366f1;color:white;padding:6px;font-size:12px;font-weight:600">🏠 首页</div>
+    <div style="padding:8px;font-size:11px">
+      今日收支概览<br>
+      最近账单列表<br>
+      快捷记账入口
+    </div>
+  </div>
+  <div style="border:2px solid #8b5cf6;border-radius:10px;overflow:hidden;text-align:center">
+    <div style="background:#8b5cf6;color:white;padding:6px;font-size:12px;font-weight:600">📝 记账</div>
+    <div style="padding:8px;font-size:11px">
+      手动输入<br>
+      📷 拍照 OCR<br>
+      🎙️ 语音 ASR
+    </div>
+  </div>
+  <div style="border:2px solid #10b981;border-radius:10px;overflow:hidden;text-align:center">
+    <div style="background:#10b981;color:white;padding:6px;font-size:12px;font-weight:600">📊 统计</div>
+    <div style="padding:8px;font-size:11px">
+      月报/周报<br>
+      分类饼图<br>
+      趋势折线图
+    </div>
+  </div>
+  <div style="border:2px solid #f59e0b;border-radius:10px;overflow:hidden;text-align:center">
+    <div style="background:#f59e0b;color:white;padding:6px;font-size:12px;font-weight:600">🎯 预算</div>
+    <div style="padding:8px;font-size:11px">
+      总预算设定<br>
+      分类预算<br>
+      超支提醒
+    </div>
+  </div>
+  <div style="border:2px solid #64748b;border-radius:10px;overflow:hidden;text-align:center">
+    <div style="background:#64748b;color:white;padding:6px;font-size:12px;font-weight:600">👤 我的</div>
+    <div style="padding:8px;font-size:11px">
+      账号设置<br>
+      分类管理<br>
+      数据导出
+    </div>
+  </div>
+</div>
+
+<!-- 记账页交互流程 -->
+<h3>✏️ 记账页交互流程</h3>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+    <div style="border:1px solid #c7d2fe;border-radius:8px;padding:10px">
+      <div style="font-weight:600;color:#6366f1;margin-bottom:6px">手动输入</div>
+      金额键盘 → 选分类 → 填备注(可选) → 选日期(默认今天) → 保存
+    </div>
+    <div style="border:1px solid #c4b5fd;border-radius:8px;padding:10px">
+      <div style="font-weight:600;color:#8b5cf6;margin-bottom:6px">📷 拍照识票</div>
+      点击拍照 → loading → Toast "已记录 餐饮 ¥35" → 账单列表自动刷新
+    </div>
+    <div style="border:1px solid #c4b5fd;border-radius:8px;padding:10px">
+      <div style="font-weight:600;color:#8b5cf6;margin-bottom:6px">🎙️ 语音记账</div>
+      长按录音 → 松手 → loading → Toast "已记录 交通 ¥12" → 账单列表自动刷新
+    </div>
+  </div>
+</div>
+
+<!-- NL 查询入口 -->
+<h3>💬 自然语言查询</h3>
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:20px;font-size:12px">
+  首页顶部搜索框，输入自然语言 → BFF 处理 → 返回卡片式结果<br>
+  <div style="margin-top:8px;background:white;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-family:monospace;font-size:11px">
+    <span style="color:#94a3b8">Q:</span> "上周吃饭花了多少钱"<br>
+    <span style="color:#10b981">A:</span> "上周餐饮类消费共 ¥287.50，共 8 笔。最大一笔 ¥68（周六聚餐）"
+  </div>
+</div>
+
+<!-- 测试策略 -->
+<h3>🧪 测试策略</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+  <div style="border:2px solid #0ea5e9;border-radius:10px;overflow:hidden">
+    <div style="background:#0ea5e9;color:white;padding:6px 12px;font-size:12px;font-weight:600">单元测试</div>
+    <div style="padding:10px;font-size:11px">
+      <b>工具：</b>Vitest<br><br>
+      • GLM Prompt 构建函数<br>
+      • 金额解析 / 日期解析<br>
+      • SQL 白名单校验逻辑<br>
+      • 预算计算 / 超支判断<br>
+      <div style="margin-top:6px;color:#0ea5e9;font-weight:600">覆盖率目标：80%+</div>
+    </div>
+  </div>
+  <div style="border:2px solid #8b5cf6;border-radius:10px;overflow:hidden">
+    <div style="background:#8b5cf6;color:white;padding:6px 12px;font-size:12px;font-weight:600">集成测试</div>
+    <div style="padding:10px;font-size:11px">
+      <b>工具：</b>Vitest + Supabase Local<br><br>
+      • BFF API 端到端调用<br>
+      • Supabase RLS 权限验证<br>
+      • AI 服务 Mock 降级测试<br>
+      • Auth 认证流程<br>
+      <div style="margin-top:6px;color:#8b5cf6;font-weight:600">关键路径全覆盖</div>
+    </div>
+  </div>
+  <div style="border:2px solid #10b981;border-radius:10px;overflow:hidden">
+    <div style="background:#10b981;color:white;padding:6px 12px;font-size:12px;font-weight:600">E2E 测试</div>
+    <div style="padding:10px;font-size:11px">
+      <b>工具：</b>Maestro (移动端)<br><br>
+      • 手动记账完整流程<br>
+      • 登录 → 记账 → 查看统计<br>
+      • 预算设置 → 超支提醒<br>
+      <div style="margin-top:6px;color:#10b981;font-weight:600">核心用户流覆盖</div>
+    </div>
+  </div>
+</div>
+
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;font-size:12px">
+  <b>📦 Monorepo 结构 (Turborepo)：</b>
+  <div style="font-family:monospace;margin-top:6px;font-size:11px;line-height:1.8">
+    coco/<br>
+    ├── apps/<br>
+    │   ├── mobile/        <span style="color:#6366f1"># Expo React Native App</span><br>
+    │   └── api/           <span style="color:#8b5cf6"># Next.js BFF (Vercel)</span><br>
+    ├── packages/<br>
+    │   ├── shared/         <span style="color:#10b981"># 共享类型、工具函数、常量</span><br>
+    │   └── ai/            <span style="color:#f59e0b"># AI 服务封装（GLM、腾讯云）</span><br>
+    ├── supabase/          <span style="color:#64748b"># Migrations, RLS, Seed</span><br>
+    ├── turbo.json<br>
+    └── package.json
+  </div>
+</div>
