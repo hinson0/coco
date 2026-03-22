@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "pnpm --filter mobile dev",
+    "worktree": "sh -c 'WT=$1; shift; pnpm --prefix .claude/worktrees/\"$WT\" run dev -- \"$@\"' _",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "git config core.hooksPath .githooks"
   },
