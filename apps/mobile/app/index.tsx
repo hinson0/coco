@@ -229,7 +229,7 @@ export default function ChatScreen() {
             ]);
           }}
         >
-          <Text style={styles.moreIcon}>···</Text>
+          <Text style={styles.clearIcon}>🗑</Text>
         </TouchableOpacity>
       </View>
 
@@ -290,11 +290,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 22,
   },
-  moreIcon: {
-    fontSize: 14,
-    color: colors.text,
-    letterSpacing: 1,
-    lineHeight: 18,
+  clearIcon: {
+    fontSize: 15,
   },
   titleArea: {
     flexDirection: 'row',
