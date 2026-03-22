@@ -1,5 +1,5 @@
 import { Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { useCategories } from "../hooks/useCategories";
+import { useLocalCategories } from "../hooks/useLocalCategories";
 
 const EXPENSE_ORDER = ['购物', '餐饮', '交通', '娱乐', '居住', '医疗', '教育', '其他支出'];
 const HIDDEN_CATEGORIES = new Set(['通讯']);
@@ -11,8 +11,8 @@ interface Props {
 }
 
 export function CategoryPicker({ selectedId, onSelect, type }: Props) {
-  const { data } = useCategories();
-  const categories = (data?.data ?? [])
+  const { data: allCategories = [] } = useLocalCategories();
+  const categories = allCategories
     .filter((c: any) => c.type === type && !HIDDEN_CATEGORIES.has(c.name))
     .sort((a: any, b: any) => {
       if (type !== 'expense') return 0;

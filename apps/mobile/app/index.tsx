@@ -8,7 +8,6 @@ import {
   Text,
   Keyboard,
   Platform,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import Animated, {
@@ -20,17 +19,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChatStore } from '../store/chatStore';
 import { useChat } from '../hooks/useChat';
-import { useChatMessages } from '../hooks/useChatMessages';
-import { useDeleteChatMessage, useClearChatMessages } from '../hooks/useDeleteChatMessage';
-import { useCategories } from '../hooks/useCategories';
+import { useLocalChatMessages, useDeleteChatMessage, useClearChatMessages } from '../hooks/useLocalChatMessages';
+import { useLocalCategories } from '../hooks/useLocalCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
 import { colors, spacing, radii, shadows } from '../constants/theme';
-import type { ChatMessage, PendingMessage, Transaction } from '@coco/shared';
+import type { ChatMessage, Transaction } from '@coco/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,13 +128,11 @@ function DateSeparator({ label }: { label: string }) {
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
-  const { sendText, sendOcr, sendAsr } = useChat();
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useChatMessages();
-  const { pendingMessages, isLoading: isSending } = useChatStore();
+  const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
+  const { data: messages = [], refetch } = useLocalChatMessages();
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
-  const { data: catData } = useCategories();
-  const categories = catData?.data ?? [];
+  const { data: categories = [] } = useLocalCategories();
 
   // Refetch chat messages when screen regains focus (e.g. after manual-entry)
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -160,20 +155,10 @@ export default function ChatScreen() {
     paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
 
-  // Merge server messages with pending messages
-  const serverMessages: ChatMessage[] =
-    data?.pages.flatMap((p) => p.data).reverse() ?? [];
-  const total = data?.pages[0]?.total ?? 0;
+  const listItems = buildListItems(messages, isSending);
 
-  const allMessages: readonly ChatMessage[] = [
-    ...serverMessages,
-    ...pendingMessages,
-  ];
-
-  const listItems = buildListItems(allMessages, isSending);
-
-  // Show welcome message only when no messages and no pending
-  if (total === 0 && pendingMessages.length === 0) {
+  // Show welcome message only when no messages exist
+  if (messages.length === 0) {
     listItems.push({ type: 'message', data: WELCOME_MESSAGE });
   }
 
@@ -197,27 +182,18 @@ export default function ChatScreen() {
       );
     }
     const msg = item.data;
-    const pendingStatus = 'status' in msg ? (msg as PendingMessage).status : undefined;
 
     return (
       <View style={styles.bubbleWrapper}>
         <ChatBubble
           message={msg}
-          status={pendingStatus}
           categories={categories}
           onDelete={() => deleteMutation.mutate(msg.id)}
           onEditRecord={msg.content_type === 'bill_card' ? () => {
             try {
               const tx = JSON.parse(msg.content) as Transaction;
-              router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx) } });
+              router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx), msgId: msg.id } });
             } catch { /* ignore parse errors */ }
-          } : undefined}
-          onRetry={pendingStatus === 'failed' ? () => {
-            const pm = msg as PendingMessage;
-            useChatStore.getState().removePending(pm.clientId);
-            if (pm.content_type === 'text') sendText(pm.content);
-            else if (pm.content_type === 'image') sendOcr(pm.content);
-            else if (pm.content_type === 'audio') sendAsr(pm.content);
           } : undefined}
         />
       </View>
@@ -266,19 +242,6 @@ export default function ChatScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        onEndReachedThreshold={0.3}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color={colors.sage} />
-            </View>
-          ) : null
-        }
       />
 
       {/* ── Bottom panel ── */}
@@ -380,9 +343,4 @@ const styles = StyleSheet.create({
     borderTopColor: colors.creamDark,
   },
 
-  // Loading more indicator
-  loadingMore: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
 });

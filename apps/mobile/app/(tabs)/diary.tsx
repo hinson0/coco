@@ -1,9 +1,9 @@
 import { ScrollView, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { Transaction, Category, Budget } from '@coco/shared';
-import { useTransactions } from '../../hooks/useTransactions';
-import { useBudgets } from '../../hooks/useBudgets';
-import { useCategories } from '../../hooks/useCategories';
+import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useLocalBudgets } from '../../hooks/useLocalBudgets';
+import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { HeaderGreeting } from '../../components/home/HeaderGreeting';
 import { OverviewCard } from '../../components/shared/OverviewCard';
 import { DayGroup } from '../../components/shared/DayGroup';
@@ -144,13 +144,11 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { data: txData, isLoading: txLoading } = useTransactions();
-  const { data: budgetData } = useBudgets();
-  const { data: catData } = useCategories();
+  const { data: txData, isLoading: txLoading } = useLocalTransactions();
+  const { data: budgets = [] } = useLocalBudgets();
+  const { data: categories = [] } = useLocalCategories();
 
   const transactions: readonly Transaction[] = txData?.data ?? [];
-  const budgets: readonly Budget[] = budgetData?.data ?? [];
-  const categories: readonly Category[] = catData?.data ?? [];
 
   const catMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 

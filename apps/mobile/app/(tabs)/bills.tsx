@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { Transaction, Category } from '@coco/shared';
-import { useTransactions } from '../../hooks/useTransactions';
-import { useCategories } from '../../hooks/useCategories';
+import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { FilterBar } from '../../components/bills/FilterBar';
 import { MonthStrip } from '../../components/bills/MonthStrip';
 import { DayGroup } from '../../components/shared/DayGroup';
@@ -120,11 +120,10 @@ function computeMonthStats(transactions: readonly Transaction[]): MonthStats {
 export default function BillsScreen() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
-  const { data: txData, isLoading: txLoading } = useTransactions();
-  const { data: catData } = useCategories();
+  const { data: txData, isLoading: txLoading } = useLocalTransactions();
+  const { data: categories = [] } = useLocalCategories();
 
   const allTransactions: readonly Transaction[] = txData?.data ?? [];
-  const categories: readonly Category[] = catData?.data ?? [];
 
   const catMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
