@@ -1,0 +1,107 @@
+<h2>系统架构设计</h2>
+<p class="subtitle">Section 1 / 4 — 整体结构与数据流</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+
+  <!-- 客户端 -->
+  <div style="border:2px solid #6366f1;border-radius:12px;overflow:hidden">
+    <div style="background:#6366f1;color:white;padding:10px 14px;font-weight:600;text-align:center">
+      📱 客户端 (Expo)
+    </div>
+    <div style="padding:12px;font-size:13px">
+      <div style="background:#eef2ff;border-radius:6px;padding:8px;margin-bottom:6px">🎙️ ASR 录音组件</div>
+      <div style="background:#eef2ff;border-radius:6px;padding:8px;margin-bottom:6px">📷 OCR 拍照组件</div>
+      <div style="background:#eef2ff;border-radius:6px;padding:8px;margin-bottom:6px">✏️ 手动输入表单</div>
+      <div style="background:#eef2ff;border-radius:6px;padding:8px;margin-bottom:6px">📊 图表 / 统计页</div>
+      <div style="background:#eef2ff;border-radius:6px;padding:8px">💬 自然语言查询</div>
+      <div style="margin-top:10px;font-size:11px;color:#6366f1;font-weight:600">
+        React Native + Expo<br>
+        Zustand (状态管理)<br>
+        React Query (数据请求)
+      </div>
+    </div>
+  </div>
+
+  <!-- BFF -->
+  <div style="border:2px solid #8b5cf6;border-radius:12px;overflow:hidden">
+    <div style="background:#8b5cf6;color:white;padding:10px 14px;font-weight:600;text-align:center">
+      ⚡ BFF (Next.js / Vercel)
+    </div>
+    <div style="padding:12px;font-size:13px">
+      <div style="background:#f5f3ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>POST /api/record/manual</b><br>
+        <span style="color:#6b7280">手动记账入口</span>
+      </div>
+      <div style="background:#f5f3ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>POST /api/record/ocr</b><br>
+        <span style="color:#6b7280">票据识别 → GLM 提取</span>
+      </div>
+      <div style="background:#f5f3ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>POST /api/record/asr</b><br>
+        <span style="color:#6b7280">语音转文字 → GLM 解析</span>
+      </div>
+      <div style="background:#f5f3ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>POST /api/query/nl</b><br>
+        <span style="color:#6b7280">自然语言 → SQL 查询</span>
+      </div>
+      <div style="background:#f5f3ff;border-radius:6px;padding:8px">
+        <b>GET /api/stats</b><br>
+        <span style="color:#6b7280">统计聚合 / 预算计算</span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#8b5cf6;font-weight:600">
+        Next.js 14 App Router<br>
+        AI 编排 + 第三方 API 聚合
+      </div>
+    </div>
+  </div>
+
+  <!-- 服务层 -->
+  <div style="border:2px solid #0ea5e9;border-radius:12px;overflow:hidden">
+    <div style="background:#0ea5e9;color:white;padding:10px 14px;font-weight:600;text-align:center">
+      ☁️ 服务层
+    </div>
+    <div style="padding:12px;font-size:13px">
+      <div style="background:#f0f9ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>Supabase</b><br>
+        <span style="color:#6b7280">PostgreSQL + Auth + Storage</span>
+      </div>
+      <div style="background:#f0f9ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>智谱 AI (GLM)</b><br>
+        <span style="color:#6b7280">分类 / 解析 / NL 查询</span>
+      </div>
+      <div style="background:#f0f9ff;border-radius:6px;padding:8px;margin-bottom:6px">
+        <b>腾讯云 ASR</b><br>
+        <span style="color:#6b7280">语音 → 文字</span>
+      </div>
+      <div style="background:#f0f9ff;border-radius:6px;padding:8px">
+        <b>腾讯云 OCR</b><br>
+        <span style="color:#6b7280">票据 / 发票识别</span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#0ea5e9;font-weight:600">
+        所有密钥只存在 BFF 端<br>
+        客户端不直接调用 AI API
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 数据流 -->
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;font-size:13px">
+  <h3 style="margin:0 0 12px;font-size:14px">🔄 核心数据流（以 OCR 记账为例）</h3>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div style="background:#6366f1;color:white;padding:6px 12px;border-radius:20px">① 用户拍照</div>
+    <span>→</span>
+    <div style="background:#8b5cf6;color:white;padding:6px 12px;border-radius:20px">② BFF 接收图片</div>
+    <span>→</span>
+    <div style="background:#0ea5e9;color:white;padding:6px 12px;border-radius:20px">③ 腾讯云 OCR 识别</div>
+    <span>→</span>
+    <div style="background:#8b5cf6;color:white;padding:6px 12px;border-radius:20px">④ GLM 提取金额/类别</div>
+    <span>→</span>
+    <div style="background:#6366f1;color:white;padding:6px 12px;border-radius:20px">⑤ 返回预填表单</div>
+    <span>→</span>
+    <div style="background:#10b981;color:white;padding:6px 12px;border-radius:20px">⑥ 用户确认保存</div>
+  </div>
+  <p style="margin:12px 0 0;color:#64748b">
+    <b>设计原则：</b>AI 识别结果始终先展示给用户确认，再写入数据库。避免自动写入错误数据。
+  </p>
+</div>
