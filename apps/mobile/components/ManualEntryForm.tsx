@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import { CategoryPicker } from "./CategoryPicker";
-import { useCategories } from "../hooks/useCategories";
-import { useOfflineQueue } from "../hooks/useOfflineQueue";
-import { useChatStore } from "../store/chatStore";
+import { useLocalCategories } from "../hooks/useLocalCategories";
+import { useCreateTransaction } from "../hooks/useLocalTransactions";
+import { useAddChatMessage } from "../hooks/useLocalChatMessages";
 
 interface Props {
   readonly visible: boolean;
@@ -27,10 +27,9 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
-  const { enqueueCreate } = useOfflineQueue();
-  const { addMessage } = useChatStore();
-  const { data: catData } = useCategories();
-  const categories = catData?.data ?? [];
+  const { mutateAsync: createTransaction } = useCreateTransaction();
+  const { mutateAsync: addMessage } = useAddChatMessage();
+  const { data: categories = [] } = useLocalCategories();
 
   const DEFAULT_NAMES: Record<string, string> = { expense: '购物', income: '工资' };
 
@@ -62,21 +61,20 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
     const categoryName = category?.name ?? "其他";
 
     try {
-      const tempId = await enqueueCreate({
+      setSubmitting(true);
+      const txId = await createTransaction({
         amount: numAmount,
-        categoryId,
-        categoryName,
-        note,
+        category_id: categoryId,
         type,
-        occurredAt: date.toISOString(),
+        note,
+        occurred_at: date.toISOString(),
         source: "manual",
       });
 
-      // 即时插入聊天消息
-      addMessage({ id: `${Date.now()}-user`, user_id: "", role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}`, transaction_id: null, created_at: new Date().toISOString() });
-      addMessage({ id: `${Date.now()}-bill`, user_id: "", role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: tempId, amount: numAmount, type, note, category: { name: categoryName } }), transaction_id: tempId, created_at: new Date().toISOString() });
+      await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
+      await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
 
-      onSuccess?.({ id: tempId, amount: numAmount, type, note });
+      onSuccess?.({ id: txId, amount: numAmount, type, note });
       onClose();
       setAmount("");
       setNote("");
@@ -84,6 +82,8 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
     } catch (err) {
       console.error("ManualEntryForm submit error:", err);
       Alert.alert("提交失败", err instanceof Error ? err.message : "请重试");
+    } finally {
+      setSubmitting(false);
     }
   };
 

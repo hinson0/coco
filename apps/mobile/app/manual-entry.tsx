@@ -2,18 +2,23 @@ import { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiFetch } from "../lib/api";
-import { useQueryClient } from "@tanstack/react-query";
 import { CategoryPicker } from "../components/CategoryPicker";
-import { useCategories } from "../hooks/useCategories";
+import { useLocalCategories } from "../hooks/useLocalCategories";
+import { useCreateTransaction, useUpdateTransaction } from "../hooks/useLocalTransactions";
+import { useAddChatMessage } from "../hooks/useLocalChatMessages";
+import { useOfflineContext } from "../lib/offline-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { colors } from "../constants/theme";
 
 export default function ManualEntryScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ txId?: string; txData?: string }>();
+  const params = useLocalSearchParams<{ txId?: string; txData?: string; msgId?: string }>();
+  const { db } = useOfflineContext();
   const qc = useQueryClient();
-  const { data: catData } = useCategories();
-  const categories = catData?.data ?? [];
+  const { data: categories = [] } = useLocalCategories();
+  const { mutateAsync: createTransaction } = useCreateTransaction();
+  const { mutateAsync: updateTransaction } = useUpdateTransaction();
+  const { mutateAsync: addMessage } = useAddChatMessage();
 
   // Parse transaction from params for edit mode
   const transaction = params.txData ? JSON.parse(params.txData) : undefined;
@@ -78,22 +83,23 @@ export default function ManualEntryScreen() {
 
     setSubmitting(true);
     try {
-      const payload = { amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId };
-      const resp = isEdit
-        ? await apiFetch<any>(`/api/transactions/${transaction.id}`, {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          })
-        : await apiFetch<any>("/api/record/manual", {
-            method: "POST",
-            body: JSON.stringify(payload),
-          });
-      if (resp.success) {
-        // Navigate back immediately for snappy UX, invalidate in background
-        router.back();
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      const category = categories.find((c: any) => c.id === categoryId);
+      const categoryName = category?.name ?? "其他";
+
+      if (isEdit) {
+        await updateTransaction({ id: transaction.id, amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId });
+        // Update the chat message snapshot so the card reflects the edit
+        if (db && params.msgId) {
+          const newContent = JSON.stringify({ id: transaction.id, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() });
+          await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", newContent, params.msgId);
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        }
+      } else {
+        const txId = await createTransaction({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, source: "manual" });
+        await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
+        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
       }
+      router.back();
     } catch {
       Alert.alert(isEdit ? "修改失败" : "提交失败", "请重试");
     } finally {

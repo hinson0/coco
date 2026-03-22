@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { useTransactions } from '../../hooks/useTransactions';
-import { useCategories } from '../../hooks/useCategories';
+import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { PeriodTabs } from '../../components/stats/PeriodTabs';
 import { MonthSelector } from '../../components/stats/MonthSelector';
 import { BarChartCard } from '../../components/stats/BarChartCard';
@@ -65,11 +65,10 @@ export default function StatsScreen() {
   const [period, setPeriod] = useState<Period>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { data: txData } = useTransactions(1);
-  const { data: catData } = useCategories();
+  const { data: txData } = useLocalTransactions();
+  const { data: categories = [] } = useLocalCategories();
 
   const allTransactions: readonly Transaction[] = txData?.data ?? [];
-  const categories: Category[] = catData?.data ?? [];
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};
