@@ -31,18 +31,22 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInpu
       <TextInput
         value={text}
         onChangeText={setText}
-        onSubmitEditing={handleSubmit}
         placeholder="记一笔或按住说话..."
         placeholderTextColor={colors.textLighter}
-        returnKeyType="send"
-        style={styles.input}
-        multiline={false}
+        returnKeyType="default"
+        style={[styles.input, { maxHeight: 100 }]}
+        multiline
       />
 
-      {/* Voice button */}
-      <Pressable onPress={onVoice} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
-        <AppText size="2xl">🎤</AppText>
-      </Pressable>
+      {text.trim() ? (
+        <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
+          <AppText size="sm" weight="semibold" color={colors.white}>发送</AppText>
+        </Pressable>
+      ) : (
+        <Pressable onPress={onVoice} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
+          <AppText size="2xl">🎤</AppText>
+        </Pressable>
+      )}
 
       {/* Plus button */}
       <Pressable onPress={onPlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
@@ -65,6 +69,14 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtn: {
+    height: 38,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 19,
+    backgroundColor: colors.sage,
     alignItems: 'center',
     justifyContent: 'center',
   },
