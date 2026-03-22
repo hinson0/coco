@@ -1,21 +1,50 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard, ActivityIndicator, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiFetch } from "../lib/api";
-import { useQueryClient } from "@tanstack/react-query";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { CategoryPicker } from "../components/CategoryPicker";
-import { useCategories } from "../hooks/useCategories";
-import { colors } from "../constants/theme";
+import { useLocalCategories } from "../hooks/useLocalCategories";
+import { useCreateTransaction, useUpdateTransaction } from "../hooks/useLocalTransactions";
+import { useAddChatMessage } from "../hooks/useLocalChatMessages";
+import { useOfflineContext } from "../lib/offline-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { colors, radii, shadows, spacing } from "../constants/theme";
+
+// ─── Date helpers ────────────────────────────────────────────────────────────
+
+const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function formatDateLabel(d: Date): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const isSame = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const base = `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
+  if (isSame(d, today)) return `${base}  今天`;
+  if (isSame(d, yesterday)) return `${base}  昨天`;
+  return base;
+}
+
+function isToday(d: Date): boolean {
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ManualEntryScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ txId?: string; txData?: string }>();
+  const params = useLocalSearchParams<{ txId?: string; txData?: string; msgId?: string }>();
+  const { db } = useOfflineContext();
   const qc = useQueryClient();
-  const { data: catData } = useCategories();
-  const categories = catData?.data ?? [];
+  const { data: categories = [] } = useLocalCategories();
+  const { mutateAsync: createTransaction } = useCreateTransaction();
+  const { mutateAsync: updateTransaction } = useUpdateTransaction();
+  const { mutateAsync: addMessage } = useAddChatMessage();
 
-  // Parse transaction from params for edit mode
   const transaction = params.txData ? JSON.parse(params.txData) : undefined;
   const isEdit = !!transaction;
 
@@ -28,6 +57,7 @@ export default function ManualEntryScreen() {
   const amountRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -37,7 +67,6 @@ export default function ManualEntryScreen() {
 
   const DEFAULT_NAMES: Record<string, string> = { expense: "购物", income: "工资" };
 
-  // Pre-fill for edit or set defaults for new
   useEffect(() => {
     if (transaction) {
       setAmount(String(transaction.amount));
@@ -46,16 +75,14 @@ export default function ManualEntryScreen() {
       setCategoryId(transaction.category_id);
       setDate(new Date(transaction.occurred_at));
     } else {
-      const defaultName = DEFAULT_NAMES["expense"];
-      const match = categories.find((c: any) => c.type === "expense" && c.name === defaultName);
+      const match = categories.find((c: any) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"]);
       if (match) setCategoryId(match.id);
     }
   }, [transaction?.id, categories.length]);
 
   useEffect(() => {
     if (!isEdit) {
-      const defaultName = DEFAULT_NAMES[type];
-      const match = categories.find((c: any) => c.type === type && c.name === defaultName);
+      const match = categories.find((c: any) => c.type === type && c.name === DEFAULT_NAMES[type]);
       if (match) setCategoryId(match.id);
     }
   }, [type, categories, isEdit]);
@@ -65,6 +92,19 @@ export default function ManualEntryScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  function shiftDate(offset: number) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + offset);
+    if (next > new Date()) return;
+    setDate(next);
+  }
+
+  function handleDateChange(_event: any, selectedDate?: Date) {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (selectedDate) setDate(selectedDate);
+  }
+
+  // ── Submit ──
   const handleSubmit = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -78,22 +118,22 @@ export default function ManualEntryScreen() {
 
     setSubmitting(true);
     try {
-      const payload = { amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId };
-      const resp = isEdit
-        ? await apiFetch<any>(`/api/transactions/${transaction.id}`, {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          })
-        : await apiFetch<any>("/api/record/manual", {
-            method: "POST",
-            body: JSON.stringify(payload),
-          });
-      if (resp.success) {
-        // Navigate back immediately for snappy UX, invalidate in background
-        router.back();
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      const category = categories.find((c: any) => c.id === categoryId);
+      const categoryName = category?.name ?? "其他";
+
+      if (isEdit) {
+        await updateTransaction({ id: transaction.id, amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId });
+        if (db && params.msgId) {
+          const newContent = JSON.stringify({ id: transaction.id, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() });
+          await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", newContent, params.msgId);
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        }
+      } else {
+        const txId = await createTransaction({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, source: "manual" });
+        await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
+        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
       }
+      router.back();
     } catch {
       Alert.alert(isEdit ? "修改失败" : "提交失败", "请重试");
     } finally {
@@ -101,67 +141,95 @@ export default function ManualEntryScreen() {
     }
   };
 
+  const bottomPadding = keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom;
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancel}>取消</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{isEdit ? "修改记账" : "手动记账"}</Text>
-        <TouchableOpacity onPress={handleSubmit} disabled={submitting}>
-          <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
-      {/* Body */}
+      {/* ── Body ── */}
       <ScrollView
         ref={scrollRef}
         style={styles.body}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight : insets.bottom + 20 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
       >
         {/* Type toggle */}
         <View style={styles.typeRow}>
-          <TouchableOpacity style={[styles.typeBtn, type === "expense" && styles.typeBtnActive]} onPress={() => setType("expense")}>
+          <TouchableOpacity
+            style={[styles.typeBtn, type === "expense" && styles.typeBtnExpense]}
+            onPress={() => setType("expense")}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.typeText, type === "expense" && styles.typeTextActive]}>支出</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.typeBtn, type === "income" && styles.typeBtnIncome]} onPress={() => setType("income")}>
+          <TouchableOpacity
+            style={[styles.typeBtn, type === "income" && styles.typeBtnIncome]}
+            onPress={() => setType("income")}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.typeText, type === "income" && styles.typeTextActive]}>收入</Text>
           </TouchableOpacity>
         </View>
 
         {/* Amount */}
-        <TextInput
-          ref={amountRef}
-          style={styles.amountInput}
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="0.00"
-          placeholderTextColor="#cbd5e1"
-          keyboardType="decimal-pad"
-        />
+        <View style={styles.amountBox}>
+          <Text style={styles.amountPrefix}>¥</Text>
+          <TextInput
+            ref={amountRef}
+            style={styles.amountInput}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0.00"
+            placeholderTextColor={colors.textLighter}
+            keyboardType="decimal-pad"
+          />
+        </View>
 
         {/* Category Picker */}
         <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
 
-        {/* Date quick select */}
-        <View style={{ marginTop: 16 }}>
-          <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>选择日期</Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {[0, -1, -2].map((offset) => {
-              const d = new Date();
-              d.setDate(d.getDate() + offset);
-              const label = offset === 0 ? "今天" : offset === -1 ? "昨天" : "前天";
-              const isSelected = date.toDateString() === d.toDateString();
-              return (
-                <TouchableOpacity key={offset} style={[styles.typeBtn, isSelected && styles.typeBtnActive]} onPress={() => setDate(d)}>
-                  <Text style={[styles.typeText, isSelected && styles.typeTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+        {/* Date selector — arrows + tappable center */}
+        <View style={styles.dateCard}>
+          <TouchableOpacity onPress={() => shiftDate(-1)} style={styles.dateArrowBtn} activeOpacity={0.6}>
+            <Text style={styles.dateArrow}>‹</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateLabelArea} activeOpacity={0.7}>
+            <Text style={styles.dateIcon}>📅</Text>
+            <Text style={styles.dateText}>{formatDateLabel(date)}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => shiftDate(1)}
+            style={styles.dateArrowBtn}
+            activeOpacity={isToday(date) ? 1 : 0.6}
+            disabled={isToday(date)}
+          >
+            <Text style={[styles.dateArrow, isToday(date) && { opacity: 0.3 }]}>›</Text>
+          </TouchableOpacity>
         </View>
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === "ios" ? "inline" : "calendar"}
+            maximumDate={new Date()}
+            onChange={handleDateChange}
+            locale="zh-CN"
+          />
+        )}
+        {showDatePicker && Platform.OS === "ios" && (
+          <TouchableOpacity style={styles.dateConfirmBtn} onPress={() => setShowDatePicker(false)} activeOpacity={0.7}>
+            <Text style={styles.dateConfirmText}>确定</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Note */}
         <TextInput
@@ -169,37 +237,209 @@ export default function ManualEntryScreen() {
           value={note}
           onChangeText={setNote}
           placeholder="添加备注..."
-          placeholderTextColor="#cbd5e1"
+          placeholderTextColor={colors.textLighter}
           onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
         />
       </ScrollView>
+
+      {/* ── Bottom save button ── */}
+      <View style={[styles.bottomBar, { paddingBottom: bottomPadding + 12 }]}>
+        <TouchableOpacity
+          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <Text style={styles.saveBtnText}>{isEdit ? "保存修改" : "保存"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
   },
+
+  // Header
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: colors.creamDark,
   },
-  cancel: { color: "#94a3b8", fontSize: 16 },
-  title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
-  save: { color: colors.sage, fontSize: 16, fontWeight: "600" },
-  body: { flex: 1, padding: 16 },
-  typeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  typeBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#F0F2F5", alignItems: "center" },
-  typeBtnActive: { backgroundColor: "#DC2626" },
-  typeBtnIncome: { backgroundColor: "#059669" },
-  typeText: { color: "#64748b", fontSize: 14, fontWeight: "600" },
-  typeTextActive: { color: "#fff" },
-  amountInput: { fontSize: 36, fontWeight: "700", color: "#1e293b", textAlign: "left", marginBottom: 20, padding: 16, backgroundColor: "#F0F2F5", borderRadius: 12 },
-  noteInput: { backgroundColor: "#F0F2F5", color: "#1e293b", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: {
+    fontSize: 18,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+  },
+
+  // Body
+  body: {
+    flex: 1,
+    padding: spacing.xl,
+  },
+
+  // Type toggle
+  typeRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 24,
+  },
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radii.md,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+  },
+  typeBtnExpense: {
+    backgroundColor: colors.coral,
+  },
+  typeBtnIncome: {
+    backgroundColor: colors.sage,
+  },
+  typeText: {
+    color: colors.textLight,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  typeTextActive: {
+    color: colors.white,
+  },
+
+  // Amount
+  amountBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.cream,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    marginBottom: 20,
+  },
+  amountPrefix: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: colors.textLighter,
+    marginRight: 4,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 36,
+    fontWeight: "700",
+    color: colors.text,
+  },
+
+  // Date selector
+  dateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.cream,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.creamDark,
+    marginTop: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  dateArrowBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.sm,
+  },
+  dateArrow: {
+    fontSize: 24,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  dateLabelArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  dateIcon: {
+    fontSize: 16,
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.text,
+  },
+  dateConfirmBtn: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    backgroundColor: colors.sage,
+    borderRadius: radii.sm,
+  },
+  dateConfirmText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // Note
+  noteInput: {
+    backgroundColor: colors.cream,
+    color: colors.text,
+    padding: 14,
+    borderRadius: radii.md,
+    fontSize: 14,
+    marginTop: 20,
+  },
+
+  // Bottom save button
+  bottomBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: 12,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
+  },
+  saveBtn: {
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.sage,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.md,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });

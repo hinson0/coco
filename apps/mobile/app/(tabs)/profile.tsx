@@ -1,6 +1,6 @@
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
-import { useTransactions } from '../../hooks/useTransactions';
+import { useLocalTransactions } from '../../hooks/useLocalTransactions';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
@@ -50,8 +50,8 @@ function computeStats(transactions: readonly Transaction[]) {
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
-  const { data } = useTransactions(1);
-  const transactions = data?.data ?? [];
+  const { data: txData } = useLocalTransactions();
+  const transactions = txData?.data ?? [];
   const { monthlyCount, streak, budgetMonths } = computeStats(transactions);
 
   const userName = session?.user?.email?.split('@')[0] ?? '棉花用户';
