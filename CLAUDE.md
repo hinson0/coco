@@ -1,0 +1,19 @@
+# 语言
+
+## 回复语言（必须遵守）
+
+全程使用**简体中文**回复，包括：
+- 所有解释、提问、总结
+- 内部 thinking/reasoning 过程
+- 代码注释中的说明文字
+
+# 工作路径
+
+## Plan Mode 文件位置
+
+Claude Code Plan Mode 的计划文件保存在**当前项目目录内**：
+`.claude/plans/YYYY_MM_DD_HH_mm-<name>.md`
+
+注意：superpowers:writing-plans 遵循其自身默认路径（`docs/superpowers/plans/`），不受此规则影响。
+
+
