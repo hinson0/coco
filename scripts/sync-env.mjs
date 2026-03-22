@@ -51,5 +51,3 @@ function sync() {
 }
 
 sync();
-
-var a = 1;

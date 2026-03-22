@@ -1,10 +1,15 @@
-import { supabase } from "./supabase";
 import * as Localization from "expo-localization";
+import { supabase } from "./supabase";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL!;
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+export async function apiFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
 
   const response = await fetch(`${API_BASE}${path}`, {
