@@ -28,4 +28,4 @@ if (!existsSync(resolve(dir, "node_modules"))) {
 
 // 剩余参数透传给 dev
 const extra = process.argv.slice(3).join(" ");
-run(`pnpm run dev -- ${extra}`);
+run(`pnpm run dev ${extra}`);
