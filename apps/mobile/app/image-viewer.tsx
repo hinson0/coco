@@ -45,6 +45,11 @@ export default function ImageViewerScreen() {
     transform: [{ scale: enterScale.value }],
   }));
 
+  // 背景跟随图片淡入淡出
+  const bgAnimStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(0,0,0,${enterOpacity.value})`,
+  }));
+
   // 缩放
   const scale = useSharedValue(1);
   const baseScaleRef = useRef(1);
@@ -171,8 +176,8 @@ export default function ImageViewerScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <Animated.View style={[styles.screen, bgAnimStyle]}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* 图片区域（外层 enterAnimStyle 控制进入/退出，内层 animatedStyle 控制缩放平移） */}
       <Animated.View style={[styles.imageArea, enterAnimStyle]}>
@@ -199,14 +204,13 @@ export default function ImageViewerScreen() {
           <AppText size="sm" color={colors.white}>保存</AppText>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#000',
   },
   imageArea: {
     flex: 1,
