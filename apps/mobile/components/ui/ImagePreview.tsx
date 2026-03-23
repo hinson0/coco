@@ -1,6 +1,6 @@
-import { useRef } from 'react';
-import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle, type View } from 'react-native';
+import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
+import Animated from 'react-native-reanimated';
 
 interface ImagePreviewProps {
   readonly uri: string;
@@ -8,27 +8,18 @@ interface ImagePreviewProps {
 }
 
 export function ImagePreview({ uri, style }: ImagePreviewProps) {
-  const thumbRef = useRef<View>(null);
-
-  function handlePress() {
-    // 获取缩略图在屏幕上的绝对位置，传给 viewer 做动画
-    thumbRef.current?.measureInWindow((x, y, width, height) => {
-      router.push({
-        pathname: '/image-viewer',
-        params: {
-          uri,
-          thumbX: Math.round(x),
-          thumbY: Math.round(y),
-          thumbW: Math.round(width),
-          thumbH: Math.round(height),
-        },
-      });
-    });
-  }
-
   return (
-    <Pressable ref={thumbRef} onPress={handlePress} style={style}>
-      <Image source={{ uri }} style={styles.thumbnail} resizeMode="cover" />
+    <Pressable
+      onPress={() => router.push({ pathname: '/image-viewer', params: { uri } })}
+      style={style}
+    >
+      {/* sharedTransitionTag 让 reanimated 自动处理两个屏幕间的转场动画 */}
+      <Animated.Image
+        sharedTransitionTag={`image-${uri}`}
+        source={{ uri }}
+        style={styles.thumbnail}
+        resizeMode="cover"
+      />
     </Pressable>
   );
 }
