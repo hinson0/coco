@@ -41,6 +41,8 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
 
   // 动画进度 0 = 缩略图位置/大小, 1 = 全屏
   const progress = useSharedValue(0);
+  // 关闭时末尾的淡出（让浮层图片融入缩略图）
+  const imageOpacity = useSharedValue(1);
 
   // 手势：缩放 + 平移
   const pinchScale = useSharedValue(1);
@@ -69,6 +71,7 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
     panTx.value = 0;
     panTy.value = 0;
     progress.value = 0;
+    imageOpacity.value = 1;
 
     setVisible(true);
     // 下一帧启动动画
@@ -88,8 +91,13 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
     panTy.value = withTiming(0, { duration: 200, easing: EASING });
 
     // 缩回缩略图位置
-    progress.value = withTiming(0, { duration: DURATION, easing: EASING }, () => {
-      runOnJS(setVisible)(false);
+    progress.value = withTiming(0, { duration: DURATION, easing: EASING });
+
+    // 最后 100ms 淡出图片，让浮层无缝融入下方缩略图
+    imageOpacity.value = withTiming(1, { duration: DURATION - 100, easing: EASING }, () => {
+      imageOpacity.value = withTiming(0, { duration: 100 }, () => {
+        runOnJS(setVisible)(false);
+      });
     });
   }
 
@@ -113,6 +121,7 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
       top: curY,
       width: curW,
       height: curH,
+      opacity: imageOpacity.value,
       transform: [
         { translateX: panTx.value },
         { translateY: panTy.value },
