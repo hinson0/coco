@@ -209,42 +209,47 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
 
   return (
     <ImageViewerContext.Provider value={{ open }}>
-      {children}
+      <View style={styles.root}>
+        {children}
 
-      {visible && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          {/* 黑色背景 */}
-          <Animated.View style={[styles.bg, bgAnimatedStyle]} />
+        {visible && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* 黑色背景 */}
+            <Animated.View style={[styles.bg, bgAnimatedStyle]} />
 
-          {/* 触摸区域 */}
-          <View
-            style={StyleSheet.absoluteFill}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <Animated.View style={imageAnimatedStyle} pointerEvents="none">
-              <Image source={{ uri: imageUri }} style={styles.fullImage} resizeMode="cover" />
+            {/* 触摸区域 */}
+            <View
+              style={StyleSheet.absoluteFill}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              <Animated.View style={imageAnimatedStyle} pointerEvents="none">
+                <Image source={{ uri: imageUri }} style={styles.fullImage} resizeMode="cover" />
+              </Animated.View>
+            </View>
+
+            {/* 工具栏 */}
+            <Animated.View
+              style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, toolbarAnimatedStyle]}
+              pointerEvents="box-none"
+            >
+              <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
+                <AppText size="2xl">↗</AppText>
+                <AppText size="sm" color={colors.white}>分享</AppText>
+              </TouchableOpacity>
             </Animated.View>
           </View>
-
-          {/* 工具栏 */}
-          <Animated.View
-            style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, toolbarAnimatedStyle]}
-            pointerEvents="box-none"
-          >
-            <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
-              <AppText size="2xl">↗</AppText>
-              <AppText size="sm" color={colors.white}>分享</AppText>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      )}
+        )}
+      </View>
     </ImageViewerContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   bg: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
