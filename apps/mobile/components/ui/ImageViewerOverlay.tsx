@@ -99,10 +99,11 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
 
   // ─── 动画样式 ───
   const { x: tx, y: ty, w: tw, h: th } = thumbRect.current;
+  // 全屏时容器覆盖整个屏幕（cover 模式下图片填满）
   const fullW = screenW;
-  const fullH = screenH * 0.8;
-  const fullX = (screenW - fullW) / 2;
-  const fullY = (screenH - fullH) / 2;
+  const fullH = screenH;
+  const fullX = 0;
+  const fullY = 0;
 
   // 缩略图圆角（匹配 OcrBubble 的 radii.lg = 18）
   const THUMB_RADIUS = 18;
@@ -228,7 +229,7 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
             onTouchEnd={onTouchEnd}
           >
             <Animated.View style={imageAnimatedStyle} pointerEvents="none">
-              <Image source={{ uri: imageUri }} style={styles.fullImage} resizeMode="contain" />
+              <Image source={{ uri: imageUri }} style={styles.fullImage} resizeMode="cover" />
             </Animated.View>
           </View>
 
