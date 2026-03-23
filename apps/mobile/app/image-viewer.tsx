@@ -1,10 +1,10 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Alert, StatusBar, type GestureResponderEvent } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { AppText } from '../components/ui/AppText';
 import { colors, spacing } from '../constants/theme';
 
@@ -20,35 +20,6 @@ const TAP_THRESHOLD = 8;
 export default function ImageViewerScreen() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const insets = useSafeAreaInsets();
-
-  // 进入/退出动画
-  const enterScale = useSharedValue(0.5);
-  const enterOpacity = useSharedValue(0);
-  const isClosingRef = useRef(false);
-
-  useEffect(() => {
-    enterScale.value = withSpring(1, { damping: 20, stiffness: 200, mass: 0.5 });
-    enterOpacity.value = withTiming(1, { duration: 250 });
-  }, []);
-
-  function animateClose() {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    enterScale.value = withTiming(0.5, { duration: 200 });
-    enterOpacity.value = withTiming(0, { duration: 200 }, () => {
-      runOnJS(router.back)();
-    });
-  }
-
-  const enterAnimStyle = useAnimatedStyle(() => ({
-    opacity: enterOpacity.value,
-    transform: [{ scale: enterScale.value }],
-  }));
-
-  // 背景跟随图片淡入淡出
-  const bgAnimStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0,0,0,${enterOpacity.value})`,
-  }));
 
   // 缩放
   const scale = useSharedValue(1);
@@ -66,6 +37,10 @@ export default function ImageViewerScreen() {
   const isDraggingRef = useRef(false);
   // pinch 结束后短暂冷却，防止第二根手指抬起被误判为单击
   const justPinchedRef = useRef(false);
+  const closingRef = useRef(false);
+
+  // 页面整体透明度（关闭动画用）
+  const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -75,15 +50,26 @@ export default function ImageViewerScreen() {
     ],
   }));
 
-  const springConfig = { damping: 20, stiffness: 200, mass: 0.5 };
+  const screenAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   function resetTransform(animated = true) {
-    scale.value = animated ? withSpring(1, springConfig) : 1;
-    translateX.value = animated ? withSpring(0, springConfig) : 0;
-    translateY.value = animated ? withSpring(0, springConfig) : 0;
+    const opts = { duration: 150 };
+    scale.value = animated ? withTiming(1, opts) : 1;
+    translateX.value = animated ? withTiming(0, opts) : 0;
+    translateY.value = animated ? withTiming(0, opts) : 0;
     baseScaleRef.current = 1;
     baseTxRef.current = 0;
     baseTyRef.current = 0;
+  }
+
+  function fadeOutAndClose() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    opacity.value = withTiming(0, { duration: 250 }, (finished) => {
+      if (finished) runOnJS(router.back)();
+    });
   }
 
   // ─── 触摸事件 ───
@@ -110,8 +96,7 @@ export default function ImageViewerScreen() {
     if (isPinchingRef.current && touches.length >= 2) {
       const dist = getDistance(touches);
       if (initialDistRef.current === 0) return;
-      const raw = Math.min(Math.max(baseScaleRef.current * (dist / initialDistRef.current), 1), 5);
-      scale.value = withSpring(raw, { damping: 40, stiffness: 300, mass: 0.5 });
+      scale.value = Math.min(Math.max(baseScaleRef.current * (dist / initialDistRef.current), 1), 5);
     } else if (touches.length === 1 && !isPinchingRef.current) {
       const dx = touches[0].pageX - startXRef.current;
       const dy = touches[0].pageY - startYRef.current;
@@ -142,8 +127,8 @@ export default function ImageViewerScreen() {
         // 第二根手指抬起（pinch 刚结束），不关闭
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
-        // 真正的单击 → 返回
-        animateClose();
+        // 真正的单击 → 渐隐后返回
+        fadeOutAndClose();
       }
       isDraggingRef.current = false;
     }
@@ -176,22 +161,20 @@ export default function ImageViewerScreen() {
   }
 
   return (
-    <Animated.View style={[styles.screen, bgAnimStyle]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <Animated.View style={[styles.screen, screenAnimatedStyle]}>
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* 图片区域（外层 enterAnimStyle 控制进入/退出，内层 animatedStyle 控制缩放平移） */}
-      <Animated.View style={[styles.imageArea, enterAnimStyle]}>
-        <View
-          style={styles.imageArea}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
-            <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
-          </Animated.View>
-        </View>
-      </Animated.View>
+      {/* 图片区域 */}
+      <View
+        style={styles.imageArea}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
+          <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+        </Animated.View>
+      </View>
 
       {/* 底部操作栏 */}
       <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
@@ -211,6 +194,7 @@ export default function ImageViewerScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: '#000',
   },
   imageArea: {
     flex: 1,
