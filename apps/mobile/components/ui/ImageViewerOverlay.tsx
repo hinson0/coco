@@ -2,7 +2,7 @@ import { useRef, useCallback, createContext, useContext, useState, type ReactNod
 import { View, Image, StyleSheet, TouchableOpacity, Alert, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing, runOnJS } from 'react-native-reanimated';
 import { AppText } from './AppText';
 import { colors, spacing } from '../../constants/theme';
 
@@ -93,12 +93,13 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
     // 缩回缩略图位置
     progress.value = withTiming(0, { duration: DURATION, easing: EASING });
 
-    // 最后 100ms 淡出图片，让浮层无缝融入下方缩略图
-    imageOpacity.value = withTiming(1, { duration: DURATION - 100, easing: EASING }, () => {
-      imageOpacity.value = withTiming(0, { duration: 100 }, () => {
+    // 缩回动画快结束时（最后 100ms），淡出图片融入下方缩略图
+    imageOpacity.value = withDelay(
+      DURATION - 100,
+      withTiming(0, { duration: 100 }, () => {
         runOnJS(setVisible)(false);
-      });
-    });
+      }),
+    );
   }
 
   // ─── 动画样式 ───
