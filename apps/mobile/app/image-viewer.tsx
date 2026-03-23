@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
 import { AppText } from '../components/ui/AppText';
 import { colors, spacing } from '../constants/theme';
 
@@ -37,6 +37,12 @@ export default function ImageViewerScreen() {
   const isDraggingRef = useRef(false);
   // pinch 结束后短暂冷却，防止第二根手指抬起被误判为单击
   const justPinchedRef = useRef(false);
+  const isClosingRef = useRef(false);
+
+  // 关闭动画：背景淡出
+  const bgOpacity = useSharedValue(1);
+  // 关闭动画：工具栏淡出
+  const toolbarOpacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -44,6 +50,15 @@ export default function ImageViewerScreen() {
       { translateY: translateY.value },
       { scale: scale.value },
     ],
+    opacity: bgOpacity.value,
+  }));
+
+  const bgAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(0,0,0,${0.85 * bgOpacity.value})`,
+  }));
+
+  const toolbarAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: toolbarOpacity.value,
   }));
 
   function resetTransform(animated = true) {
@@ -54,6 +69,20 @@ export default function ImageViewerScreen() {
     baseScaleRef.current = 1;
     baseTxRef.current = 0;
     baseTyRef.current = 0;
+  }
+
+  function animateClose() {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    const duration = 250;
+    // 图片缩小 + 淡出
+    scale.value = withTiming(0.5, { duration });
+    translateX.value = withTiming(0, { duration });
+    translateY.value = withTiming(0, { duration });
+    bgOpacity.value = withTiming(0, { duration }, () => {
+      runOnJS(router.back)();
+    });
+    toolbarOpacity.value = withTiming(0, { duration: 100 });
   }
 
   // ─── 触摸事件 ───
@@ -111,8 +140,8 @@ export default function ImageViewerScreen() {
         // 第二根手指抬起（pinch 刚结束），不关闭
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
-        // 真正的单击 → 返回
-        router.back();
+        // 真正的单击 → 缩小动画后返回
+        animateClose();
       }
       isDraggingRef.current = false;
     }
@@ -149,8 +178,8 @@ export default function ImageViewerScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       {/* 图片区域 */}
-      <View
-        style={styles.imageArea}
+      <Animated.View
+        style={[styles.imageArea, bgAnimatedStyle]}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -158,10 +187,10 @@ export default function ImageViewerScreen() {
         <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
           <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
         </Animated.View>
-      </View>
+      </Animated.View>
 
       {/* 底部操作栏 */}
-      <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
+      <Animated.View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, toolbarAnimatedStyle]}>
         <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
           <AppText size="2xl">↗</AppText>
           <AppText size="sm" color={colors.white}>分享</AppText>
@@ -170,7 +199,7 @@ export default function ImageViewerScreen() {
           <AppText size="2xl">⬇</AppText>
           <AppText size="sm" color={colors.white}>保存</AppText>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -184,6 +213,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.85)',
   },
   imageBox: {
     width: '100%',
