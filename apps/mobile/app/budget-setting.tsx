@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalBudgets, useCreateBudget, useUpdateBudget } from "../hooks/useLocalBudgets";
@@ -16,6 +16,7 @@ export default function BudgetSettingScreen() {
 
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const amountRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -23,6 +24,12 @@ export default function BudgetSettingScreen() {
       setAmount(String(existingBudget.amount));
     }
   }, [existingBudget?.id]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => amountRef.current?.focus(), 500);
@@ -90,7 +97,7 @@ export default function BudgetSettingScreen() {
       </View>
 
       {/* Bottom save button */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
         <TouchableOpacity
           style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
           onPress={handleSubmit}
