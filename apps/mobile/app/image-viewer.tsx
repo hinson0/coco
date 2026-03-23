@@ -35,6 +35,8 @@ export default function ImageViewerScreen() {
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const isDraggingRef = useRef(false);
+  // pinch 结束后短暂冷却，防止第二根手指抬起被误判为单击
+  const justPinchedRef = useRef(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -94,13 +96,22 @@ export default function ImageViewerScreen() {
 
   const onTouchEnd = useCallback((e: GestureResponderEvent) => {
     const { touches } = e.nativeEvent;
+
     if (touches.length < 2 && isPinchingRef.current) {
+      // 第一根手指抬起，pinch 结束
       isPinchingRef.current = false;
+      justPinchedRef.current = true;
       baseScaleRef.current = scale.value;
       if (scale.value < 1.1) resetTransform(true);
+      return;
     }
-    if (touches.length === 0 && !isPinchingRef.current) {
-      if (!isDraggingRef.current) {
+
+    if (touches.length === 0) {
+      if (justPinchedRef.current) {
+        // 第二根手指抬起（pinch 刚结束），不关闭
+        justPinchedRef.current = false;
+      } else if (!isDraggingRef.current) {
+        // 真正的单击 → 返回
         router.back();
       }
       isDraggingRef.current = false;
