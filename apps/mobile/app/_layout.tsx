@@ -6,6 +6,7 @@ import type * as SQLite from "expo-sqlite";
 import { useAuth } from "../hooks/useAuth";
 import { initDatabase } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
+import { ImageViewerProvider } from "@/components/ui/ImageViewerOverlay";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +33,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <OfflineContext.Provider value={{ db }}>
-        <Slot />
+        <ImageViewerProvider>
+          <Slot />
+        </ImageViewerProvider>
       </OfflineContext.Provider>
     </QueryClientProvider>
   );
