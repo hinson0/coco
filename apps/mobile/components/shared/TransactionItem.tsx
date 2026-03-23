@@ -3,6 +3,8 @@ import { AppText } from '../ui/AppText';
 import { IconBox } from '../ui/IconBox';
 import { Badge } from '../ui/Badge';
 import { colors, radii, shadows, type CategoryColorName } from '../../constants/theme';
+import { formatAmount } from '../../lib/format';
+import { MAJOR_AMOUNT_THRESHOLD } from '@coco/shared';
 import type { Transaction } from '@coco/shared';
 
 interface TransactionItemProps {
@@ -15,10 +17,10 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, categoryIcon, categoryName, categoryColor, onPress }: TransactionItemProps) {
   const isIncome = transaction.type === 'income';
-  const amountPrefix = isIncome ? '+' : '-';
   const amountColor = isIncome ? colors.sage : colors.text;
   const time = new Date(transaction.occurred_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   const isAi = transaction.source === 'text' || transaction.source === 'asr' || transaction.source === 'ocr';
+  const isMajor = !isIncome && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
@@ -28,10 +30,11 @@ export function TransactionItem({ transaction, categoryIcon, categoryName, categ
         <View style={styles.meta}>
           <AppText size="base" color={colors.textLighter}>{time} · {categoryName}</AppText>
           {isAi ? <Badge text="AI" variant="ai" /> : null}
+          {isMajor ? <Badge text="大宗" variant="pro" /> : null}
         </View>
       </View>
       <AppText size="xl" weight="bold" color={amountColor}>
-        {amountPrefix}¥{Math.abs(transaction.amount).toLocaleString()}
+        {formatAmount(transaction.amount, transaction.type)}
       </AppText>
     </TouchableOpacity>
   );

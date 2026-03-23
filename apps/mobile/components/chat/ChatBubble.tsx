@@ -114,7 +114,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
       <View style={[styles.rowAssistant, styles.rowCard]}>
         <Avatar emoji="🌿" style={styles.avatarAi} />
         <TouchableOpacity
-          style={styles.bubbleArea}
+          style={[styles.bubbleArea, { flex: 1 }]}
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
   },
   rowCard: {
-    maxWidth: '95%',
+    width: '90%',
   },
 
   // Avatars
