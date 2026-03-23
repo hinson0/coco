@@ -244,6 +244,7 @@ export default function ChatScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
       />
 
       {/* ── Bottom panel ── */}

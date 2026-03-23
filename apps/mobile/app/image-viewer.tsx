@@ -161,23 +161,25 @@ export default function ImageViewerScreen() {
   }
 
   return (
-    <Animated.View style={[styles.screen, screenAnimatedStyle]}>
+    <View style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* 图片区域 */}
-      <View
-        style={styles.imageArea}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
-          <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
-        </Animated.View>
-      </View>
+      {/* 图片区域（淡出动画只作用于内容） */}
+      <Animated.View style={[styles.imageArea, screenAnimatedStyle]}>
+        <View
+          style={styles.imageTouch}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
+            <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+          </Animated.View>
+        </View>
+      </Animated.View>
 
-      {/* 底部操作栏 */}
-      <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
+      {/* 底部操作栏（也跟随淡出） */}
+      <Animated.View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, screenAnimatedStyle]}>
         <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
           <AppText size="2xl">↗</AppText>
           <AppText size="sm" color={colors.white}>分享</AppText>
@@ -186,8 +188,8 @@ export default function ImageViewerScreen() {
           <AppText size="2xl">⬇</AppText>
           <AppText size="sm" color={colors.white}>保存</AppText>
         </TouchableOpacity>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -197,6 +199,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   imageArea: {
+    flex: 1,
+  },
+  imageTouch: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
