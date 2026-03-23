@@ -13,17 +13,20 @@ interface TransactionItemProps {
   readonly categoryName: string;
   readonly categoryColor: CategoryColorName;
   readonly onPress?: () => void;
+  readonly onLongPress?: () => void;
 }
 
-export function TransactionItem({ transaction, categoryIcon, categoryName, categoryColor, onPress }: TransactionItemProps) {
+export function TransactionItem({ transaction, categoryIcon, categoryName, categoryColor, onPress, onLongPress }: TransactionItemProps) {
   const isIncome = transaction.type === 'income';
   const amountColor = isIncome ? colors.sage : colors.text;
-  const time = new Date(transaction.occurred_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const occurredDate = new Date(transaction.occurred_at);
+  const datePrefix = `${occurredDate.getMonth() + 1}/${occurredDate.getDate()}`;
+  const time = `${datePrefix} ${occurredDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
   const isAi = transaction.source === 'text' || transaction.source === 'asr' || transaction.source === 'ocr';
   const isMajor = !isIncome && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.container} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.7}>
       <IconBox emoji={categoryIcon} colorName={categoryColor} />
       <View style={styles.info}>
         <AppText size="lg" weight="semibold">{transaction.note || categoryName}</AppText>

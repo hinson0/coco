@@ -15,3 +15,7 @@ export interface CreateBudgetInput {
   readonly period: BudgetPeriod;
   readonly start_date: string;
 }
+
+export interface UpdateBudgetInput {
+  readonly amount: number;
+}

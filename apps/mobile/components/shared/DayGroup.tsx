@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     paddingVertical: 12,
     paddingHorizontal: 4,
+    backgroundColor: colors.cream,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
 });
