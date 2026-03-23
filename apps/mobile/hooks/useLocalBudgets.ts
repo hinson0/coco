@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
-import type { Budget, CreateBudgetInput } from "@coco/shared";
+import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@coco/shared";
 
 export function useLocalBudgets() {
   const { db } = useOfflineContext();
@@ -34,6 +34,25 @@ export function useCreateBudget() {
         input.start_date
       );
       return id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+    },
+  });
+}
+
+export function useUpdateBudget() {
+  const { db } = useOfflineContext();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: UpdateBudgetInput & { readonly id: string }) => {
+      if (!db) throw new Error("Database not initialized");
+      await db.runAsync(
+        "UPDATE budgets SET amount = ? WHERE id = ?",
+        params.amount,
+        params.id
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
