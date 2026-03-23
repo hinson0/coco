@@ -37,6 +37,8 @@
 - 交通：`买车`、`提车`、`订车`、`车贷`
 - 居住：`买房`、`首付款`
 
+**关键词去重**：`月租` 同时出现在"居住"和"通讯"两个分类中。保留"居住"（月租更常指房租），从"通讯"中移除（通讯已有 `套餐费` 覆盖）。
+
 **修复后流程**：
 ```
 "买车100000"
@@ -71,7 +73,7 @@
 2. `RecordCard.tsx` — 金额格式化改用统一工具函数，增加千位分隔符
 3. `RecordCard.tsx` — 金额文本添加 `numberOfLines={1}` + `adjustsFontSizeToFit` 作为极端情况兜底
 
-**统一金额格式化**：提取 `formatAmount(amount, type)` 工具函数，所有组件（`RecordCard`、`TransactionItem`、`DayGroup`）统一使用：
+**统一金额格式化**：提取 `formatAmount(amount, type)` 工具函数，`RecordCard` 和 `TransactionItem` 统一使用：
 ```typescript
 // 输出示例："-366,666.00"、"+5,000.00"
 function formatAmount(amount: number, type: 'income' | 'expense'): string {
