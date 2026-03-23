@@ -114,7 +114,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
       <View style={[styles.rowAssistant, styles.rowCard]}>
         <Avatar emoji="🌿" style={styles.avatarAi} />
         <TouchableOpacity
-          style={[styles.bubbleArea, styles.cardArea]}
+          style={styles.bubbleArea}
           activeOpacity={0.75}
           onLongPress={() => handleLongPress(onDelete)}
         >
@@ -198,9 +198,6 @@ const styles = StyleSheet.create({
   // Bubble area (content + time, shrinks to fit)
   bubbleArea: {
     flexShrink: 1,
-  },
-  cardArea: {
-    flex: 1,
   },
 
   // Bubbles
