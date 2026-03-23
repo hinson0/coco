@@ -2,7 +2,7 @@ import { useRef, useCallback, createContext, useContext, useState, type ReactNod
 import { View, Image, StyleSheet, TouchableOpacity, Alert, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { AppText } from './AppText';
 import { colors, spacing } from '../../constants/theme';
 
@@ -41,9 +41,6 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
 
   // 动画进度 0 = 缩略图位置/大小, 1 = 全屏
   const progress = useSharedValue(0);
-  // 关闭时末尾的淡出（让浮层图片融入缩略图）
-  const imageOpacity = useSharedValue(1);
-
   // 手势：缩放 + 平移
   const pinchScale = useSharedValue(1);
   const panTx = useSharedValue(0);
@@ -71,7 +68,6 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
     panTx.value = 0;
     panTy.value = 0;
     progress.value = 0;
-    imageOpacity.value = 1;
 
     setVisible(true);
     // 下一帧启动动画
@@ -90,16 +86,10 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
     panTx.value = withTiming(0, { duration: 200, easing: EASING });
     panTy.value = withTiming(0, { duration: 200, easing: EASING });
 
-    // 缩回缩略图位置
-    progress.value = withTiming(0, { duration: DURATION, easing: EASING });
-
-    // 缩回动画快结束时（最后 100ms），淡出图片融入下方缩略图
-    imageOpacity.value = withDelay(
-      DURATION - 100,
-      withTiming(0, { duration: 100 }, () => {
-        runOnJS(setVisible)(false);
-      }),
-    );
+    // 缩回缩略图位置，动画完成后移除覆盖层
+    progress.value = withTiming(0, { duration: DURATION, easing: EASING }, () => {
+      runOnJS(setVisible)(false);
+    });
   }
 
   // ─── 动画样式 ───
@@ -109,12 +99,17 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
   const fullX = (screenW - fullW) / 2;
   const fullY = (screenH - fullH) / 2;
 
+  // 缩略图圆角（匹配 OcrBubble 的 radii.lg = 18）
+  const THUMB_RADIUS = 18;
+
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const p = progress.value;
     const curX = tx + (fullX - tx) * p;
     const curY = ty + (fullY - ty) * p;
     const curW = tw + (fullW - tw) * p;
     const curH = th + (fullH - th) * p;
+    // 圆角：缩略图 18 → 全屏 0
+    const curRadius = THUMB_RADIUS * (1 - p);
 
     return {
       position: 'absolute',
@@ -122,7 +117,8 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
       top: curY,
       width: curW,
       height: curH,
-      opacity: imageOpacity.value,
+      borderRadius: curRadius,
+      overflow: 'hidden' as const,
       transform: [
         { translateX: panTx.value },
         { translateY: panTy.value },
