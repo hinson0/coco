@@ -1,9 +1,14 @@
-import { View, Image, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { AppText } from '../ui/AppText';
+import { ImagePreview } from '../ui/ImagePreview';
 import { colors, radii, spacing } from '../../constants/theme';
 
 interface OcrBubbleProps {
   readonly imageUri?: string;
+}
+
+function hasValidImage(uri?: string): uri is string {
+  return uri != null && (uri.startsWith('file://') || uri.startsWith('http'));
 }
 
 export function OcrBubble({ imageUri }: OcrBubbleProps) {
@@ -12,8 +17,8 @@ export function OcrBubble({ imageUri }: OcrBubbleProps) {
       <View style={styles.bubble}>
         {/* Receipt preview area */}
         <View style={styles.imageArea}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+          {hasValidImage(imageUri) ? (
+            <ImagePreview uri={imageUri} style={styles.imageContainer} />
           ) : (
             <View style={styles.placeholder}>
               <AppText size="2xl">🧾</AppText>
@@ -53,7 +58,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 120,
   },
-  image: {
+  imageContainer: {
     width: '100%',
     height: '100%',
   },
