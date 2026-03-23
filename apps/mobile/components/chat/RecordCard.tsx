@@ -1,6 +1,9 @@
 import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { AppText } from '../ui/AppText';
+import { Badge } from '../ui/Badge';
 import { colors, radii, spacing } from '../../constants/theme';
+import { formatAmount } from '../../lib/format';
+import { MAJOR_AMOUNT_THRESHOLD } from '@coco/shared';
 import type { Transaction } from '@coco/shared';
 
 interface RecordCardProps {
@@ -18,9 +21,8 @@ function formatDate(isoString: string): string {
 
 export function RecordCard({ transaction, categoryName, categoryIcon, onEdit, onDelete }: RecordCardProps) {
   const isExpense = transaction.type === 'expense';
-  const amountStr = isExpense
-    ? `-${transaction.amount.toFixed(2)}`
-    : `+${transaction.amount.toFixed(2)}`;
+  const amountStr = formatAmount(transaction.amount, transaction.type);
+  const isMajor = isExpense && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
   return (
     <View style={styles.card}>
@@ -30,14 +32,23 @@ export function RecordCard({ transaction, categoryName, categoryIcon, onEdit, on
           <AppText size="xl">{categoryIcon ?? '📦'}</AppText>
         </View>
         <View style={styles.info}>
-          <AppText size="lg" weight="semibold" color={colors.text}>
-            {categoryName ?? '未知'}
-          </AppText>
+          <View style={styles.categoryRow}>
+            <AppText size="lg" weight="semibold" color={colors.text}>
+              {categoryName ?? '未知'}
+            </AppText>
+            {isMajor ? <Badge text="大宗" variant="pro" /> : null}
+          </View>
           {transaction.note ? (
             <AppText size="base" color={colors.textLighter}>{transaction.note}</AppText>
           ) : null}
         </View>
-        <AppText size="2xl" weight="bold" color={isExpense ? colors.coral : colors.sage}>
+        <AppText
+          size="2xl"
+          weight="bold"
+          color={isExpense ? colors.coral : colors.sage}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           {amountStr}
         </AppText>
       </View>
@@ -101,6 +112,11 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     gap: 2,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 
   divider: {
