@@ -1,10 +1,10 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Alert, StatusBar, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { AppText } from '../components/ui/AppText';
 import { colors, spacing } from '../constants/theme';
 
@@ -16,77 +16,17 @@ function getDistance(touches: GestureResponderEvent['nativeEvent']['touches']) {
 }
 
 const TAP_THRESHOLD = 8;
-const ANIM_DURATION = 280;
 
 export default function ImageViewerScreen() {
-  const params = useLocalSearchParams<{
-    uri: string;
-    thumbX: string;
-    thumbY: string;
-    thumbW: string;
-    thumbH: string;
-  }>();
-  const uri = params.uri;
-  const thumbX = Number(params.thumbX) || 0;
-  const thumbY = Number(params.thumbY) || 0;
-  const thumbW = Number(params.thumbW) || 160;
-  const thumbH = Number(params.thumbH) || 120;
-
+  const { uri } = useLocalSearchParams<{ uri: string }>();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
 
-  // ─── 所有 shared values 集中声明（hooks 必须在 useAnimatedStyle 之前） ───
-  const progress = useSharedValue(0);       // 0 = 缩略图位置, 1 = 全屏
-  const bgOpacity = useSharedValue(0);
-  const toolbarOpacity = useSharedValue(0);
-  const pinchScale = useSharedValue(1);     // 双指缩放
-  const panTx = useSharedValue(0);          // 单指平移 X
-  const panTy = useSharedValue(0);          // 单指平移 Y
+  // ─── 双指缩放 + 单指平移（在查看时使用，不影响转场） ───
+  const pinchScale = useSharedValue(1);
+  const panTx = useSharedValue(0);
+  const panTy = useSharedValue(0);
 
-  // 全屏时图片的目标中心
-  const fullCenterX = screenW / 2;
-  const fullCenterY = screenH / 2;
-  // 缩略图中心
-  const thumbCenterX = thumbX + thumbW / 2;
-  const thumbCenterY = thumbY + thumbH / 2;
-  // 缩略图相对全屏的缩放比例
-  const thumbScale = thumbW / screenW;
-
-  // 入场动画
-  useEffect(() => {
-    progress.value = withTiming(1, { duration: ANIM_DURATION });
-    bgOpacity.value = withTiming(1, { duration: ANIM_DURATION });
-    toolbarOpacity.value = withTiming(1, { duration: ANIM_DURATION });
-  }, []);
-
-  // 图片转场样式：从缩略图位置插值到全屏
-  const imageTransitionStyle = useAnimatedStyle(() => {
-    const p = progress.value;
-    const currentScale = thumbScale + (1 - thumbScale) * p;
-    const currentX = thumbCenterX + (fullCenterX - thumbCenterX) * p;
-    const currentY = thumbCenterY + (fullCenterY - thumbCenterY) * p;
-    // 将位置转换为 translate（相对于全屏中心的偏移）
-    const tx = currentX - fullCenterX;
-    const ty = currentY - fullCenterY;
-
-    return {
-      transform: [
-        { translateX: tx + panTx.value },
-        { translateY: ty + panTy.value },
-        { scale: currentScale * pinchScale.value },
-      ],
-    };
-  });
-
-  const bgAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0,0,0,${bgOpacity.value})`,
-  }));
-
-  const toolbarAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: toolbarOpacity.value,
-  }));
-
-  // ─── 手势 refs ───
   const basePinchRef = useRef(1);
   const initialDistRef = useRef(0);
   const isPinchingRef = useRef(false);
@@ -96,27 +36,17 @@ export default function ImageViewerScreen() {
   const startYRef = useRef(0);
   const isDraggingRef = useRef(false);
   const justPinchedRef = useRef(false);
-  const isClosingRef = useRef(false);
 
-  function animateClose() {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-
-    // 重置平移和额外缩放，让图片回到「干净」的全屏状态
-    panTx.value = withTiming(0, { duration: ANIM_DURATION });
-    panTy.value = withTiming(0, { duration: ANIM_DURATION });
-    pinchScale.value = withTiming(1, { duration: ANIM_DURATION });
-    // 从全屏收回缩略图位置
-    progress.value = withTiming(0, { duration: ANIM_DURATION });
-    bgOpacity.value = withTiming(0, { duration: ANIM_DURATION }, () => {
-      runOnJS(router.back)();
-    });
-    toolbarOpacity.value = withTiming(0, { duration: 120 });
-  }
+  const gestureStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: panTx.value },
+      { translateY: panTy.value },
+      { scale: pinchScale.value },
+    ],
+  }));
 
   // ─── 触摸事件 ───
   const onTouchStart = useCallback((e: GestureResponderEvent) => {
-    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
     if (touches.length === 2) {
       isPinchingRef.current = true;
@@ -135,7 +65,6 @@ export default function ImageViewerScreen() {
   }, [pinchScale, panTx, panTy]);
 
   const onTouchMove = useCallback((e: GestureResponderEvent) => {
-    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
     if (isPinchingRef.current && touches.length >= 2) {
       const dist = getDistance(touches);
@@ -155,9 +84,7 @@ export default function ImageViewerScreen() {
   }, [pinchScale, panTx, panTy]);
 
   const onTouchEnd = useCallback((e: GestureResponderEvent) => {
-    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
-
     if (touches.length < 2 && isPinchingRef.current) {
       isPinchingRef.current = false;
       justPinchedRef.current = true;
@@ -170,12 +97,17 @@ export default function ImageViewerScreen() {
       }
       return;
     }
-
     if (touches.length === 0) {
       if (justPinchedRef.current) {
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
-        animateClose();
+        // 单击返回 — 先重置缩放/平移，再 router.back()
+        // reanimated 的 sharedTransitionTag 自动处理缩回动画
+        pinchScale.value = withTiming(1, { duration: 150 });
+        panTx.value = withTiming(0, { duration: 150 });
+        panTy.value = withTiming(0, { duration: 150 });
+        // 短暂延迟让手势重置完成，再触发页面返回转场
+        setTimeout(() => router.back(), 80);
       }
       isDraggingRef.current = false;
     }
@@ -211,21 +143,26 @@ export default function ImageViewerScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      <Animated.View
-        style={[styles.imageArea, bgAnimatedStyle]}
+      {/* 图片区域 */}
+      <View
+        style={styles.imageArea}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <Animated.View
-          style={[{ width: screenW, height: screenH * 0.85 }, imageTransitionStyle]}
-          pointerEvents="none"
-        >
-          <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+        <Animated.View style={[styles.gestureContainer, gestureStyle]} pointerEvents="none">
+          {/* sharedTransitionTag 与 ImagePreview 中的一致，reanimated 自动处理转场 */}
+          <Animated.Image
+            sharedTransitionTag={`image-${uri}`}
+            source={{ uri }}
+            style={{ width: screenW, height: screenH * 0.85 }}
+            resizeMode="contain"
+          />
         </Animated.View>
-      </Animated.View>
+      </View>
 
-      <Animated.View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, toolbarAnimatedStyle]}>
+      {/* 底部操作栏 */}
+      <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
         <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
           <AppText size="2xl">↗</AppText>
           <AppText size="sm" color={colors.white}>分享</AppText>
@@ -234,7 +171,7 @@ export default function ImageViewerScreen() {
           <AppText size="2xl">⬇</AppText>
           <AppText size="sm" color={colors.white}>保存</AppText>
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -249,9 +186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fullImage: {
-    width: '100%',
-    height: '100%',
+  gestureContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toolbar: {
     flexDirection: 'row',
