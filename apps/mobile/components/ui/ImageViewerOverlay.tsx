@@ -9,8 +9,6 @@ import { colors, spacing } from '../../constants/theme';
 // ─── Context ───
 interface ImageViewerState {
   open: (uri: string, layout: { x: number; y: number; w: number; h: number }) => void;
-  /** 当前正在预览的 URI，缩略图据此隐藏自己 */
-  activeUri: string | null;
 }
 
 const ImageViewerContext = createContext<ImageViewerState | null>(null);
@@ -36,7 +34,6 @@ const DURATION = 300;
 export function ImageViewerProvider({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(false);
   const [imageUri, setImageUri] = useState('');
-  const [activeUri, setActiveUri] = useState<string | null>(null);
   const thumbRect = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -63,7 +60,6 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
   // ─── 打开 ───
   const open = useCallback((uri: string, layout: { x: number; y: number; w: number; h: number }) => {
     setImageUri(uri);
-    setActiveUri(uri);  // 隐藏原始缩略图
     thumbRect.current = layout;
     isClosingRef.current = false;
 
@@ -92,7 +88,6 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
 
     // 缩回缩略图位置，动画完成后恢复缩略图 + 移除覆盖层
     progress.value = withTiming(0, { duration: DURATION, easing: EASING }, () => {
-      runOnJS(setActiveUri)(null);  // 恢复原始缩略图可见
       runOnJS(setVisible)(false);
     });
   }
@@ -213,7 +208,7 @@ export function ImageViewerProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ImageViewerContext.Provider value={{ open, activeUri }}>
+    <ImageViewerContext.Provider value={{ open }}>
       {children}
 
       {visible && (
