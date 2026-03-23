@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // scripts/worktree-dev.mjs — 启动 worktree 的 dev server（自动安装依赖）
 
-import { existsSync } from "fs";
 import { execSync } from "child_process";
+import { existsSync } from "fs";
 import { resolve } from "path";
 
 const name = process.argv[2];
@@ -18,14 +18,18 @@ if (!existsSync(dir)) {
   process.exit(1);
 }
 
-const run = (cmd) => execSync(cmd, { stdio: "inherit", cwd: dir });
+const run = (cmd, opts = {}) =>
+  execSync(cmd, { stdio: "inherit", ...opts });
+
+// 先同步 .env 文件到 worktree
+run(`node scripts/sync-env.mjs ${name}`);
 
 // 依赖不存在则自动安装
 if (!existsSync(resolve(dir, "node_modules"))) {
   console.log("📦 首次启动，安装依赖...");
-  run("pnpm install");
+  run("pnpm install", { cwd: dir });
 }
 
 // 剩余参数透传给 dev
 const extra = process.argv.slice(3).join(" ");
-run(`pnpm run dev ${extra}`);
+run(`pnpm run dev ${extra}`, { cwd: dir });
