@@ -1,7 +1,10 @@
-import { ScrollView, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { useCallback } from 'react';
+import { FlatList, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import type { Transaction, Category, Budget } from '@coco/shared';
-import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalBudgets } from '../../hooks/useLocalBudgets';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { HeaderGreeting } from '../../components/home/HeaderGreeting';
@@ -78,7 +81,8 @@ function groupByDay(transactions: readonly Transaction[]): DayData[] {
 // ─── Helper: format money ─────────────────────────────────────────────────────
 
 function fmt(amount: number): string {
-  return `¥${Math.abs(amount).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
+  const abs = Math.abs(amount).toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+  return amount < 0 ? `-¥${abs}` : `¥${abs}`;
 }
 
 // ─── Helper: compute stats ───────────────────────────────────────────────────
@@ -87,11 +91,13 @@ interface Stats {
   expense: string;
   income: string;
   balance: string;
+  balanceRaw: number;
   budget: string;
   remaining: string;
   dailyAvg: string;
   budgetPercent: number;
   daysLeft: number;
+  hasBudget: boolean;
 }
 
 function computeStats(transactions: readonly Transaction[], budgets: readonly Budget[]): Stats {
@@ -99,15 +105,11 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
   const year = now.getFullYear();
   const month = now.getMonth();
 
-  const monthTxns = transactions.filter(t => {
-    const d = new Date(t.occurred_at);
-    return d.getFullYear() === year && d.getMonth() === month;
-  });
-
-  const totalExpense = monthTxns
+  // With useMonthlyTransactions, all transactions are already this month
+  const totalExpense = transactions
     .filter(t => t.type === 'expense')
     .reduce((s, t) => s + t.amount, 0);
-  const totalIncome = monthTxns
+  const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
@@ -117,6 +119,7 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
     budgets.find(b => b.period === 'monthly' && b.category_id === null) ??
     budgets.find(b => b.period === 'monthly');
 
+  const hasBudget = monthlyBudget !== undefined;
   const budgetAmount = monthlyBudget?.amount ?? 0;
   const remaining = Math.max(0, budgetAmount - totalExpense);
 
@@ -133,103 +136,112 @@ function computeStats(transactions: readonly Transaction[], budgets: readonly Bu
     expense: fmt(totalExpense),
     income: fmt(totalIncome),
     balance: fmt(balance),
-    budget: fmt(budgetAmount),
-    remaining: fmt(remaining),
-    dailyAvg: fmt(dailyAvg),
+    balanceRaw: balance,
+    budget: hasBudget ? fmt(budgetAmount) : '点击设置',
+    remaining: hasBudget ? fmt(remaining) : '--',
+    dailyAvg: hasBudget ? fmt(dailyAvg) : '--',
     budgetPercent,
     daysLeft,
+    hasBudget,
   };
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { data: txData, isLoading: txLoading } = useLocalTransactions();
-  const { data: budgets = [] } = useLocalBudgets();
+  const now = new Date();
+  const { data: transactions = [], isLoading: txLoading, refetch } = useMonthlyTransactions(now.getFullYear(), now.getMonth());
+  const { data: budgets = [], refetch: refetchBudgets } = useLocalBudgets();
   const { data: categories = [] } = useLocalCategories();
 
-  const transactions: readonly Transaction[] = txData?.data ?? [];
+  // Refetch data when tab gains focus
+  useFocusEffect(useCallback(() => { refetch(); refetchBudgets(); }, [refetch, refetchBudgets]));
 
   const catMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
   const stats = computeStats(transactions, budgets);
   const days = groupByDay(transactions);
 
+  function handlePressBudget() {
+    router.push('/budget-setting');
+  }
+
+  function renderDayGroup({ item: day }: { item: DayData }) {
+    const totalColor = day.dayExpense > 0 ? colors.coral : colors.sage;
+    const totalStr =
+      day.dayExpense > 0 && day.dayIncome > 0
+        ? `-¥${day.dayExpense.toLocaleString()} / +¥${day.dayIncome.toLocaleString()}`
+        : day.dayExpense > 0
+        ? `-¥${day.dayExpense.toLocaleString()}`
+        : `+¥${day.dayIncome.toLocaleString()}`;
+
+    return (
+      <DayGroup
+        label={day.label}
+        date={day.date}
+        total={totalStr}
+        totalColor={totalColor}
+      >
+        {day.transactions.map(txn => {
+          const cat = catMap.get(txn.category_id);
+          const catName = cat?.name ?? '其他';
+          const catIcon = cat?.icon ?? '📦';
+          const catColor = getCategoryColor(catName);
+
+          return (
+            <TransactionItem
+              key={txn.id}
+              transaction={txn}
+              categoryIcon={catIcon}
+              categoryName={catName}
+              categoryColor={catColor}
+            />
+          );
+        })}
+      </DayGroup>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" backgroundColor={colors.cream} />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+      {/* Fixed header */}
+      <View style={styles.fixedHeader}>
         <HeaderGreeting />
-
-        {/* Overview stats card */}
         <View style={styles.cardWrapper}>
           <OverviewCard
             expense={stats.expense}
             income={stats.income}
             balance={stats.balance}
+            balanceRaw={stats.balanceRaw}
             budget={stats.budget}
             remaining={stats.remaining}
             dailyAvg={stats.dailyAvg}
             budgetPercent={stats.budgetPercent}
             daysLeft={stats.daysLeft}
+            hasBudget={stats.hasBudget}
+            onPressBudget={handlePressBudget}
           />
         </View>
+      </View>
 
-        {/* Transaction list */}
-        <View style={styles.txSection}>
-          {txLoading ? (
-            <ActivityIndicator color={colors.sage} style={styles.loader} />
-          ) : days.length === 0 ? (
-            <View style={styles.empty}>
-              <AppText color={colors.textLighter} size="lg">还没有记录，快去记一笔吧 🌿</AppText>
-            </View>
-          ) : (
-            days.map(day => {
-              const totalColor =
-                day.dayExpense > 0 ? colors.coral : colors.sage;
-              const totalStr =
-                day.dayExpense > 0 && day.dayIncome > 0
-                  ? `-¥${day.dayExpense.toLocaleString()} / +¥${day.dayIncome.toLocaleString()}`
-                  : day.dayExpense > 0
-                  ? `-¥${day.dayExpense.toLocaleString()}`
-                  : `+¥${day.dayIncome.toLocaleString()}`;
-
-              return (
-                <DayGroup
-                  key={day.key}
-                  label={day.label}
-                  date={day.date}
-                  total={totalStr}
-                  totalColor={totalColor}
-                >
-                  {day.transactions.map(txn => {
-                    const cat = catMap.get(txn.category_id);
-                    const catName = cat?.name ?? '其他';
-                    const catIcon = cat?.icon ?? '📦';
-                    const catColor = getCategoryColor(catName);
-
-                    return (
-                      <TransactionItem
-                        key={txn.id}
-                        transaction={txn}
-                        categoryIcon={catIcon}
-                        categoryName={catName}
-                        categoryColor={catColor}
-                      />
-                    );
-                  })}
-                </DayGroup>
-              );
-            })
-          )}
+      {/* Scrollable transaction list */}
+      {txLoading ? (
+        <ActivityIndicator color={colors.sage} style={styles.loader} />
+      ) : days.length === 0 ? (
+        <View style={styles.empty}>
+          <AppText color={colors.textLighter} size="lg">还没有记录，快去记一笔吧 🌿</AppText>
         </View>
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={days}
+          keyExtractor={day => day.key}
+          renderItem={renderDayGroup}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -239,19 +251,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
+  fixedHeader: {
     paddingTop: 54,
-    paddingBottom: 100,
   },
   cardWrapper: {
     marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 12,
   },
-  txSection: {
+  listContent: {
     paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   loader: {
     marginTop: 40,
