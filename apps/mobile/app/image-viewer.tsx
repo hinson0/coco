@@ -1,10 +1,10 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Alert, StatusBar, type GestureResponderEvent } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
 import { AppText } from '../components/ui/AppText';
 import { colors, spacing } from '../constants/theme';
 
@@ -20,6 +20,30 @@ const TAP_THRESHOLD = 8;
 export default function ImageViewerScreen() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const insets = useSafeAreaInsets();
+
+  // 进入/退出动画
+  const enterScale = useSharedValue(0.5);
+  const enterOpacity = useSharedValue(0);
+  const isClosingRef = useRef(false);
+
+  useEffect(() => {
+    enterScale.value = withSpring(1, { damping: 20, stiffness: 200, mass: 0.5 });
+    enterOpacity.value = withTiming(1, { duration: 250 });
+  }, []);
+
+  function animateClose() {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    enterScale.value = withTiming(0.5, { duration: 200 });
+    enterOpacity.value = withTiming(0, { duration: 200 }, () => {
+      runOnJS(router.back)();
+    });
+  }
+
+  const enterAnimStyle = useAnimatedStyle(() => ({
+    opacity: enterOpacity.value,
+    transform: [{ scale: enterScale.value }],
+  }));
 
   // 缩放
   const scale = useSharedValue(1);
@@ -114,7 +138,7 @@ export default function ImageViewerScreen() {
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
         // 真正的单击 → 返回
-        router.back();
+        animateClose();
       }
       isDraggingRef.current = false;
     }
@@ -150,17 +174,19 @@ export default function ImageViewerScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* 图片区域 */}
-      <View
-        style={styles.imageArea}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
-          <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
-        </Animated.View>
-      </View>
+      {/* 图片区域（外层 enterAnimStyle 控制进入/退出，内层 animatedStyle 控制缩放平移） */}
+      <Animated.View style={[styles.imageArea, enterAnimStyle]}>
+        <View
+          style={styles.imageArea}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
+            <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+          </Animated.View>
+        </View>
+      </Animated.View>
 
       {/* 底部操作栏 */}
       <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
