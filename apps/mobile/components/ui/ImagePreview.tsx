@@ -1,6 +1,6 @@
-import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { router } from 'expo-router';
-import Animated from 'react-native-reanimated';
+import { useRef } from 'react';
+import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle, type View } from 'react-native';
+import { useImageViewer } from './ImageViewerOverlay';
 
 interface ImagePreviewProps {
   readonly uri: string;
@@ -8,18 +8,18 @@ interface ImagePreviewProps {
 }
 
 export function ImagePreview({ uri, style }: ImagePreviewProps) {
+  const thumbRef = useRef<View>(null);
+  const { open } = useImageViewer();
+
+  function handlePress() {
+    thumbRef.current?.measureInWindow((x, y, w, h) => {
+      open(uri, { x, y, w, h });
+    });
+  }
+
   return (
-    <Pressable
-      onPress={() => router.push({ pathname: '/image-viewer', params: { uri } })}
-      style={style}
-    >
-      {/* sharedTransitionTag 让 reanimated 自动处理两个屏幕间的转场动画 */}
-      <Animated.Image
-        sharedTransitionTag={`image-${uri}`}
-        source={{ uri }}
-        style={styles.thumbnail}
-        resizeMode="cover"
-      />
+    <Pressable ref={thumbRef} onPress={handlePress} style={style}>
+      <Image source={{ uri }} style={styles.thumbnail} resizeMode="cover" />
     </Pressable>
   );
 }
