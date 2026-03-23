@@ -1,5 +1,6 @@
 import { extractAmount } from "./extract-amount";
 import { matchCategory } from "./match-category";
+import { stripAmount } from "./strip-amount";
 import { INCOME_KEYWORDS } from "./keywords";
 
 export interface ParseResult {
@@ -15,7 +16,8 @@ export function parse(text: string): ParseResult | null {
   const amount = extractAmount(text);
   if (amount === null) return null;
 
-  const isIncome = INCOME_KEYWORDS.some((kw) => text.includes(kw));
+  const stripped = stripAmount(text);
+  const isIncome = INCOME_KEYWORDS.some((kw) => stripped.includes(kw));
   const categoryName = matchCategory(text);
 
   const note = text
