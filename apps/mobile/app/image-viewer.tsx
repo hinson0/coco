@@ -35,11 +35,13 @@ export default function ImageViewerScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
 
-  // ─── 转场动画值 ───
-  // progress: 0 = 缩略图位置, 1 = 全屏
-  const progress = useSharedValue(0);
+  // ─── 所有 shared values 集中声明（hooks 必须在 useAnimatedStyle 之前） ───
+  const progress = useSharedValue(0);       // 0 = 缩略图位置, 1 = 全屏
   const bgOpacity = useSharedValue(0);
   const toolbarOpacity = useSharedValue(0);
+  const pinchScale = useSharedValue(1);     // 双指缩放
+  const panTx = useSharedValue(0);          // 单指平移 X
+  const panTy = useSharedValue(0);          // 单指平移 Y
 
   // 全屏时图片的目标中心
   const fullCenterX = screenW / 2;
@@ -84,15 +86,10 @@ export default function ImageViewerScreen() {
     opacity: toolbarOpacity.value,
   }));
 
-  // ─── 双指缩放 ───
-  const pinchScale = useSharedValue(1);
+  // ─── 手势 refs ───
   const basePinchRef = useRef(1);
   const initialDistRef = useRef(0);
   const isPinchingRef = useRef(false);
-
-  // ─── 单指平移 ───
-  const panTx = useSharedValue(0);
-  const panTy = useSharedValue(0);
   const basePanTxRef = useRef(0);
   const basePanTyRef = useRef(0);
   const startXRef = useRef(0);
