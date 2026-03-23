@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Alert, StatusBar, type GestureResponderEvent } from 'react-native';
+import { useRef, useCallback, useEffect } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, Alert, StatusBar, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
@@ -16,136 +16,173 @@ function getDistance(touches: GestureResponderEvent['nativeEvent']['touches']) {
 }
 
 const TAP_THRESHOLD = 8;
+const ANIM_DURATION = 280;
 
 export default function ImageViewerScreen() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  const params = useLocalSearchParams<{
+    uri: string;
+    thumbX: string;
+    thumbY: string;
+    thumbW: string;
+    thumbH: string;
+  }>();
+  const uri = params.uri;
+  const thumbX = Number(params.thumbX) || 0;
+  const thumbY = Number(params.thumbY) || 0;
+  const thumbW = Number(params.thumbW) || 160;
+  const thumbH = Number(params.thumbH) || 120;
+
   const insets = useSafeAreaInsets();
+  const { width: screenW, height: screenH } = useWindowDimensions();
 
-  // 缩放
-  const scale = useSharedValue(1);
-  const baseScaleRef = useRef(1);
-  const initialDistRef = useRef(0);
-  const isPinchingRef = useRef(false);
+  // ─── 转场动画值 ───
+  // progress: 0 = 缩略图位置, 1 = 全屏
+  const progress = useSharedValue(0);
+  const bgOpacity = useSharedValue(0);
+  const toolbarOpacity = useSharedValue(0);
 
-  // 平移
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const baseTxRef = useRef(0);
-  const baseTyRef = useRef(0);
-  const startXRef = useRef(0);
-  const startYRef = useRef(0);
-  const isDraggingRef = useRef(false);
-  // pinch 结束后短暂冷却，防止第二根手指抬起被误判为单击
-  const justPinchedRef = useRef(false);
-  const isClosingRef = useRef(false);
+  // 全屏时图片的目标中心
+  const fullCenterX = screenW / 2;
+  const fullCenterY = screenH / 2;
+  // 缩略图中心
+  const thumbCenterX = thumbX + thumbW / 2;
+  const thumbCenterY = thumbY + thumbH / 2;
+  // 缩略图相对全屏的缩放比例
+  const thumbScale = thumbW / screenW;
 
-  // 关闭动画：背景淡出
-  const bgOpacity = useSharedValue(1);
-  // 关闭动画：工具栏淡出
-  const toolbarOpacity = useSharedValue(1);
+  // 入场动画
+  useEffect(() => {
+    progress.value = withTiming(1, { duration: ANIM_DURATION });
+    bgOpacity.value = withTiming(1, { duration: ANIM_DURATION });
+    toolbarOpacity.value = withTiming(1, { duration: ANIM_DURATION });
+  }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-    opacity: bgOpacity.value,
-  }));
+  // 图片转场样式：从缩略图位置插值到全屏
+  const imageTransitionStyle = useAnimatedStyle(() => {
+    const p = progress.value;
+    const currentScale = thumbScale + (1 - thumbScale) * p;
+    const currentX = thumbCenterX + (fullCenterX - thumbCenterX) * p;
+    const currentY = thumbCenterY + (fullCenterY - thumbCenterY) * p;
+    // 将位置转换为 translate（相对于全屏中心的偏移）
+    const tx = currentX - fullCenterX;
+    const ty = currentY - fullCenterY;
+
+    return {
+      transform: [
+        { translateX: tx + panTx.value },
+        { translateY: ty + panTy.value },
+        { scale: currentScale * pinchScale.value },
+      ],
+    };
+  });
 
   const bgAnimatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0,0,0,${0.85 * bgOpacity.value})`,
+    backgroundColor: `rgba(0,0,0,${bgOpacity.value})`,
   }));
 
   const toolbarAnimatedStyle = useAnimatedStyle(() => ({
     opacity: toolbarOpacity.value,
   }));
 
-  function resetTransform(animated = true) {
-    const opts = { duration: 150 };
-    scale.value = animated ? withTiming(1, opts) : 1;
-    translateX.value = animated ? withTiming(0, opts) : 0;
-    translateY.value = animated ? withTiming(0, opts) : 0;
-    baseScaleRef.current = 1;
-    baseTxRef.current = 0;
-    baseTyRef.current = 0;
-  }
+  // ─── 双指缩放 ───
+  const pinchScale = useSharedValue(1);
+  const basePinchRef = useRef(1);
+  const initialDistRef = useRef(0);
+  const isPinchingRef = useRef(false);
+
+  // ─── 单指平移 ───
+  const panTx = useSharedValue(0);
+  const panTy = useSharedValue(0);
+  const basePanTxRef = useRef(0);
+  const basePanTyRef = useRef(0);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const justPinchedRef = useRef(false);
+  const isClosingRef = useRef(false);
 
   function animateClose() {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
-    const duration = 250;
-    // 图片缩小 + 淡出
-    scale.value = withTiming(0.5, { duration });
-    translateX.value = withTiming(0, { duration });
-    translateY.value = withTiming(0, { duration });
-    bgOpacity.value = withTiming(0, { duration }, () => {
+
+    // 重置平移和额外缩放，让图片回到「干净」的全屏状态
+    panTx.value = withTiming(0, { duration: ANIM_DURATION });
+    panTy.value = withTiming(0, { duration: ANIM_DURATION });
+    pinchScale.value = withTiming(1, { duration: ANIM_DURATION });
+    // 从全屏收回缩略图位置
+    progress.value = withTiming(0, { duration: ANIM_DURATION });
+    bgOpacity.value = withTiming(0, { duration: ANIM_DURATION }, () => {
       runOnJS(router.back)();
     });
-    toolbarOpacity.value = withTiming(0, { duration: 100 });
+    toolbarOpacity.value = withTiming(0, { duration: 120 });
   }
 
   // ─── 触摸事件 ───
   const onTouchStart = useCallback((e: GestureResponderEvent) => {
+    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
     if (touches.length === 2) {
       isPinchingRef.current = true;
       isDraggingRef.current = false;
       initialDistRef.current = getDistance(touches);
-      baseScaleRef.current = scale.value;
-      baseTxRef.current = translateX.value;
-      baseTyRef.current = translateY.value;
+      basePinchRef.current = pinchScale.value;
+      basePanTxRef.current = panTx.value;
+      basePanTyRef.current = panTy.value;
     } else if (touches.length === 1) {
       isDraggingRef.current = false;
       startXRef.current = touches[0].pageX;
       startYRef.current = touches[0].pageY;
-      baseTxRef.current = translateX.value;
-      baseTyRef.current = translateY.value;
+      basePanTxRef.current = panTx.value;
+      basePanTyRef.current = panTy.value;
     }
-  }, [scale, translateX, translateY]);
+  }, [pinchScale, panTx, panTy]);
 
   const onTouchMove = useCallback((e: GestureResponderEvent) => {
+    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
     if (isPinchingRef.current && touches.length >= 2) {
       const dist = getDistance(touches);
       if (initialDistRef.current === 0) return;
-      scale.value = Math.min(Math.max(baseScaleRef.current * (dist / initialDistRef.current), 1), 5);
+      pinchScale.value = Math.min(Math.max(basePinchRef.current * (dist / initialDistRef.current), 1), 5);
     } else if (touches.length === 1 && !isPinchingRef.current) {
       const dx = touches[0].pageX - startXRef.current;
       const dy = touches[0].pageY - startYRef.current;
       if (!isDraggingRef.current && (Math.abs(dx) > TAP_THRESHOLD || Math.abs(dy) > TAP_THRESHOLD)) {
         isDraggingRef.current = true;
       }
-      if (isDraggingRef.current && scale.value > 1.05) {
-        translateX.value = baseTxRef.current + dx;
-        translateY.value = baseTyRef.current + dy;
+      if (isDraggingRef.current && pinchScale.value > 1.05) {
+        panTx.value = basePanTxRef.current + dx;
+        panTy.value = basePanTyRef.current + dy;
       }
     }
-  }, [scale, translateX, translateY]);
+  }, [pinchScale, panTx, panTy]);
 
   const onTouchEnd = useCallback((e: GestureResponderEvent) => {
+    if (isClosingRef.current) return;
     const { touches } = e.nativeEvent;
 
     if (touches.length < 2 && isPinchingRef.current) {
-      // 第一根手指抬起，pinch 结束
       isPinchingRef.current = false;
       justPinchedRef.current = true;
-      baseScaleRef.current = scale.value;
-      if (scale.value < 1.1) resetTransform(true);
+      basePinchRef.current = pinchScale.value;
+      if (pinchScale.value < 1.1) {
+        pinchScale.value = withTiming(1, { duration: 150 });
+        panTx.value = withTiming(0, { duration: 150 });
+        panTy.value = withTiming(0, { duration: 150 });
+        basePinchRef.current = 1;
+      }
       return;
     }
 
     if (touches.length === 0) {
       if (justPinchedRef.current) {
-        // 第二根手指抬起（pinch 刚结束），不关闭
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
-        // 真正的单击 → 缩小动画后返回
         animateClose();
       }
       isDraggingRef.current = false;
     }
-  }, [scale]);
+  }, [pinchScale, panTx, panTy]);
 
   // ─── 操作按钮 ───
   async function handleSave() {
@@ -177,19 +214,20 @@ export default function ImageViewerScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* 图片区域 */}
       <Animated.View
         style={[styles.imageArea, bgAnimatedStyle]}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
+        <Animated.View
+          style={[{ width: screenW, height: screenH * 0.85 }, imageTransitionStyle]}
+          pointerEvents="none"
+        >
           <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
         </Animated.View>
       </Animated.View>
 
-      {/* 底部操作栏 */}
       <Animated.View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, toolbarAnimatedStyle]}>
         <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
           <AppText size="2xl">↗</AppText>
@@ -213,11 +251,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.85)',
-  },
-  imageBox: {
-    width: '100%',
-    height: '100%',
   },
   fullImage: {
     width: '100%',
