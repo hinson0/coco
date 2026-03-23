@@ -2,6 +2,8 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
+import * as FileSystem from "expo-file-system";
+import * as Crypto from "expo-crypto";
 import { apiFetch } from "../lib/api";
 import { parse } from "@/lib/rule-engine";
 import { useOfflineContext } from "@/lib/offline-context";
@@ -118,7 +120,18 @@ export function useChat() {
       await addMessage({ role: "assistant", content_type: "text", content: "拍照记账需要联网才能使用，请连接网络后重试。" });
       return;
     }
-    await addMessage({ role: "user", content_type: "image", content: "[拍照]" });
+    // 保存图片到本地文件系统，fallback 到占位符
+    let imageContent = "[拍照]";
+    try {
+      const dir = `${FileSystem.documentDirectory}ocr-images/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      const filePath = `${dir}${Date.now()}-${Crypto.randomUUID()}.jpg`;
+      await FileSystem.writeAsStringAsync(filePath, imageBase64, { encoding: FileSystem.EncodingType.Base64 });
+      imageContent = filePath;
+    } catch {
+      // 磁盘空间不足等异常，fallback 到占位符
+    }
+    await addMessage({ role: "user", content_type: "image", content: imageContent });
     setLoading(true);
     try {
       const resp = await apiFetch<any>("/api/record/ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
