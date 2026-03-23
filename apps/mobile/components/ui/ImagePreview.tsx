@@ -9,7 +9,9 @@ interface ImagePreviewProps {
 
 export function ImagePreview({ uri, style }: ImagePreviewProps) {
   const thumbRef = useRef<View>(null);
-  const { open } = useImageViewer();
+  const { open, activeUri } = useImageViewer();
+  // 当此图片正在全屏预览时，隐藏缩略图（让动画图片成为唯一可见实体）
+  const isHidden = activeUri === uri;
 
   function handlePress() {
     thumbRef.current?.measureInWindow((x, y, w, h) => {
@@ -19,7 +21,11 @@ export function ImagePreview({ uri, style }: ImagePreviewProps) {
 
   return (
     <Pressable ref={thumbRef} onPress={handlePress} style={style}>
-      <Image source={{ uri }} style={styles.thumbnail} resizeMode="cover" />
+      <Image
+        source={{ uri }}
+        style={[styles.thumbnail, isHidden && styles.hidden]}
+        resizeMode="cover"
+      />
     </Pressable>
   );
 }
@@ -28,5 +34,8 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: '100%',
+  },
+  hidden: {
+    opacity: 0,
   },
 });
