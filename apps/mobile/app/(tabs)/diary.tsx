@@ -46,8 +46,8 @@ function formatDayLabel(dateStr: string): { label: string; date: string } {
 interface DaySection {
   readonly key: string;
   readonly label: string;
-  readonly totalStr: string;
-  readonly totalColor: string;
+  readonly expenseStr: string | null;
+  readonly incomeStr: string | null;
   readonly data: readonly Transaction[];
 }
 
@@ -71,15 +71,10 @@ function buildSections(transactions: readonly Transaction[]): DaySection[] {
     const dayExpense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const dayIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
 
-    const totalStr =
-      dayExpense > 0 && dayIncome > 0
-        ? `-¥${dayExpense.toLocaleString()} / +¥${dayIncome.toLocaleString()}`
-        : dayExpense > 0
-        ? `-¥${dayExpense.toLocaleString()}`
-        : `+¥${dayIncome.toLocaleString()}`;
-    const totalColor = dayExpense > 0 ? colors.coral : colors.sage;
+    const expenseStr = dayExpense > 0 ? `-¥${dayExpense.toLocaleString()}` : null;
+    const incomeStr = dayIncome > 0 ? `+¥${dayIncome.toLocaleString()}` : null;
 
-    return { key, label, totalStr, totalColor, data: txns };
+    return { key, label, expenseStr, incomeStr, data: txns };
   });
 }
 
@@ -220,7 +215,11 @@ export default function HomeScreen() {
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <AppText size="lg" weight="bold">{section.label}</AppText>
-              <AppText size="md" weight="semibold" color={section.totalColor}>{section.totalStr}</AppText>
+              <View style={styles.sectionTotals}>
+                {section.expenseStr ? <AppText size="md" weight="semibold" color={colors.coral}>{section.expenseStr}</AppText> : null}
+                {section.expenseStr && section.incomeStr ? <AppText size="md" color={colors.textLighter}> / </AppText> : null}
+                {section.incomeStr ? <AppText size="md" weight="semibold" color={colors.sage}>{section.incomeStr}</AppText> : null}
+              </View>
             </View>
           )}
           renderItem={({ item: txn }) => {
@@ -267,6 +266,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
     backgroundColor: colors.cream,
+  },
+  sectionTotals: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
   listContent: {
     paddingHorizontal: 20,
