@@ -128,8 +128,8 @@ export function useChat() {
       const filePath = `${dir}${Date.now()}-${Crypto.randomUUID()}.jpg`;
       await FileSystem.writeAsStringAsync(filePath, imageBase64, { encoding: FileSystem.EncodingType.Base64 });
       imageContent = filePath;
-    } catch {
-      // 磁盘空间不足等异常，fallback 到占位符
+    } catch (err) {
+      console.error('[sendOcr] 图片保存失败:', err);
     }
     await addMessage({ role: "user", content_type: "image", content: imageContent });
     setLoading(true);
