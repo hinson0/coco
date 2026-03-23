@@ -20,6 +20,7 @@ import Animated, {
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChat } from '../hooks/useChat';
+import { useCamera } from '../hooks/useCamera';
 import { useLocalChatMessages, useDeleteChatMessage, useClearChatMessages } from '../hooks/useLocalChatMessages';
 import { useLocalCategories } from '../hooks/useLocalCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
@@ -129,6 +130,7 @@ function DateSeparator({ label }: { label: string }) {
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
+  const { pickImage } = useCamera();
   const { data: messages = [], refetch } = useLocalChatMessages();
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
@@ -249,9 +251,12 @@ export default function ChatScreen() {
         <ChatToolBar onSelectTool={handleSelectTool} />
         <ChatInputBar
           onSendText={sendText}
-          onCamera={() => {/* OCR handled via camera picker */}}
-          onVoice={() => {/* ASR handled via voice recorder */}}
-          onPlus={() => {/* expand tool panel */}}
+          onCamera={async () => {
+            const base64 = await pickImage();
+            if (base64) sendOcr(base64);
+          }}
+          onVoice={(base64) => sendAsr(base64)}
+          onQuickAction={(actionText) => sendText(actionText)}
         />
       </Animated.View>
 
