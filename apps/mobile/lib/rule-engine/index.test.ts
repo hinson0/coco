@@ -1,11 +1,11 @@
 import { parse } from "./index";
 
 describe("parse", () => {
-  it('parses "买车100000" as 交通 expense', () => {
+  it('parses "买车100000" as 购物 expense', () => {
     const result = parse("买车100000");
     expect(result).not.toBeNull();
     expect(result!.amount).toBe(100000);
-    expect(result!.categoryName).toBe("交通");
+    expect(result!.categoryName).toBe("购物");
     expect(result!.type).toBe("expense");
   });
 
@@ -15,10 +15,10 @@ describe("parse", () => {
     expect(result!.categoryName).toBe("通讯");
   });
 
-  it('parses "提车50000" as 交通', () => {
+  it('parses "提车50000" as 购物', () => {
     const result = parse("提车50000");
     expect(result).not.toBeNull();
-    expect(result!.categoryName).toBe("交通");
+    expect(result!.categoryName).toBe("购物");
   });
 
   it('parses "买房2000000" as 居住', () => {

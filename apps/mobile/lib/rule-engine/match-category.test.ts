@@ -6,12 +6,12 @@ describe("matchCategory", () => {
     expect(matchCategory("买车100000")).not.toBe("通讯");
   });
 
-  it('matches "买车100000" to 交通', () => {
-    expect(matchCategory("买车100000")).toBe("交通");
+  it('matches "买车100000" to 购物', () => {
+    expect(matchCategory("买车100000")).toBe("购物");
   });
 
-  it('matches "买车99999.99" to 交通', () => {
-    expect(matchCategory("买车99999.99")).toBe("交通");
+  it('matches "买车99999.99" to 购物', () => {
+    expect(matchCategory("买车99999.99")).toBe("购物");
   });
 
   // 纯数字关键词仍然有效
