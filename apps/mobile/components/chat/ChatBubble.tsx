@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
   },
   rowCard: {
-    maxWidth: '95%',
+    maxWidth: '100%',
   },
 
   // Avatars
