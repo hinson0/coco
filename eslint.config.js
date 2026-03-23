@@ -6,15 +6,18 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
-    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
+    files: ["**/*.{js,cjs,ts,jsx,tsx}"],
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: { globals: globals.browser },
     rules: {
       "no-var": "error",
       "prefer-const": "warn",
-      "no-console": "warn",
     },
+  },
+  {
+    files: ["**/*.mjs"],
+    languageOptions: { globals: globals.node },
   },
 
   ...tseslint.configs.recommended,
