@@ -99,10 +99,12 @@ View (flex:1)
 2. 新增 `useMonthlyTransactions(year, month)` hook，按当月过滤无分页查询：
    ```sql
    SELECT * FROM transactions
-   WHERE deleted_at IS NULL AND occurred_at >= '当月1号'
+   WHERE deleted_at IS NULL
+     AND occurred_at >= '当月1号'
+     AND occurred_at < '下月1号'
    ORDER BY occurred_at DESC
    ```
-   queryKey 为 `["transactions", "monthly", "2026-03"]`，与现有 `["transactions", page]` 不冲突。日记页改用此 hook。
+   queryKey 为 `["transactions", "monthly", "2026-03"]`，与现有 `["transactions", page]` 不冲突。日记页改用此 hook。上下界确保即使有预录入的未来日期交易也不会混入。
 
 **行为变化说明**：改为只查当月数据后，日记页将不再显示上月交易。这是期望行为——日记页聚焦当月记录，历史数据可通过统计页/账单页查看。
 
