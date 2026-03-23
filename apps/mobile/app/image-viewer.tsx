@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { AppText } from '../components/ui/AppText';
 import { colors, spacing } from '../constants/theme';
 
@@ -37,10 +37,6 @@ export default function ImageViewerScreen() {
   const isDraggingRef = useRef(false);
   // pinch 结束后短暂冷却，防止第二根手指抬起被误判为单击
   const justPinchedRef = useRef(false);
-  const closingRef = useRef(false);
-
-  // 页面整体透明度（关闭动画用）
-  const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -48,10 +44,6 @@ export default function ImageViewerScreen() {
       { translateY: translateY.value },
       { scale: scale.value },
     ],
-  }));
-
-  const screenAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
   }));
 
   function resetTransform(animated = true) {
@@ -62,14 +54,6 @@ export default function ImageViewerScreen() {
     baseScaleRef.current = 1;
     baseTxRef.current = 0;
     baseTyRef.current = 0;
-  }
-
-  function fadeOutAndClose() {
-    if (closingRef.current) return;
-    closingRef.current = true;
-    opacity.value = withTiming(0, { duration: 250 }, (finished) => {
-      if (finished) runOnJS(router.back)();
-    });
   }
 
   // ─── 触摸事件 ───
@@ -127,8 +111,8 @@ export default function ImageViewerScreen() {
         // 第二根手指抬起（pinch 刚结束），不关闭
         justPinchedRef.current = false;
       } else if (!isDraggingRef.current) {
-        // 真正的单击 → 渐隐后返回
-        fadeOutAndClose();
+        // 真正的单击 → 返回
+        router.back();
       }
       isDraggingRef.current = false;
     }
@@ -164,22 +148,20 @@ export default function ImageViewerScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* 图片区域（淡出动画只作用于内容） */}
-      <Animated.View style={[styles.imageArea, screenAnimatedStyle]}>
-        <View
-          style={styles.imageTouch}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
-            <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
-          </Animated.View>
-        </View>
-      </Animated.View>
+      {/* 图片区域 */}
+      <View
+        style={styles.imageArea}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <Animated.View style={[styles.imageBox, animatedStyle]} pointerEvents="none">
+          <Image source={{ uri }} style={styles.fullImage} resizeMode="contain" />
+        </Animated.View>
+      </View>
 
-      {/* 底部操作栏（也跟随淡出） */}
-      <Animated.View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }, screenAnimatedStyle]}>
+      {/* 底部操作栏 */}
+      <View style={[styles.toolbar, { paddingBottom: insets.bottom + spacing.md }]}>
         <TouchableOpacity onPress={handleShare} style={styles.toolBtn}>
           <AppText size="2xl">↗</AppText>
           <AppText size="sm" color={colors.white}>分享</AppText>
@@ -188,7 +170,7 @@ export default function ImageViewerScreen() {
           <AppText size="2xl">⬇</AppText>
           <AppText size="sm" color={colors.white}>保存</AppText>
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -199,9 +181,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   imageArea: {
-    flex: 1,
-  },
-  imageTouch: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',

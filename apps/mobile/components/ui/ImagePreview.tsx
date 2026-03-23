@@ -1,6 +1,5 @@
-import { useRef } from 'react';
-import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle, type View } from 'react-native';
-import { useImageViewer } from './ImageViewerOverlay';
+import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { router } from 'expo-router';
 
 interface ImagePreviewProps {
   readonly uri: string;
@@ -8,17 +7,11 @@ interface ImagePreviewProps {
 }
 
 export function ImagePreview({ uri, style }: ImagePreviewProps) {
-  const thumbRef = useRef<View>(null);
-  const { open } = useImageViewer();
-
-  function handlePress() {
-    thumbRef.current?.measureInWindow((x, y, w, h) => {
-      open(uri, { x, y, w, h });
-    });
-  }
-
   return (
-    <Pressable ref={thumbRef} onPress={handlePress} style={style}>
+    <Pressable
+      onPress={() => router.push({ pathname: '/image-viewer', params: { uri } })}
+      style={style}
+    >
       <Image source={{ uri }} style={styles.thumbnail} resizeMode="cover" />
     </Pressable>
   );
