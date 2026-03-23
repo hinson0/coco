@@ -144,6 +144,8 @@ const MAX_DURATION_MS = 60_000;
 export function useVoiceRecorder() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
+  // useRef 镜像 isRecording，避免 useCallback/PanResponder 闭包捕获过期值
+  const isRecordingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelledRef = useRef(false);
 
@@ -153,6 +155,19 @@ export function useVoiceRecorder() {
       timerRef.current = null;
     }
   }, []);
+
+  const setRecordingFlag = useCallback((value: boolean) => {
+    isRecordingRef.current = value;
+    setIsRecording(value);
+  }, []);
+
+  const readBase64 = useCallback(async (): Promise<string | null> => {
+    const uri = recorder.uri;
+    if (!uri) return null;
+    return FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  }, [recorder]);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
     const { granted } = await requestRecordingPermissionsAsync();
@@ -168,46 +183,41 @@ export function useVoiceRecorder() {
       return false;
     }
 
+    clearTimer();
     cancelledRef.current = false;
     await recorder.prepareToRecordAsync();
     recorder.record();
-    setIsRecording(true);
+    setRecordingFlag(true);
 
-    // 60 秒自动停止
-    timerRef.current = setTimeout(() => {
-      recorder.stop();
-      setIsRecording(false);
+    // 60 秒自动停止（await stop + 读取 base64，但不自动发送——由调用方通过 onAutoStop 回调处理）
+    timerRef.current = setTimeout(async () => {
+      await recorder.stop();
+      setRecordingFlag(false);
     }, MAX_DURATION_MS);
 
     return true;
-  }, [recorder, clearTimer]);
+  }, [recorder, clearTimer, setRecordingFlag]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     clearTimer();
-    if (!isRecording) return null;
+    // 读 ref 而非 state，避免闭包过期
+    if (!isRecordingRef.current) return null;
 
     await recorder.stop();
-    setIsRecording(false);
+    setRecordingFlag(false);
 
     if (cancelledRef.current) return null;
-
-    const uri = recorder.uri;
-    if (!uri) return null;
-
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    return base64;
-  }, [recorder, isRecording, clearTimer]);
+    return readBase64();
+  }, [recorder, clearTimer, setRecordingFlag, readBase64]);
 
   const cancelRecording = useCallback(async (): Promise<void> => {
     clearTimer();
     cancelledRef.current = true;
-    if (isRecording) {
+    if (isRecordingRef.current) {
       await recorder.stop();
-      setIsRecording(false);
+      setRecordingFlag(false);
     }
-  }, [recorder, isRecording, clearTimer]);
+  }, [recorder, clearTimer, setRecordingFlag]);
 
   return { isRecording, startRecording, stopRecording, cancelRecording };
 }
@@ -322,8 +332,8 @@ git commit -m "feat: add QuickActions component for plus button panel"
 
 ```typescript
 // apps/mobile/components/chat/ChatInputBar.tsx
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TextInput, Pressable, StyleSheet, PanResponder, type LayoutRectangle } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { View, TextInput, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { QuickActions } from './QuickActions';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
@@ -351,25 +361,41 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: C
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const hasText = text.trim().length > 0;
-  const { isRecording, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+  const { startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+
+  // useRef 镜像 recordingState，PanResponder 回调中读 ref 避免闭包陷阱
+  const recordingStateRef = useRef<RecordingState>('idle');
+  function setRecordingStateSync(s: RecordingState) {
+    recordingStateRef.current = s;
+    setRecordingState(s);
+  }
+
+  // useRef 镜像 onVoice 回调，避免 PanResponder 闭包捕获旧 prop
+  const onVoiceRef = useRef(onVoice);
+  onVoiceRef.current = onVoice;
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const btnLayoutRef = useRef<LayoutRectangle | null>(null);
   const startYRef = useRef(0);
 
-  // ─── 录音计时器 ───
+  // ─── 录音计时器（仅在 idle <-> 非 idle 切换时启停，recording <-> cancelling 不重启） ───
+  const wasRecordingRef = useRef(false);
   useEffect(() => {
-    if (recordingState === 'recording' || recordingState === 'cancelling') {
+    const isActive = recordingState !== 'idle';
+    if (isActive && !wasRecordingRef.current) {
+      // 从 idle 进入录音：启动计时器
       setRecordingSeconds(0);
       timerRef.current = setInterval(() => {
         setRecordingSeconds((s) => s + 1);
       }, 1000);
-    } else {
+    } else if (!isActive && wasRecordingRef.current) {
+      // 从录音回到 idle：清除计时器
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
       setRecordingSeconds(0);
     }
+    wasRecordingRef.current = isActive;
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -399,7 +425,7 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: C
     onQuickAction(actionText);
   }
 
-  // ─── PanResponder 长按录音手势 ───
+  // ─── PanResponder 长按录音手势（所有回调读 ref，不读 state） ───
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -407,33 +433,34 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: C
         startYRef.current = gestureState.y0;
         const started = await startRecording();
         if (started) {
-          setRecordingState('recording');
+          setRecordingStateSync('recording');
         }
       },
       onPanResponderMove: (_evt, gestureState) => {
-        if (recordingState === 'idle') return;
+        if (recordingStateRef.current === 'idle') return;
         const dy = startYRef.current - gestureState.moveY;
         if (dy > CANCEL_THRESHOLD) {
-          setRecordingState('cancelling');
+          setRecordingStateSync('cancelling');
         } else {
-          setRecordingState('recording');
+          setRecordingStateSync('recording');
         }
       },
       onPanResponderRelease: async () => {
-        if (recordingState === 'cancelling') {
+        const current = recordingStateRef.current;
+        if (current === 'cancelling') {
           await cancelRecording();
-          setRecordingState('idle');
-        } else if (recordingState === 'recording') {
+          setRecordingStateSync('idle');
+        } else if (current === 'recording') {
           const base64 = await stopRecording();
-          setRecordingState('idle');
+          setRecordingStateSync('idle');
           if (base64) {
-            onVoice(base64);
+            onVoiceRef.current(base64);
           }
         }
       },
       onPanResponderTerminate: async () => {
         await cancelRecording();
-        setRecordingState('idle');
+        setRecordingStateSync('idle');
       },
     }),
   ).current;
