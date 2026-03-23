@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Keyboard } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalBudgets, useCreateBudget, useUpdateBudget } from "../hooks/useLocalBudgets";
@@ -15,7 +15,6 @@ export default function BudgetSettingScreen() {
     ?? budgets.find(b => b.period === "monthly");
 
   const [amount, setAmount] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const amountRef = useRef<TextInput>(null);
 
@@ -43,7 +42,6 @@ export default function BudgetSettingScreen() {
       return;
     }
 
-    setSubmitting(true);
     try {
       if (existingBudget) {
         await updateBudget({ id: existingBudget.id, amount: numAmount });
@@ -60,8 +58,6 @@ export default function BudgetSettingScreen() {
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -99,16 +95,11 @@ export default function BudgetSettingScreen() {
       {/* Bottom save button */}
       <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
         <TouchableOpacity
-          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+          style={styles.saveBtn}
           onPress={handleSubmit}
-          disabled={submitting}
           activeOpacity={0.8}
         >
-          {submitting ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>{existingBudget ? "保存修改" : "保存"}</Text>
-          )}
+          <Text style={styles.saveBtnText}>{existingBudget ? "保存修改" : "保存"}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -191,9 +182,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadows.md,
-  },
-  saveBtnDisabled: {
-    opacity: 0.6,
   },
   saveBtnText: {
     color: colors.white,
