@@ -1,4 +1,4 @@
-import { Slot, router } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +6,6 @@ import type * as SQLite from "expo-sqlite";
 import { useAuth } from "../hooks/useAuth";
 import { initDatabase } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
-import { ImageViewerProvider } from "@/components/ui/ImageViewerOverlay";
 
 const queryClient = new QueryClient();
 
@@ -33,9 +32,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <OfflineContext.Provider value={{ db }}>
-        <ImageViewerProvider>
-          <Slot />
-        </ImageViewerProvider>
+        <Stack screenOptions={{ headerShown: false }} />
       </OfflineContext.Provider>
     </QueryClientProvider>
   );
