@@ -80,8 +80,7 @@ export function SummaryOverviewCard({
 
       {/* Date range */}
       <View style={styles.dateRow}>
-        <AppText size="sm" color={colors.textLighter}>月起始日: {dateRangeLabel}</AppText>
-        <AppText size="sm" color={colors.textLighter}> ⓘ</AppText>
+        <AppText size="sm" color={colors.textLighter}>月起始日: {dateRangeLabel} ⓘ</AppText>
       </View>
     </Card>
   );
