@@ -30,3 +30,9 @@ apps/mobile/package-lock.json
 
 *.swp
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
