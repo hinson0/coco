@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { Card } from '../ui/Card';
@@ -26,6 +26,17 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
     () => data.map((c) => ({ value: c.percent, color: c.color })),
     [data],
   );
+
+  const centerLabel = useCallback(() => (
+    <View style={styles.centerLabel}>
+      <AppText size="sm" weight="bold" color={colors.text}>
+        {top?.name}
+      </AppText>
+      <AppText size="sm" color={colors.textLighter}>
+        {top?.percent}%
+      </AppText>
+    </View>
+  ), [top]);
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
@@ -58,16 +69,7 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
             donut
             radius={80}
             innerRadius={52}
-            centerLabelComponent={() => (
-              <View style={styles.centerLabel}>
-                <AppText size="sm" weight="bold" color={colors.text}>
-                  {top?.name}
-                </AppText>
-                <AppText size="sm" color={colors.textLighter}>
-                  {top?.percent}%
-                </AppText>
-              </View>
-            )}
+            centerLabelComponent={centerLabel}
           />
         </View>
       ) : (
@@ -79,7 +81,7 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
       {/* Rank list */}
       <View style={styles.list}>
         {visible.map((item, index) => (
-          <View key={item.name} style={styles.rankRow}>
+          <View key={`${item.name}-${tab}`} style={styles.rankRow}>
             <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
               {index + 1}
             </AppText>
