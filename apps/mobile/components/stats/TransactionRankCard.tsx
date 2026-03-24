@@ -65,43 +65,43 @@ export function TransactionRankCard({
       {data.length > 0 ? (
         <View style={styles.list}>
           {visible.map((item, index) => (
-            <View key={`${item.id}-${tab}`} style={styles.rankRow}>
-              {/* 序号 */}
-              <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
-                {index + 1}
-              </AppText>
+            <View key={`${item.id}-${tab}`}>
+              {/* 主行 */}
+              <View style={styles.rankRow}>
+                {/* 序号 */}
+                <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
+                  {index + 1}
+                </AppText>
 
-              {/* 分类图标 */}
-              <AppText size="xl" style={styles.emoji}>
-                {item.categoryEmoji}
-              </AppText>
+                {/* 分类图标 */}
+                <AppText size="xl" style={styles.emoji}>
+                  {item.categoryEmoji}
+                </AppText>
 
-              {/* 分类名称 */}
-              <AppText size="md" weight="semibold" color={colors.text} style={styles.categoryName}>
-                {item.categoryName}
-              </AppText>
+                {/* 分类名称 */}
+                <AppText size="md" weight="semibold" color={colors.text} style={styles.categoryName}>
+                  {item.categoryName}
+                </AppText>
 
-              {/* 金额（右对齐） */}
-              <AppText
-                size="sm"
-                weight="semibold"
-                color={tab === 'expense' ? colors.coral : colors.sage}
-              >
-                {tab === 'expense' ? '-' : '+'}¥
-                {item.amount.toLocaleString('zh-CN', {
-                  maximumFractionDigits: 0,
-                })}
-              </AppText>
-            </View>
-          ))}
-
-          {/* 日期和备注行 */}
-          {visible.map((item) => (
-            <View key={`${item.id}-${tab}-detail`} style={styles.detailRow}>
-              <AppText size="xs" color={colors.textLighter}>
-                {formatDate(item.date)}
-                {item.note && ` · ${item.note}`}
-              </AppText>
+                {/* 金额（右对齐） */}
+                <AppText
+                  size="sm"
+                  weight="semibold"
+                  color={tab === 'expense' ? colors.coral : colors.sage}
+                >
+                  {tab === 'expense' ? '-' : '+'}¥
+                  {item.amount.toLocaleString('zh-CN', {
+                    maximumFractionDigits: 0,
+                  })}
+                </AppText>
+              </View>
+              {/* 日期/备注行 */}
+              <View style={styles.detailRow}>
+                <AppText size="xs" color={colors.textLighter} numberOfLines={1}>
+                  {formatDate(item.date)}
+                  {item.note ? ` · ${item.note}` : ''}
+                </AppText>
+              </View>
             </View>
           ))}
         </View>
