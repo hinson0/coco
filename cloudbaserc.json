@@ -1,0 +1,48 @@
+{
+  "envId": "你的-env-id",
+  "framework": {
+    "name": "coco-functions",
+    "plugins": {
+      "function": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "./functions",
+          "functions": [
+            {
+              "name": "record-asr",
+              "memory": 256,
+              "timeout": 60,
+              "runtime": "Py39",
+              "installDependency": true,
+              "httpPath": "/api/record/asr"
+            },
+            {
+              "name": "record-ocr",
+              "memory": 256,
+              "timeout": 60,
+              "runtime": "Py39",
+              "installDependency": true,
+              "httpPath": "/api/record/ocr"
+            },
+            {
+              "name": "bill-parse",
+              "memory": 256,
+              "timeout": 30,
+              "runtime": "Py39",
+              "installDependency": true,
+              "httpPath": "/api/bill/parse"
+            },
+            {
+              "name": "chat",
+              "memory": 256,
+              "timeout": 60,
+              "runtime": "Py39",
+              "installDependency": true,
+              "httpPath": "/api/chat"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
