@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useLocalTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
@@ -113,17 +113,21 @@ export default function StatsScreen() {
   );
 
   // 月份导航
-  function handlePrev() {
-    const d = new Date(currentDate);
-    d.setMonth(d.getMonth() - 1);
-    setCurrentDate(d);
-  }
+  const handlePrev = useCallback(() => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    });
+  }, []);
 
-  function handleNext() {
-    const d = new Date(currentDate);
-    d.setMonth(d.getMonth() + 1);
-    setCurrentDate(d);
-  }
+  const handleNext = useCallback(() => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    });
+  }, []);
 
   const monthLabel = formatMonthLabelPadded(currentDate);
   const dateRangeLabel = buildDateRangeLabel(currentDate);
