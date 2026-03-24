@@ -10,6 +10,15 @@ interface TransactionRankCardProps {
   readonly incomeTransactions: RankedTransaction[];
 }
 
+/**
+ * 将 "2026-03-22" 格式转成 "03月22日"
+ */
+function formatDate(dateStr: string): string {
+  const month = dateStr.slice(5, 7);   // "03"
+  const day = dateStr.slice(8, 10);    // "22"
+  return `${month}月${day}日`;
+}
+
 const MAX_VISIBLE = 3;
 const MAX_EXPANDED = 10;
 
@@ -22,15 +31,6 @@ export function TransactionRankCard({
 
   const data = tab === 'expense' ? expenseTransactions : incomeTransactions;
   const visible = expanded ? data.slice(0, MAX_EXPANDED) : data.slice(0, MAX_VISIBLE);
-
-  /**
-   * 将 "2026-03-22" 格式转成 "03月22日"
-   */
-  const formatDate = (dateStr: string): string => {
-    const month = dateStr.slice(5, 7);   // "03"
-    const day = dateStr.slice(8, 10);    // "22"
-    return `${month}月${day}日`;
-  };
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
@@ -65,7 +65,7 @@ export function TransactionRankCard({
       {data.length > 0 ? (
         <View style={styles.list}>
           {visible.map((item, index) => (
-            <View key={`${item.id}-${tab}`}>
+            <View key={item.id}>
               {/* 主行 */}
               <View style={styles.rankRow}>
                 {/* 序号 */}
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailRow: {
-    marginLeft: 52,
+    marginLeft: 52, // rankNum(16) + gap(8) + emoji(28)
     marginBottom: 8,
   },
   empty: {
