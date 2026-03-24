@@ -27,16 +27,19 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
     [data],
   );
 
-  const centerLabel = useCallback(() => (
-    <View style={styles.centerLabel}>
-      <AppText size="sm" weight="bold" color={colors.text}>
-        {top?.name}
-      </AppText>
-      <AppText size="sm" color={colors.textLighter}>
-        {top?.percent}%
-      </AppText>
-    </View>
-  ), [top]);
+  const centerLabel = useCallback(() => {
+    if (!top) return null;
+    return (
+      <View style={styles.centerLabel}>
+        <AppText size="sm" weight="bold" color={colors.text}>
+          {top.name}
+        </AppText>
+        <AppText size="sm" color={colors.textLighter}>
+          {top.percent}%
+        </AppText>
+      </View>
+    );
+  }, [top]);
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
