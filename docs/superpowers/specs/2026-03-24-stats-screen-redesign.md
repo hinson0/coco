@@ -23,7 +23,8 @@
 | 账本选择器 | 占位样式，`onPress` 为空 |
 | 周期切换 | 去掉 PeriodTabs，固定月视图 |
 | 每日趋势图 | 支出/收入/结余 × 柱状图/折线图 完整实现 |
-| 查看更多 | inline 展开，最多显示 10 条后收起 |
+| 查看更多（分类排行） | inline 展开，展开后显示全部分类（无上限） |
+| 查看更多（明细排行） | inline 展开，展开后最多显示前 10 条 |
 
 ---
 
@@ -36,7 +37,7 @@ stats.tsx (ScrollView, backgroundColor: colors.cream)
 ├── DailyTrendCard           ← 新建（替换 BarChartCard）
 ├── CategoryRankCard         ← 新建（替换 DonutChartCard）
 ├── TransactionRankCard      ← 新建
-└── TrendInsightRow          ← 保留（数据已更新）
+└── TrendInsightRow          ← 保留（继续使用静态 AI_INSIGHTS，本次不修改）
 ```
 
 **删除的文件/组件：**
@@ -61,7 +62,8 @@ stats.tsx (ScrollView, backgroundColor: colors.cream)
 **规格：**
 - 整行 `flexDirection: 'row'`，`justifyContent: 'space-between'`，`alignItems: 'center'`
 - 左侧账本选择器：胶囊形圆角按钮（`borderRadius: 20`），白色背景，`shadows.sm`，内含文字"我的账本"+ 下箭头 `▼`；`onPress` 为空占位
-- 右侧月份导航：`‹` 文字按钮 + 月份文字（`YYYY年MM月`）+ `›` 文字按钮，使用 `colors.text` 色
+- 右侧月份导航：`‹` 文字按钮 + 月份文字（`YYYY年MM月`，月份两位补零，如 `"2026年03月"`）+ `›` 文字按钮，使用 `colors.text` 色
+- **注意：** 现有 `formatMonthLabel` 输出无补零（如 `"2026年3月"`），需更新为 `String(month + 1).padStart(2, '0')` 格式
 - 背景透明，`paddingHorizontal: 16`，`paddingVertical: 8`
 
 **Props：**
@@ -99,6 +101,12 @@ interface AccountSelectorBarProps {
 - 结余颜色：正数 → `colors.sage`，负数 → `colors.coral`（日均结余同规则）
 - 装饰图标：`Text` emoji `🐣`（占位，后期替换图片资源）
 - 日期栏：`月份第一天 — 月份最后一天`，格式 `YYYY年MM月DD日`，末尾 ⓘ 图标（`onPress` 空占位）
+- **`dateRangeLabel` 构建（在 stats.tsx 中完成，传入 prop）：**
+  ```ts
+  const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+  const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const dateRangeLabel = `${currentDate.getFullYear()}年${mm}月01日—${currentDate.getFullYear()}年${mm}月${lastDay}日`;
+  ```
 
 **Props：**
 ```ts
@@ -135,8 +143,11 @@ interface SummaryOverviewCardProps {
 - X 轴：当月每天，label 每 5 天显示一次（1、6、11、16、21、26、末）
 - Y 轴：自动缩放，`noOfSections: 4`，隐藏 Y 轴文字（仅显示网格线）
 - 维度映射：支出 → `item.expense`，收入 → `item.income`，结余 → `item.income - item.expense`
-- 结余负数：柱状图用 `colors.coralLight` 表示负值柱（gifted-charts 负数支持），折线图用红色线
-- 图表库：`react-native-gifted-charts`（`BarChart` / `LineChart`），`isAnimated: true`
+- 结余负数处理：
+  - **柱状图模式**：启用 `showNegativeValues: true`，设置 `negativeStepValue` 与正向 `stepValue` 相同，`yAxisOffset: 0`，负值柱颜色使用 `colors.coralLight`
+  - **折线图模式**：`LineChart` 原生支持负值，数据直接传入，负值线段颜色使用 `colors.coral`
+  - 当维度为支出/收入时（均为正值），`showNegativeValues` 不传（默认 false）
+- 图表库：`react-native-gifted-charts` v1.4.x（`BarChart` / `LineChart`），`isAnimated: true`
 
 **内部 State：**
 ```ts
@@ -278,8 +289,12 @@ interface RankedTransaction {
 const dailyData = useMemo(() => { /* 按日聚合 expense/income */ }, [filtered]);
 
 // 分类统计（支出 + 收入分开）
-const expenseByCat = useMemo(() => { /* ... */ }, [filtered, categoryMap]);
-const incomeByCat  = useMemo(() => { /* ... */ }, [filtered, categoryMap]);
+// 聚合逻辑：按分类 name 分组，累加 amount，计数 count，计算 percent
+// 颜色赋值：排序后按 index 取 CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+// count: number = 该分类的交易笔数（txs.length）
+// 最多取前 6 条，其余合并为"其他"
+const expenseByCat = useMemo(() => { /* CategoryStat[] */ }, [filtered, categoryMap]);
+const incomeByCat  = useMemo(() => { /* CategoryStat[] */ }, [filtered, categoryMap]);
 
 // 明细排行（支出 + 收入分开，按绝对值降序）
 const expenseRank = useMemo(() => { /* ... */ }, [filtered, categoryMap]);
