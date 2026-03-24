@@ -13,7 +13,7 @@ export async function recognizeSpeech(audioBase64: string, options: TencentAsrOp
   const AsrClient = tencentcloud.asr.v20190614.Client;
   const client = new AsrClient({ credential: { secretId: options.secretId, secretKey: options.secretKey }, region: "ap-guangzhou" });
   const resp = await client.SentenceRecognition({
-    EngSerViceType: "16k_zh", SourceType: 1, VoiceFormat: "wav",
+    EngSerViceType: "16k_zh", SourceType: 1, VoiceFormat: "m4a",
     Data: audioBase64, DataLen: Buffer.from(audioBase64, "base64").length,
   });
   return { text: resp.Result ?? "" };

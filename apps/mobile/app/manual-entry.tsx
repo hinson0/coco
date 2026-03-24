@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, ActivityIndicator, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -56,14 +56,7 @@ export default function ManualEntryScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const amountRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, []);
 
   const DEFAULT_NAMES: Record<string, string> = { expense: "购物", income: "工资" };
 
@@ -141,10 +134,12 @@ export default function ManualEntryScreen() {
     }
   };
 
-  const bottomPadding = keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom;
-
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView
+      style={[styles.screen, { paddingTop: insets.top }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
@@ -243,7 +238,7 @@ export default function ManualEntryScreen() {
       </ScrollView>
 
       {/* ── Bottom save button ── */}
-      <View style={[styles.bottomBar, { paddingBottom: bottomPadding + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
           style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
           onPress={handleSubmit}
@@ -257,7 +252,7 @@ export default function ManualEntryScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

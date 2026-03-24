@@ -2,15 +2,24 @@ import { useRef, useCallback, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 import {
   useAudioRecorder,
-  RecordingPresets,
   requestRecordingPermissionsAsync,
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const MAX_DURATION_MS = 60_000;
 
+// 16kHz 单声道，匹配腾讯云 ASR "16k_zh" 引擎，减少上传体积
+const ASR_RECORDING_OPTIONS = {
+  extension: '.m4a',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 32000,
+  android: { outputFormat: 'mpeg4' as const, audioEncoder: 'aac' as const },
+  ios: { outputFormat: 'aac ' as const, audioQuality: 96 },
+};
+
 export function useVoiceRecorder() {
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(ASR_RECORDING_OPTIONS);
   const [isRecording, setIsRecording] = useState(false);
   // useRef 镜像 isRecording，避免 useCallback/PanResponder 闭包捕获过期值
   const isRecordingRef = useRef(false);

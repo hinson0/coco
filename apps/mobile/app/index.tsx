@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   FlatList,
@@ -139,40 +140,49 @@ export default function ChatScreen() {
   // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
 
-  // Track keyboard height and visibility
+  // Track keyboard height and visibility — only while this screen is focused
+  // Using useFocusEffect prevents manual-entry's keyboard events from animating this screen's
+  // bottomPanel during the back-navigation transition (which caused the visible "jump").
   const keyboardHeight = useSharedValue(0);
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      keyboardHeight.value = withTiming(0, { duration: 250 });
-    });
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, [keyboardHeight]);
+  useFocusEffect(
+    useCallback(() => {
+      const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+      const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+      const showSub = Keyboard.addListener(showEvent, (e) => {
+        keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
+      });
+      const hideSub = Keyboard.addListener(hideEvent, () => {
+        keyboardHeight.value = withTiming(0, { duration: 250 });
+      });
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+        keyboardHeight.value = 0; // 立刻归零，避免返回时 bottomPanel 带着键盘高度出现
+      };
+    }, [keyboardHeight]),
+  );
 
   const bottomPanelAnimatedStyle = useAnimatedStyle(() => ({
     paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
 
-  const listItems = buildListItems(messages, isSending);
+  const listItems = useMemo(() => {
+    const items = buildListItems(messages, isSending);
+    if (messages.length === 0) {
+      items.push({ type: 'message', data: WELCOME_MESSAGE });
+    }
+    return items;
+  }, [messages, isSending]);
 
-  // Show welcome message only when no messages exist
-  if (messages.length === 0) {
-    listItems.push({ type: 'message', data: WELCOME_MESSAGE });
-  }
-
-  function handleSelectTool(tool: string) {
+  const handleSelectTool = useCallback((tool: string) => {
     if (tool === '手动记账') {
       router.push('/manual-entry');
       return;
     }
     sendText(tool);
-  }
+  }, [sendText]);
 
-  function renderItem({ item }: { item: ListItem }) {
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.type === 'separator') {
       return <DateSeparator label={item.label} />;
     }
@@ -200,7 +210,7 @@ export default function ChatScreen() {
         />
       </View>
     );
-  }
+  }, [categories, deleteMutation]);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
