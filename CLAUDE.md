@@ -16,4 +16,5 @@ Claude Code Plan Mode 的计划文件保存在**当前项目目录内**：
 
 注意：superpowers:writing-plans 遵循其自身默认路径（`docs/superpowers/plans/`），不受此规则影响。
 
-
+## git 语言
+git commit message/pull request统一都用中文.
