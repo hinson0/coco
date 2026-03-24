@@ -1,0 +1,2 @@
+tencentcloud-sdk-python-ocr
+tencentcloud-sdk-python-common
