@@ -56,9 +56,9 @@ const CATEGORY_COLORS = [
 const WEEKLY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 const AI_INSIGHTS = [
-  { emoji: '🍜', title: '餐饮支出偏高', desc: '本月餐饮占总支出 42%，高于上月', badge: { text: '↑ 12%', direction: 'up' as const } },
-  { emoji: '🚌', title: '交通花费稳定', desc: '交通支出与上月基本持平', badge: { text: '↓ 3%', direction: 'down' as const } },
-  { emoji: '💡', title: '建议设置餐饮预算', desc: '合理规划有助于减少月末超支' },
+  { emoji: '🍜', title: '餐饮支出偏高', desc: '较上月增长 18%，建议控制外卖频次', badge: { text: '↑ 18%', direction: 'up' as const } },
+  { emoji: '🚌', title: '交通支出正常', desc: '较上月减少 5%，保持得不错', badge: { text: '↓ 5%', direction: 'down' as const } },
+  { emoji: '💡', title: '节省建议', desc: '本月如减少 3 次外卖，可省约 ¥120' },
 ];
 
 export default function StatsScreen() {
