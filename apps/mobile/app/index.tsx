@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -17,9 +17,10 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChat } from '../hooks/useChat';
+import { useCamera } from '../hooks/useCamera';
 import { useLocalChatMessages, useDeleteChatMessage, useClearChatMessages } from '../hooks/useLocalChatMessages';
 import { useLocalCategories } from '../hooks/useLocalCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
@@ -129,13 +130,14 @@ function DateSeparator({ label }: { label: string }) {
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
+  const { pickImage } = useCamera();
   const { data: messages = [], refetch } = useLocalChatMessages();
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
   const { data: categories = [] } = useLocalCategories();
 
-  // Refetch chat messages when screen regains focus (e.g. after manual-entry)
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
+  // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
 
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
@@ -249,9 +251,12 @@ export default function ChatScreen() {
         <ChatToolBar onSelectTool={handleSelectTool} />
         <ChatInputBar
           onSendText={sendText}
-          onCamera={() => {/* OCR handled via camera picker */}}
-          onVoice={() => {/* ASR handled via voice recorder */}}
-          onPlus={() => {/* expand tool panel */}}
+          onCamera={async () => {
+            const base64 = await pickImage();
+            if (base64) sendOcr(base64);
+          }}
+          onVoice={(base64) => sendAsr(base64)}
+          onQuickAction={(actionText) => sendText(actionText)}
         />
       </Animated.View>
 

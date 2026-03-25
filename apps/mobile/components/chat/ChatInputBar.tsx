@@ -1,19 +1,73 @@
-import { useState } from 'react';
-import { View, TextInput, Pressable, StyleSheet } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { View, TextInput, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { AppText } from '../ui/AppText';
+import { QuickActions } from './QuickActions';
+import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
 import { colors, radii, spacing, shadows } from '../../constants/theme';
 
+// ─── 滑动取消阈值（向上滑动 50pt 触发） ───
+const CANCEL_THRESHOLD = 50;
+
+// ─── Props ───
 interface ChatInputBarProps {
   readonly onSendText: (text: string) => void;
   readonly onCamera: () => void;
-  readonly onVoice: () => void;
-  readonly onPlus: () => void;
+  readonly onVoice: (audioBase64: string) => void;
+  readonly onQuickAction: (text: string) => void;
 }
 
-export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInputBarProps) {
-  const [text, setText] = useState('');
-  const hasText = text.trim().length > 0;
+// ─── 录音状态 ───
+type RecordingState = 'idle' | 'recording' | 'cancelling';
 
+export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: ChatInputBarProps) {
+  const [text, setText] = useState('');
+  const [mode, setMode] = useState<'text' | 'voice'>('text');
+  const [plusExpanded, setPlusExpanded] = useState(false);
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  const hasText = text.trim().length > 0;
+  const { startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+
+  // useRef 镜像 recordingState，PanResponder 回调中读 ref 避免闭包陷阱
+  const recordingStateRef = useRef<RecordingState>('idle');
+  function setRecordingStateSync(s: RecordingState) {
+    recordingStateRef.current = s;
+    setRecordingState(s);
+  }
+
+  // useRef 镜像 onVoice 回调，避免 PanResponder 闭包捕获旧 prop
+  const onVoiceRef = useRef(onVoice);
+  onVoiceRef.current = onVoice;
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startYRef = useRef(0);
+
+  // ─── 录音计时器（仅在 idle <-> 非 idle 切换时启停，recording <-> cancelling 不重启） ───
+  const wasRecordingRef = useRef(false);
+  useEffect(() => {
+    const isActive = recordingState !== 'idle';
+    if (isActive && !wasRecordingRef.current) {
+      // 从 idle 进入录音：启动计时器
+      setRecordingSeconds(0);
+      timerRef.current = setInterval(() => {
+        setRecordingSeconds((s) => s + 1);
+      }, 1000);
+    } else if (!isActive && wasRecordingRef.current) {
+      // 从录音回到 idle：清除计时器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setRecordingSeconds(0);
+    }
+    wasRecordingRef.current = isActive;
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [recordingState]);
+
+  // ─── 文字提交 ───
   function handleSubmit() {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -21,42 +75,148 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onPlus }: ChatInpu
     setText('');
   }
 
+  // ─── 模式切换 ───
+  function toggleMode() {
+    setMode((prev) => (prev === 'text' ? 'voice' : 'text'));
+    setPlusExpanded(false);
+  }
+
+  // ─── + 按钮 ───
+  function handlePlus() {
+    setPlusExpanded((prev) => !prev);
+  }
+
+  function handleQuickAction(actionText: string) {
+    setPlusExpanded(false);
+    onQuickAction(actionText);
+  }
+
+  // ─── PanResponder 长按录音手势（所有回调读 ref，不读 state） ───
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: async (_evt, gestureState) => {
+        startYRef.current = gestureState.y0;
+        const started = await startRecording();
+        if (started) {
+          setRecordingStateSync('recording');
+        }
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (recordingStateRef.current === 'idle') return;
+        const dy = startYRef.current - gestureState.moveY;
+        if (dy > CANCEL_THRESHOLD) {
+          setRecordingStateSync('cancelling');
+        } else {
+          setRecordingStateSync('recording');
+        }
+      },
+      onPanResponderRelease: async () => {
+        const current = recordingStateRef.current;
+        if (current === 'cancelling') {
+          await cancelRecording();
+          setRecordingStateSync('idle');
+        } else if (current === 'recording') {
+          const base64 = await stopRecording();
+          setRecordingStateSync('idle');
+          if (base64) {
+            onVoiceRef.current(base64);
+          }
+        }
+      },
+      onPanResponderTerminate: async () => {
+        await cancelRecording();
+        setRecordingStateSync('idle');
+      },
+    }),
+  ).current;
+
+  // ─── 录音按钮文字 ───
+  const voiceBtnText =
+    recordingState === 'cancelling'
+      ? '松开取消'
+      : recordingState === 'recording'
+        ? `松开发送 ${recordingSeconds}s`
+        : '按住说话';
+
+  const voiceBtnBg =
+    recordingState === 'cancelling'
+      ? '#fde8e2'
+      : recordingState === 'recording'
+        ? colors.sagePale
+        : colors.cream;
+
   return (
-    <View style={styles.container}>
-      {!hasText && (
+    <View>
+      <QuickActions visible={plusExpanded} onSelect={handleQuickAction} />
+
+      <View style={styles.container}>
+        {/* 📷 相机按钮 — 两种模式都显示 */}
         <Pressable onPress={onCamera} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
           <AppText size="2xl">📷</AppText>
         </Pressable>
-      )}
 
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        placeholder="记一笔或按住说话..."
-        placeholderTextColor={colors.textLighter}
-        returnKeyType="default"
-        style={[styles.input, { maxHeight: 100 }]}
-        multiline
-      />
+        {mode === 'text' ? (
+          <>
+            {/* 文字模式：输入框 */}
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="记一笔..."
+              placeholderTextColor={colors.textLighter}
+              returnKeyType="default"
+              style={[styles.input, { maxHeight: 100 }]}
+              multiline
+            />
 
-      {hasText ? (
-        <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
-          <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
-        </Pressable>
-      ) : (
-        <>
-          <Pressable onPress={onVoice} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
-            <AppText size="2xl">🎤</AppText>
-          </Pressable>
-          <Pressable onPress={onPlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
-            <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
-          </Pressable>
-        </>
-      )}
+            {hasText ? (
+              /* 有文字 → 发送按钮 */
+              <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
+                <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
+              </Pressable>
+            ) : (
+              <>
+                {/* 无文字 → 🎤 + ➕ */}
+                <Pressable onPress={toggleMode} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
+                  <AppText size="2xl">🎤</AppText>
+                </Pressable>
+                <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
+                  <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
+                </Pressable>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {/* 语音模式：按住说话 */}
+            <View
+              style={[styles.voiceArea, { backgroundColor: voiceBtnBg }]}
+              {...panResponder.panHandlers}
+            >
+              <AppText
+                size="lg"
+                weight="medium"
+                color={recordingState === 'cancelling' ? colors.coral : colors.text}
+              >
+                {voiceBtnText}
+              </AppText>
+            </View>
+
+            {/* ⌨️ 切回文字模式 */}
+            <Pressable onPress={toggleMode} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
+              <AppText size="2xl">⌨️</AppText>
+            </Pressable>
+            <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
+              <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
+            </Pressable>
+          </>
+        )}
+      </View>
     </View>
   );
 }
 
+// ─── Styles ───
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -104,5 +264,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     fontSize: 14,
     color: colors.text,
+  },
+  voiceArea: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.creamDeeper,
+    borderRadius: radii.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

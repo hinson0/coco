@@ -1,19 +1,23 @@
 {
-    "permissions": {
-        "allow": [
-            "Edit(*)",
-            "Read(*)",
-            "Write(*)",
-            "Bash(*)"
-        ],
-        "deny": [
-          "Bash(rm *)",
-          "Bash(sudo *)",
-          "Bash(git push --force *)",
-          "Bash(git push -f *)",
-          "Bash(git reset --hard *)",
-          "Bash(git checkout -- *)",
-          "Bash(git branch -D *)"
-        ]
-    }
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Read",
+      "Write",
+      "Bash",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)",
+      "Bash(git checkout -- *)",
+      "Bash(git branch -D *)"
+    ]
+  },
+  "enabledPlugins": {
+    "explanatory-output-style@claude-plugins-official": true
+  }
 }

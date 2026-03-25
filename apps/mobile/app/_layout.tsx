@@ -1,4 +1,4 @@
-import { Slot, router } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -32,7 +32,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <OfflineContext.Provider value={{ db }}>
-        <Slot />
+        <Stack screenOptions={{ headerShown: false }} />
       </OfflineContext.Provider>
     </QueryClientProvider>
   );

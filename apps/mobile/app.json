@@ -31,7 +31,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-audio",
+      [
+        "expo-image-picker",
+        { "cameraPermission": "允许 Coco 使用相机拍摄小票进行记账" }
+      ],
+      [
+        "expo-audio",
+        { "microphonePermission": "允许 Coco 使用麦克风进行语音记账" }
+      ],
       "expo-sqlite",
       "@react-native-community/datetimepicker"
     ],
