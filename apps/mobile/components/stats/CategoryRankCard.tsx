@@ -81,15 +81,21 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
         </AppText>
       )}
 
-      {/* Color legend */}
+      {/* Color legend — 每行 5 个，居中 */}
       {data.length > 0 && (
         <View style={styles.legend}>
-          {data.map((item) => (
-            <View key={`legend-${item.name}-${tab}`} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-              <AppText size="xs" color={colors.textLight}>
-                {item.name} {item.percent}%
-              </AppText>
+          {Array.from({ length: Math.ceil(data.length / 5) }, (_, row) =>
+            data.slice(row * 5, row * 5 + 5)
+          ).map((rowItems, row) => (
+            <View key={`legend-row-${row}`} style={styles.legendRow}>
+              {rowItems.map((item) => (
+                <View key={`legend-${item.name}-${tab}`} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                  <AppText size="xs" color={colors.textLight}>
+                    {item.name} {item.percent}%
+                  </AppText>
+                </View>
+              ))}
             </View>
           ))}
         </View>
@@ -182,11 +188,13 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   legend: {
+    gap: 6,
+    marginBottom: 16,
+  },
+  legendRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 16,
   },
   legendItem: {
     flexDirection: 'row',
