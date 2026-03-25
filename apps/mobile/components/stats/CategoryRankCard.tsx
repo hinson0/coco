@@ -81,6 +81,20 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
         </AppText>
       )}
 
+      {/* Color legend */}
+      {data.length > 0 && (
+        <View style={styles.legend}>
+          {data.map((item) => (
+            <View key={`legend-${item.name}-${tab}`} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <AppText size="xs" color={colors.textLight}>
+                {item.name} {item.percent}%
+              </AppText>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Rank list */}
       <View style={styles.list}>
         {visible.map((item, index) => (
@@ -166,6 +180,23 @@ const styles = StyleSheet.create({
   empty: {
     textAlign: 'center',
     marginVertical: 20,
+  },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   list: {
     gap: 10,
