@@ -26,7 +26,9 @@ apps/mobile/package-lock.json
 .claire/
 
 # Claude Code local files (machine-specific)
-.claude/
+.claude/worktrees/
+.claude/*local*
+.claude/hook-logs/
 
 *.swp
 
