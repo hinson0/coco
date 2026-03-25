@@ -115,7 +115,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           height={160}
           noOfSections={4}
           stepValue={stepValue}
-          isAnimated
           hideYAxisText
           yAxisThickness={0}
           xAxisThickness={1}
@@ -133,7 +132,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           data={lineData}
           height={160}
           noOfSections={4}
-          isAnimated
           hideYAxisText
           yAxisThickness={0}
           xAxisThickness={1}

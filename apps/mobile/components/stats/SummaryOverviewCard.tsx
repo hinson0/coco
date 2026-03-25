@@ -37,7 +37,6 @@ export function SummaryOverviewCard({
       {/* Title row */}
       <View style={styles.titleRow}>
         <AppText size="lg" weight="semibold" color={colors.text}>收支总览</AppText>
-        <AppText size="2xl">🐣</AppText>
       </View>
 
       <View style={styles.divider} />

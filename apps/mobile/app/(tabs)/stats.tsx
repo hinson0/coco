@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { AccountSelectorBar } from '../../components/stats/AccountSelectorBar';
 import { SummaryOverviewCard } from '../../components/stats/SummaryOverviewCard';
@@ -17,20 +17,7 @@ import {
   buildDateRangeLabel,
   formatMonthLabelPadded,
 } from '../../utils/statsUtils';
-import type { Transaction, Category } from '@coco/shared';
-
-function filterByMonth(
-  transactions: readonly Transaction[],
-  currentDate: Date,
-): Transaction[] {
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  return transactions.filter((tx) => {
-    const d = new Date(tx.occurred_at);
-    return d.getFullYear() === year && d.getMonth() === month;
-  });
-}
+import type { Category } from '@coco/shared';
 
 const CATEGORY_COLORS = [
   colors.coral,
@@ -50,10 +37,10 @@ const AI_INSIGHTS = [
 export default function StatsScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { data: txData } = useLocalTransactions();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const { data: filtered = [] } = useMonthlyTransactions(year, month);
   const { data: categories = [] } = useLocalCategories();
-
-  const allTransactions: readonly Transaction[] = txData?.data ?? [];
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};
@@ -62,12 +49,6 @@ export default function StatsScreen() {
     });
     return map;
   }, [categories]);
-
-  // 月份过滤（固定月视图）
-  const filtered = useMemo(
-    () => filterByMonth(allTransactions, currentDate),
-    [allTransactions, currentDate],
-  );
 
   // 收支总计
   const totalExpense = useMemo(
