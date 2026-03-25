@@ -9,11 +9,12 @@ import type { CategoryStat } from '../../utils/statsUtils';
 interface CategoryRankCardProps {
   readonly expenseByCategory: CategoryStat[];
   readonly incomeByCategory: CategoryStat[];
+  readonly onCategoryPress?: (categoryId: string) => void;
 }
 
 const MAX_BAR_WIDTH = 120;
 
-export function CategoryRankCard({ expenseByCategory, incomeByCategory }: CategoryRankCardProps) {
+export function CategoryRankCard({ expenseByCategory, incomeByCategory, onCategoryPress }: CategoryRankCardProps) {
   const [tab, setTab] = useState<'expense' | 'income'>('expense');
   const [expanded, setExpanded] = useState(false);
 
@@ -109,7 +110,11 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
       {/* Rank list */}
       <View style={styles.list}>
         {visible.map((item, index) => (
-          <View key={`${item.name}-${tab}`} style={styles.rankRow}>
+          <Pressable
+            key={`${item.name}-${tab}`}
+            style={styles.rankRow}
+            onPress={() => item.categoryId && onCategoryPress?.(item.categoryId)}
+          >
             <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
               {index + 1}
             </AppText>
@@ -144,7 +149,7 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
                 maximumFractionDigits: 0,
               })}
             </AppText>
-          </View>
+          </Pressable>
         ))}
       </View>
 

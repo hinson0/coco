@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
@@ -110,6 +111,10 @@ export default function StatsScreen() {
     });
   }, []);
 
+  const handleCategoryPress = useCallback((categoryId: string) => {
+    router.push({ pathname: '/category-detail', params: { categoryId } });
+  }, []);
+
   const monthLabel = formatMonthLabelPadded(currentDate);
   const dateRangeLabel = buildDateRangeLabel(currentDate);
 
@@ -137,6 +142,7 @@ export default function StatsScreen() {
       <CategoryRankCard
         expenseByCategory={expenseByCat}
         incomeByCategory={incomeByCat}
+        onCategoryPress={handleCategoryPress}
       />
       <TransactionRankCard
         expenseTransactions={expenseRank}
