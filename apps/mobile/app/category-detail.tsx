@@ -1,15 +1,16 @@
-import { useState } from 'react';
-import { ScrollView, View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useState, useMemo } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { router, useLocalSearchParams } from 'expo-router';
 import type { Transaction, Category } from '@coco/shared';
-import { useLocalTransactions } from '../../hooks/useLocalTransactions';
-import { useLocalCategories } from '../../hooks/useLocalCategories';
-import { FilterBar, ALL_EXPENSE } from '../../components/bills/FilterBar';
-import { MonthStrip } from '../../components/bills/MonthStrip';
-import { DayGroup } from '../../components/shared/DayGroup';
-import { TransactionItem } from '../../components/shared/TransactionItem';
-import { AppText } from '../../components/ui/AppText';
-import { colors, radii, shadows, getCategoryColor } from '../../constants/theme';
+import { useMonthlyTransactions } from '../hooks/useLocalTransactions';
+import { useLocalCategories } from '../hooks/useLocalCategories';
+import { FilterBar, ALL_EXPENSE, ALL_INCOME } from '../components/bills/FilterBar';
+import { MonthStrip } from '../components/bills/MonthStrip';
+import { DayGroup } from '../components/shared/DayGroup';
+import { TransactionItem } from '../components/shared/TransactionItem';
+import { AppText } from '../components/ui/AppText';
+import { colors, radii, shadows, getCategoryColor } from '../constants/theme';
 
 // ─── Helper: date label ──────────────────────────────────────────────────────
 
@@ -30,15 +31,11 @@ function formatDayLabel(dateStr: string): { label: string; date: string } {
   } else if (isSameDay(d, yesterday)) {
     label = '昨天';
   } else {
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    label = `${month}月${day}日`;
+    label = `${d.getMonth() + 1}月${d.getDate()}日`;
   }
 
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  const date = weekdays[d.getDay()];
-
-  return { label, date };
+  return { label, date: weekdays[d.getDay()] };
 }
 
 // ─── Helper: group transactions by date ─────────────────────────────────────
@@ -54,25 +51,21 @@ interface DayData {
 
 function groupByDay(transactions: readonly Transaction[]): DayData[] {
   const map = new Map<string, Transaction[]>();
-
   for (const t of transactions) {
     const key = t.occurred_at.slice(0, 10);
     const existing = map.get(key);
-    if (existing) {
-      existing.push(t);
-    } else {
-      map.set(key, [t]);
-    }
+    if (existing) existing.push(t);
+    else map.set(key, [t]);
   }
 
-  const sorted = Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-
-  return sorted.map(([key, txns]) => {
-    const { label, date } = formatDayLabel(key);
-    const dayExpense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const dayIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    return { key, label, date, transactions: txns, dayExpense, dayIncome };
-  });
+  return Array.from(map.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, txns]) => {
+      const { label, date } = formatDayLabel(key);
+      const dayExpense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const dayIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      return { key, label, date, transactions: txns, dayExpense, dayIncome };
+    });
 }
 
 // ─── Helper: format money ─────────────────────────────────────────────────────
@@ -81,70 +74,73 @@ function fmt(amount: number): string {
   return `¥${Math.abs(amount).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
 }
 
-// ─── Helper: current month label ─────────────────────────────────────────────
+// ─── Helper: compute stats for filtered transactions ─────────────────────────
 
-function currentMonthLabel(): string {
-  const now = new Date();
-  return `${now.getFullYear()}年${now.getMonth() + 1}月`;
-}
-
-// ─── Helper: compute month stats ─────────────────────────────────────────────
-
-interface MonthStats {
-  count: number;
-  total: string;
-}
-
-function computeMonthStats(transactions: readonly Transaction[]): MonthStats {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  const monthTxns = transactions.filter(t => {
-    const d = new Date(t.occurred_at);
-    return d.getFullYear() === year && d.getMonth() === month;
-  });
-
-  const totalExpense = monthTxns
+function computeStats(transactions: readonly Transaction[]): { count: number; total: string } {
+  const totalExpense = transactions
     .filter(t => t.type === 'expense')
     .reduce((s, t) => s + t.amount, 0);
 
-  return {
-    count: monthTxns.length,
-    total: fmt(totalExpense),
-  };
+  return { count: transactions.length, total: fmt(totalExpense) };
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+// ─── Screen ──────────────────────────────────────────────────────────────────
 
-export default function BillsScreen() {
-  const [activeFilter, setActiveFilter] = useState(ALL_EXPENSE);
+export default function CategoryDetailScreen() {
+  const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
+  const [activeFilter, setActiveFilter] = useState(categoryId ?? ALL_EXPENSE);
 
-  const { data: txData, isLoading: txLoading } = useLocalTransactions();
+  const now = new Date();
+  const { data: allTransactions = [], isLoading: txLoading } = useMonthlyTransactions(
+    now.getFullYear(),
+    now.getMonth(),
+  );
   const { data: categories = [] } = useLocalCategories();
-
-  const allTransactions: readonly Transaction[] = txData?.data ?? [];
 
   const catMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
-  // Filter transactions by active category
+  const EXPENSE_ORDER: Record<string, number> = {
+    '购物': 0, '餐饮': 1, '娱乐': 2, '交通': 3,
+    '其他支出': 4, '教育': 5, '居住': 6, '医疗': 7, '通讯': 8,
+  };
+  const INCOME_ORDER: Record<string, number> = { '工资': 0, '理财': 1, '其他收入': 2 };
+  const sortedCategories = useMemo(() => {
+    const mapped = categories.map(c => ({ id: c.id, name: c.name, type: c.type }));
+    const expenses = mapped
+      .filter(c => c.type === 'expense')
+      .sort((a, b) => (EXPENSE_ORDER[a.name] ?? 99) - (EXPENSE_ORDER[b.name] ?? 99));
+    const incomes = mapped
+      .filter(c => c.type === 'income')
+      .sort((a, b) => (INCOME_ORDER[a.name] ?? 99) - (INCOME_ORDER[b.name] ?? 99));
+    return [...expenses, ...incomes];
+  }, [categories]);
+
   const filteredTransactions = activeFilter === ALL_EXPENSE
-    ? allTransactions
+    ? allTransactions.filter(t => t.type === 'expense')
+    : activeFilter === ALL_INCOME
+    ? allTransactions.filter(t => t.type === 'income')
     : allTransactions.filter(t => t.category_id === activeFilter);
 
-  const monthStats = computeMonthStats(filteredTransactions);
+  const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+  const monthStats = computeStats(filteredTransactions);
   const days = groupByDay(filteredTransactions);
 
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" backgroundColor={colors.cream} />
 
-      {/* Fixed header */}
+      {/* Header */}
       <View style={styles.header}>
-        <AppText size="5xl" weight="bold" color={colors.text}>账单</AppText>
-        <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
-          <AppText size="xl">🔍</AppText>
+        <TouchableOpacity
+          onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/diary')}
+          style={[styles.iconBtn, styles.headerBack]}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
+        <AppText size="5xl" weight="bold" color={colors.text}>账单</AppText>
+        {/* 右侧占位，保持标题居中 */}
+        <View style={styles.headerPlaceholder} />
       </View>
 
       <ScrollView
@@ -154,14 +150,15 @@ export default function BillsScreen() {
       >
         {/* Category filter chips */}
         <FilterBar
-          categories={categories.map(c => ({ id: c.id, name: c.name }))}
+          categories={sortedCategories}
           activeId={activeFilter}
           onSelect={setActiveFilter}
+          wrap
         />
 
         {/* Month summary strip */}
         <MonthStrip
-          month={currentMonthLabel()}
+          month={monthLabel}
           count={monthStats.count}
           total={monthStats.total}
         />
@@ -173,7 +170,7 @@ export default function BillsScreen() {
           ) : days.length === 0 ? (
             <View style={styles.empty}>
               <AppText color={colors.textLighter} size="lg">
-                {activeFilter !== ALL_EXPENSE ? '该分类暂无记录 🌿' : '还没有记录，快去记一笔吧 🌿'}
+                {activeFilter ? '该分类暂无记录 🌿' : '还没有记录，快去记一笔吧 🌿'}
               </AppText>
             </View>
           ) : (
@@ -234,7 +231,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: colors.cream,
   },
-  searchBtn: {
+  headerBack: {
+    position: 'relative',
+  },
+  headerPlaceholder: {
+    width: 36,
+  },
+  iconBtn: {
     width: 36,
     height: 36,
     borderRadius: radii.md,
@@ -242,6 +245,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.md,
+  },
+  backArrow: {
+    fontSize: 18,
+    color: colors.text,
+    lineHeight: 22,
   },
   scroll: {
     flex: 1,
