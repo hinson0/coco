@@ -27,6 +27,11 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
     [data],
   );
 
+  const legendData = useMemo(
+    () => data.filter((c) => c.percent > 0),
+    [data],
+  );
+
   const centerLabel = useCallback(() => {
     if (!top) return null;
     return (
@@ -81,11 +86,11 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory }: Catego
         </AppText>
       )}
 
-      {/* Color legend — 每行 5 个，居中 */}
-      {data.length > 0 && (
+      {/* Color legend — 每行 5 个，居中，0% 不显示 */}
+      {legendData.length > 0 && (
         <View style={styles.legend}>
-          {Array.from({ length: Math.ceil(data.length / 5) }, (_, row) =>
-            data.slice(row * 5, row * 5 + 5)
+          {Array.from({ length: Math.ceil(legendData.length / 5) }, (_, row) =>
+            legendData.slice(row * 5, row * 5 + 5)
           ).map((rowItems, row) => (
             <View key={`legend-row-${row}`} style={styles.legendRow}>
               {rowItems.map((item) => (
