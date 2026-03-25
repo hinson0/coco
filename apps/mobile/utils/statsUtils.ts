@@ -1,7 +1,5 @@
 import type { Transaction } from '@coco/shared';
 
-// Do not import from theme (avoids Node test env resolving RN module chain)
-const OTHER_CATEGORY_COLOR = '#e4d8c8'; // equals colors.creamDeeper
 
 export interface DailyDataPoint {
   date: string;   // "YYYY-MM-DD"
@@ -10,6 +8,7 @@ export interface DailyDataPoint {
 }
 
 export interface CategoryStat {
+  categoryId: string | null;
   emoji: string;
   name: string;
   amount: number;
@@ -97,7 +96,7 @@ export function buildDailyData(
 }
 
 /**
- * Aggregate by category, sort descending, take top 6 (rest merged as "其他").
+ * Aggregate by category, sort descending.
  * @param palette Color array assigned by index (pass CATEGORY_COLORS from theme)
  */
 export function buildCategoryStats(
@@ -106,13 +105,13 @@ export function buildCategoryStats(
   categoryMap: Record<string, { id: string; name: string; icon: string }>,
   palette: readonly string[],
 ): CategoryStat[] {
-  const map: Record<string, { emoji: string; name: string; amount: number; count: number }> = {};
+  const map: Record<string, { categoryId: string | null; emoji: string; name: string; amount: number; count: number }> = {};
 
   for (const tx of transactions) {
     if (tx.type !== type) continue;
     const cat = categoryMap[tx.category_id];
     const key = cat?.name ?? '其他';
-    if (!map[key]) map[key] = { emoji: cat?.icon ?? '📦', name: key, amount: 0, count: 0 };
+    if (!map[key]) map[key] = { categoryId: cat?.id ?? null, emoji: cat?.icon ?? '📦', name: key, amount: 0, count: 0 };
     map[key].amount += Number(tx.amount);
     map[key].count += 1;
   }
@@ -120,29 +119,11 @@ export function buildCategoryStats(
   const sorted = Object.values(map).sort((a, b) => b.amount - a.amount);
   const total = sorted.reduce((s, c) => s + c.amount, 0) || 1;
 
-  const top6 = sorted.slice(0, 6);
-  const rest = sorted.slice(6);
-
-  const result: CategoryStat[] = top6.map((item, i) => ({
+  return sorted.map((item, i) => ({
     ...item,
     percent: Math.round((item.amount / total) * 100),
     color: palette[i % palette.length],
   }));
-
-  if (rest.length > 0) {
-    const otherAmount = rest.reduce((s, c) => s + c.amount, 0);
-    const otherCount  = rest.reduce((s, c) => s + c.count, 0);
-    result.push({
-      emoji: '📦',
-      name: '其他',
-      amount: otherAmount,
-      count: otherCount,
-      percent: Math.round((otherAmount / total) * 100),
-      color: OTHER_CATEGORY_COLOR,
-    });
-  }
-
-  return result;
 }
 
 /** Sort transactions by amount descending */
