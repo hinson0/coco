@@ -1,12 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Edit",
-      "Read",
-      "Write",
-      "Bash",
-      "WebSearch"
-    ],
+    "allow": ["Edit", "Read", "Write", "Bash", "WebSearch"],
     "deny": [
       "Bash(rm -rf *)",
       "Bash(sudo *)",
@@ -18,6 +12,7 @@
     ]
   },
   "enabledPlugins": {
-    "explanatory-output-style@claude-plugins-official": true
+    "explanatory-output-style@claude-plugins-official": true,
+    "learning-output-style@claude-plugins-official": false
   }
 }
