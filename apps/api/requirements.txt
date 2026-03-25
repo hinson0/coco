@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+tencentcloud-sdk-python-asr
+tencentcloud-sdk-python-ocr
+tencentcloud-sdk-python-common
+zhipuai
+python-dotenv
