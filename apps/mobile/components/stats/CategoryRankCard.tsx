@@ -184,9 +184,9 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 8,
     marginBottom: 16,
-    paddingHorizontal: 4,
   },
   legendItem: {
     flexDirection: 'row',
