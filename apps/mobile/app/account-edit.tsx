@@ -25,8 +25,9 @@ const TYPE_LABELS: Record<AccountType, string> = {
 
 export default function AccountEditScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string; initialBalance?: string }>();
+  const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string; initialBalance?: string; isDefault?: string }>();
   const isEdit = !!params.id;
+  const isDefault = params.isDefault === "1";
 
   const qc = useQueryClient();
   const { mutateAsync: createAccount } = useCreateAccount();
@@ -46,10 +47,13 @@ export default function AccountEditScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
+  const [fromPreset, setFromPreset] = useState(false);
+
   const handlePreset = (preset: typeof PRESETS[0]) => {
     setName(preset.name);
     setIcon(preset.icon);
     setType(preset.type);
+    setFromPreset(true);
   };
 
   const handleSave = async () => {
@@ -67,7 +71,7 @@ export default function AccountEditScreen() {
       if (isEdit) {
         await updateAccount({ id: params.id!, name: name.trim(), icon, type, initial_balance: numBalance });
       } else {
-        await createAccount({ name: name.trim(), icon, type, initial_balance: numBalance });
+        await createAccount({ name: name.trim(), icon, type, initial_balance: numBalance, is_default: fromPreset });
       }
       await qc.invalidateQueries({ queryKey: ["accounts"] });
       await qc.invalidateQueries({ queryKey: ["total-assets"] });
@@ -86,8 +90,12 @@ export default function AccountEditScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
-        <AppText size="2xl" weight="semibold">{isEdit ? "编辑账户" : "添加账户"}</AppText>
-        <View style={{ width: 36 }} />
+        <AppText size="2xl" weight="semibold">{isDefault ? "查看账户" : isEdit ? "编辑账户" : "添加账户"}</AppText>
+        {isDefault ? (
+          <AppText size="sm" color={colors.textLighter}>预设</AppText>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
@@ -116,12 +124,12 @@ export default function AccountEditScreen() {
 
         {/* Icon */}
         <View style={styles.iconSection}>
-          <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
+          <TouchableOpacity onPress={() => !isDefault && setShowEmojiPicker(true)} activeOpacity={isDefault ? 1 : 0.8}>
             <View style={styles.iconPreview}>
               <AppText style={{ fontSize: 36 }}>{icon}</AppText>
             </View>
           </TouchableOpacity>
-          <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换图标</AppText>
+          {!isDefault && <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换图标</AppText>}
         </View>
 
         {/* Fields */}
@@ -130,10 +138,11 @@ export default function AccountEditScreen() {
           <View style={styles.field}>
             <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>账户名称</AppText>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDefault && { color: colors.textLighter }]}
               value={name}
               onChangeText={setName}
               placeholder="输入账户名称"
+              editable={!isDefault}
               placeholderTextColor={colors.textLighter}
               maxLength={20}
             />
@@ -169,12 +178,13 @@ export default function AccountEditScreen() {
             <View style={styles.balanceRow}>
               <AppText style={{ fontSize: 20, fontWeight: "700", color: colors.textLighter }}>¥</AppText>
               <TextInput
-                style={styles.balanceInput}
+                style={[styles.balanceInput, isDefault && { color: colors.textLighter }]}
                 value={initialBalance}
                 onChangeText={setInitialBalance}
                 placeholder="0.00"
                 placeholderTextColor={colors.textLighter}
                 keyboardType="decimal-pad"
+                editable={!isDefault}
               />
             </View>
           </View>
@@ -187,20 +197,22 @@ export default function AccountEditScreen() {
         onClose={() => setShowEmojiPicker(false)}
       />
 
-      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
-        <TouchableOpacity
-          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={submitting}
-          activeOpacity={0.8}
-        >
-          {submitting ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
-          )}
-        </TouchableOpacity>
-      </View>
+      {!isDefault && (
+        <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+          <TouchableOpacity
+            style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={submitting}
+            activeOpacity={0.8}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
