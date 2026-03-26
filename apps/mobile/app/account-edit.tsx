@@ -1,6 +1,6 @@
-// 账户添加/编辑页面 — 类型选择 + 动态 placeholder + emoji 图标 + 初始余额
+// 账户添加/编辑页面 — 紧凑布局，键盘弹起时所有内容可见
 import { useState, useEffect, useRef } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard, Image, type ImageSourcePropType } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard, Image, type ImageSourcePropType } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,10 +17,10 @@ const BRAND_ICONS = {
   alipay: require("../assets/images/alipay.png"),
 } as const;
 
-// 账户类型配置：图标、标签、默认名称、placeholder
+// 账户类型配置
 interface TypeConfig {
-  readonly emoji?: string;                   // emoji 图标（普通类型）
-  readonly brandIcon?: ImageSourcePropType;  // 品牌图标（微信/支付宝）
+  readonly emoji?: string;
+  readonly brandIcon?: ImageSourcePropType;
   readonly label: string;
   readonly dbType: AccountType;
   readonly autoName?: string;
@@ -36,8 +36,7 @@ const TYPE_OPTIONS: readonly TypeConfig[] = [
   { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
 ];
 
-// 渲染类型图标（品牌图片 or emoji）
-function TypeIcon({ config, size = 16 }: { config: TypeConfig; size?: number }) {
+function TypeIcon({ config, size = 14 }: { config: TypeConfig; size?: number }) {
   if (config.brandIcon) {
     return <Image source={config.brandIcon} style={{ width: size, height: size }} resizeMode="contain" />;
   }
@@ -54,7 +53,6 @@ export default function AccountEditScreen() {
   const { mutateAsync: updateAccount } = useUpdateAccount();
   const { mutateAsync: deleteAccount } = useDeleteAccount();
 
-  // 编辑时从 params 匹配当前类型配置
   const initialTypeConfig = TYPE_OPTIONS.find((t) => t.dbType === params.type) ?? TYPE_OPTIONS[0];
 
   const [selectedType, setSelectedType] = useState<TypeConfig>(initialTypeConfig);
@@ -73,7 +71,6 @@ export default function AccountEditScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  // 新建时自动聚焦：有 autoName 的聚焦金额，否则聚焦名称
   useEffect(() => {
     if (!isEdit) {
       const ref = selectedType.autoName ? balanceRef : nameRef;
@@ -87,7 +84,6 @@ export default function AccountEditScreen() {
     setIcon(config.emoji ?? "📦");
     if (config.autoName) {
       setName(config.autoName);
-      // 名称自动填充且不可编辑，聚焦到金额
       setTimeout(() => balanceRef.current?.focus(), 300);
     } else {
       setName("");
@@ -153,10 +149,10 @@ export default function AccountEditScreen() {
         )}
       </View>
 
-      <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 80 }}>
-        {/* 账户类型选择 */}
+      <View style={styles.body}>
+        {/* 账户类型 chips */}
         <View style={styles.section}>
-          <AppText size="md" weight="semibold" color={colors.textLighter} style={styles.sectionLabel}>账户类型</AppText>
+          <AppText size="sm" weight="semibold" color={colors.textLighter} style={styles.sectionLabel}>账户类型</AppText>
           <View style={styles.typeChips}>
             {TYPE_OPTIONS.map((config) => {
               const isActive = selectedType.label === config.label;
@@ -168,8 +164,8 @@ export default function AccountEditScreen() {
                   activeOpacity={isEdit ? 1 : 0.7}
                   disabled={isEdit}
                 >
-                  <TypeIcon config={config} size={18} />
-                  <AppText size="md" weight={isActive ? "semibold" : "medium"}
+                  <TypeIcon config={config} size={14} />
+                  <AppText size="sm" weight={isActive ? "semibold" : "medium"}
                     color={isActive ? colors.sage : colors.textLight}>
                     {config.label}
                   </AppText>
@@ -179,45 +175,39 @@ export default function AccountEditScreen() {
           </View>
         </View>
 
-        {/* 图标 */}
-        <View style={styles.iconSection}>
-          <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[colors.sagePale, colors.coralPale]}
-              style={styles.iconPreview}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <AppText style={{ fontSize: 36 }}>{icon}</AppText>
-            </LinearGradient>
-          </TouchableOpacity>
-          <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换图标</AppText>
-        </View>
-
-        {/* 表单 */}
+        {/* 紧凑表单：图标内联在名称行左侧 */}
         <View style={styles.formCard}>
-          {/* 账户名称 */}
-          <View style={styles.formField}>
-            <AppText size="sm" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>账户名称</AppText>
-            <TextInput
-              ref={nameRef}
-              style={styles.fieldInput}
-              value={name}
-              onChangeText={setName}
-              placeholder={selectedType.placeholder ?? "输入账户名称"}
-              placeholderTextColor={colors.creamDeeper}
-              maxLength={20}
-              editable={!selectedType.brandIcon || isEdit}
-            />
+          {/* 名称行：左侧图标 + 右侧名称输入 */}
+          <View style={styles.formRow}>
+            <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.sagePale, colors.coralPale]}
+                style={styles.inlineIcon}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+              </LinearGradient>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <AppText size="xs" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>账户名称</AppText>
+              <TextInput
+                ref={nameRef}
+                style={styles.fieldInput}
+                value={name}
+                onChangeText={setName}
+                placeholder={selectedType.placeholder ?? "输入账户名称"}
+                placeholderTextColor={colors.creamDeeper}
+                maxLength={20}
+                editable={!selectedType.brandIcon || isEdit}
+              />
+            </View>
           </View>
 
-          {/* 分隔线 */}
-          <View style={styles.fieldSep} />
-
-          {/* 初始余额 */}
-          <View style={styles.formField}>
-            <AppText size="sm" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>初始余额</AppText>
+          {/* 金额行：标签 + ¥ + 金额输入 同行 */}
+          <View style={[styles.formRow, styles.formRowBorder]}>
             <View style={styles.balanceRow}>
+              <AppText size="xs" weight="semibold" color={colors.textLighter} style={{ marginRight: 8 }}>初始余额</AppText>
               <AppText style={styles.balancePrefix}>¥</AppText>
               <TextInput
                 ref={balanceRef}
@@ -231,7 +221,7 @@ export default function AccountEditScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
+      </View>
 
       <EmojiPicker
         visible={showEmojiPicker}
@@ -262,60 +252,68 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.white },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.creamDark,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: radii.sm,
     backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
   },
-  body: { flex: 1 },
+  body: { flex: 1, paddingHorizontal: spacing.xxl },
 
   // Section
-  section: { paddingHorizontal: spacing.xxl, paddingTop: spacing.xxl },
-  sectionLabel: { marginBottom: 10 },
+  section: { paddingTop: spacing.xl },
+  sectionLabel: { marginBottom: 8 },
 
-  // Type chips
-  typeChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  // Type chips - 紧凑
+  typeChips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: spacing.xl },
   typeChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: radii.md, backgroundColor: colors.cream,
-    borderWidth: 2, borderColor: "transparent",
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 10, backgroundColor: colors.cream,
+    borderWidth: 1.5, borderColor: "transparent",
   },
   typeChipActive: {
     backgroundColor: colors.sagePale,
     borderColor: colors.sage,
   },
 
-  // Icon
-  iconSection: { alignItems: "center", paddingVertical: 24 },
-  iconPreview: {
-    width: 72, height: 72, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-    ...shadows.md,
+  // Form card
+  formCard: {
+    backgroundColor: colors.cream,
+    borderRadius: radii.md, overflow: "hidden",
+  },
+  formRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14,
+  },
+  formRowBorder: {
+    borderTopWidth: 1, borderTopColor: colors.creamDark,
   },
 
-  // Form
-  formCard: {
-    marginHorizontal: spacing.xxl, backgroundColor: colors.cream,
-    borderRadius: radii.lg, overflow: "hidden",
+  // Inline icon
+  inlineIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+    ...shadows.sm,
   },
-  formField: { padding: spacing.xl },
-  fieldLabel: { marginBottom: 6, letterSpacing: 0.5 },
+
+  // Fields
+  fieldLabel: { marginBottom: 2, letterSpacing: 0.3 },
   fieldInput: { fontSize: 15, color: colors.text, fontWeight: "500" },
-  fieldSep: { height: 1, backgroundColor: colors.creamDark, marginHorizontal: spacing.xl },
-  balanceRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
-  balancePrefix: { fontSize: 20, fontWeight: "700", color: colors.textLighter },
-  balanceInput: { flex: 1, fontSize: 28, fontWeight: "700", color: colors.text },
+
+  // Balance - 同行布局
+  balanceRow: { flex: 1, flexDirection: "row", alignItems: "baseline" },
+  balancePrefix: { fontSize: 18, fontWeight: "700", color: colors.textLighter, marginRight: 4 },
+  balanceInput: { flex: 1, fontSize: 24, fontWeight: "700", color: colors.text },
 
   // Bottom bar
   bottomBar: {
-    paddingHorizontal: spacing.xl, paddingTop: 12,
+    paddingHorizontal: spacing.xl, paddingTop: 10,
     backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.creamDark,
   },
   saveBtn: {
-    height: 48, borderRadius: radii.md, backgroundColor: colors.sage,
+    height: 46, borderRadius: radii.md, backgroundColor: colors.sage,
     alignItems: "center", justifyContent: "center", ...shadows.md,
   },
   saveBtnDisabled: { opacity: 0.6 },
