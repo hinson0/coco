@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCreateAccount, useUpdateAccount } from "../hooks/useLocalAccounts";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
@@ -27,6 +28,7 @@ export default function AccountEditScreen() {
   const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string; initialBalance?: string }>();
   const isEdit = !!params.id;
 
+  const qc = useQueryClient();
   const { mutateAsync: createAccount } = useCreateAccount();
   const { mutateAsync: updateAccount } = useUpdateAccount();
 
@@ -67,6 +69,8 @@ export default function AccountEditScreen() {
       } else {
         await createAccount({ name: name.trim(), icon, type, initial_balance: numBalance });
       }
+      await qc.invalidateQueries({ queryKey: ["accounts"] });
+      await qc.invalidateQueries({ queryKey: ["total-assets"] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");
