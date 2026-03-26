@@ -10,9 +10,5 @@
       "Bash(git checkout -- *)",
       "Bash(git branch -D *)"
     ]
-  },
-  "enabledPlugins": {
-    "explanatory-output-style@claude-plugins-official": true,
-    "learning-output-style@claude-plugins-official": false
   }
 }
