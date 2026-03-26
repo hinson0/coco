@@ -228,7 +228,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           data={lineData}
           height={positiveHeight}
           noOfSections={sectionsAbove}
-          stepValue={posStep}
+          stepValue={stepValue}
           yAxisTextStyle={yAxisTextStyle}
           formatYLabel={formatYLabel}
           yAxisLabelWidth={Y_AXIS_WIDTH}
@@ -245,7 +245,8 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dataPointsColor={activeColor}
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
-          negativeStepValue={negStep}
+          negativeStepHeight={pxPerSection}
+          xAxisLabelsAtBottom
           labelsExtraHeight={28}
           endSpacing={20}
         />
