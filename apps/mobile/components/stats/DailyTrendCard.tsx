@@ -213,8 +213,8 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dashGap={4}
           dashWidth={3}
           color={activeColor}
-          initialSpacing={INITIAL_SPACING}
-          spacing={barSpacing}
+          initialSpacing={INITIAL_SPACING + BAR_WIDTH / 2}
+          spacing={BAR_WIDTH + barSpacing}
           dataPointsColor={activeColor}
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
