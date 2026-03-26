@@ -10,8 +10,9 @@ import { useQuery } from "@tanstack/react-query";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { Account } from "@coco/shared";
+import type * as SQLite from "expo-sqlite";
 
-function useAccountBalanceInline(db: any, accountId: string) {
+function useAccountBalanceInline(db: SQLite.SQLiteDatabase | null, accountId: string) {
   return useQuery({
     queryKey: ["account-balance", accountId],
     queryFn: async (): Promise<number> => {
@@ -32,7 +33,7 @@ function useAccountBalanceInline(db: any, accountId: string) {
   });
 }
 
-function AccountRow({ account }: { readonly account: Account }) {
+function AccountRow({ account, onLongPress }: { readonly account: Account; readonly onLongPress?: () => void }) {
   const { db } = useOfflineContext();
   const { data: balance = 0 } = useAccountBalanceInline(db, account.id);
 
@@ -40,6 +41,7 @@ function AccountRow({ account }: { readonly account: Account }) {
     <TouchableOpacity
       style={styles.row}
       onPress={() => router.push({ pathname: "/account-edit", params: { id: account.id, name: account.name, icon: account.icon, type: account.type, initialBalance: String(account.initial_balance) } })}
+      onLongPress={onLongPress}
       activeOpacity={0.7}
     >
       <View style={styles.rowIcon}>
@@ -96,7 +98,7 @@ export default function AccountsScreen() {
             </AppText>
           </LinearGradient>
         }
-        renderItem={({ item }) => <AccountRow account={item} />}
+        renderItem={({ item }) => <AccountRow account={item} onLongPress={() => handleDelete(item.id, item.name)} />}
         ListFooterComponent={
           <TouchableOpacity
             style={styles.addBtn}
