@@ -200,6 +200,9 @@ export default function AccountEditScreen() {
                 placeholderTextColor={colors.creamDeeper}
                 maxLength={20}
                 editable={!selectedType.autoName || isEdit}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => balanceRef.current?.focus()}
               />
             </View>
           </View>
