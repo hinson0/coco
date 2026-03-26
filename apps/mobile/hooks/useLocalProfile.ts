@@ -22,26 +22,22 @@ export function useProfile() {
   });
 }
 
-export function useInitProfile() {
+// 确保 profile 记录存在。在 profile.tsx 和 profile-edit.tsx 中都应调用。
+// 使用 INSERT OR IGNORE 保证幂等，不依赖 mutation 的执行时机。
+export function useEnsureProfile() {
   const { db } = useOfflineContext();
   const { session } = useAuth();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      if (!db || !session?.user) throw new Error("Database or session not available");
+      if (!db || !session?.user) return null;
       const userId = session.user.id;
-
-      const existing = await db.getFirstAsync<UserProfile>(
-        "SELECT * FROM user_profiles WHERE id = ?",
-        userId
-      );
-      if (existing) return existing;
-
       const nickname = session.user.email?.split("@")[0] ?? "棉花用户";
       const now = new Date().toISOString();
+      // INSERT OR IGNORE：如果 id 已存在则静默跳过，不报错也不覆盖
       await db.runAsync(
-        "INSERT INTO user_profiles (id, nickname, avatar_type, avatar_value, created_at, updated_at) VALUES (?, ?, 'emoji', '🌿', ?, ?)",
+        "INSERT OR IGNORE INTO user_profiles (id, nickname, avatar_type, avatar_value, created_at, updated_at) VALUES (?, ?, 'emoji', '🌿', ?, ?)",
         userId,
         nickname,
         now,
