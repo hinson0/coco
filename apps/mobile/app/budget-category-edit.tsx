@@ -40,6 +40,11 @@ export default function BudgetCategoryEditScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => amountRef.current?.focus(), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSave = async () => {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
