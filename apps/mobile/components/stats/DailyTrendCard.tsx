@@ -212,6 +212,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           negativeStepHeight={pxPerSection}
           autoShiftLabels
           xAxisLabelsAtBottom
+          labelsExtraHeight={20}
           endSpacing={END_SPACING}
         />
       ) : (
