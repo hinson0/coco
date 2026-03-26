@@ -199,7 +199,7 @@ export default function AccountEditScreen() {
                 placeholder={selectedType.placeholder ?? "输入账户名称"}
                 placeholderTextColor={colors.creamDeeper}
                 maxLength={20}
-                editable={!selectedType.brandIcon || isEdit}
+                editable={!selectedType.autoName || isEdit}
               />
             </View>
           </View>
