@@ -8,6 +8,7 @@ export interface Account {
   readonly icon: string;
   readonly type: AccountType;
   readonly initial_balance: number;
+  readonly is_default: boolean;
   readonly created_at: string;
   readonly deleted_at: string | null;
 }
@@ -17,6 +18,7 @@ export interface CreateAccountInput {
   readonly icon: string;
   readonly type: AccountType;
   readonly initial_balance: number;
+  readonly is_default?: boolean;
 }
 
 export interface UpdateAccountInput {

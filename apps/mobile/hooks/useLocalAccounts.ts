@@ -12,9 +12,10 @@ export function useAccounts() {
     queryKey: ["accounts"],
     queryFn: async (): Promise<readonly Account[]> => {
       if (!db) return [];
-      return db.getAllAsync<Account>(
+      const rows = await db.getAllAsync<Account>(
         "SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY created_at ASC"
       );
+      return rows.map((r) => ({ ...r, is_default: Boolean(r.is_default) }));
     },
     enabled: !!db,
   });
@@ -88,12 +89,13 @@ export function useCreateAccount() {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, is_default, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)",
         id,
         input.name,
         input.icon,
         input.type,
         input.initial_balance,
+        input.is_default ? 1 : 0,
         now
       );
       return id;

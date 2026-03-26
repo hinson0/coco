@@ -75,6 +75,7 @@ const CREATE_ACCOUNTS = `
       icon TEXT NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('cash', 'bank', 'e_wallet', 'credit', 'custom')),
       initial_balance REAL NOT NULL DEFAULT 0,
+      is_default INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       deleted_at TEXT
     );
@@ -112,6 +113,7 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
   );
+  await addColumnIfNotExists(db, "accounts", "is_default", "INTEGER NOT NULL DEFAULT 0");
 }
 
 async function addColumnIfNotExists(
