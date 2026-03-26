@@ -6,9 +6,11 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 import { useCreateTransaction, useUpdateTransaction } from "../hooks/useLocalTransactions";
+import { useAccounts } from "../hooks/useLocalAccounts";
 import { useAddChatMessage } from "../hooks/useLocalChatMessages";
 import { useOfflineContext } from "../lib/offline-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { AppText } from "../components/ui/AppText";
 import { colors, radii, shadows, spacing } from "../constants/theme";
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
@@ -44,6 +46,7 @@ export default function ManualEntryScreen() {
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const { mutateAsync: updateTransaction } = useUpdateTransaction();
   const { mutateAsync: addMessage } = useAddChatMessage();
+  const { data: accounts = [] } = useAccounts();
 
   const transaction = params.txData ? JSON.parse(params.txData) : undefined;
   const isEdit = !!transaction;
@@ -54,6 +57,7 @@ export default function ManualEntryScreen() {
   const [date, setDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState<string | null>(null);
   const amountRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -73,6 +77,7 @@ export default function ManualEntryScreen() {
       setNote(transaction.note || "");
       setType(transaction.type);
       setCategoryId(transaction.category_id);
+      setAccountId(transaction.account_id ?? null);
       setDate(new Date(transaction.occurred_at));
     } else {
       const match = categories.find((c: any) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"]);
@@ -122,14 +127,14 @@ export default function ManualEntryScreen() {
       const categoryName = category?.name ?? "其他";
 
       if (isEdit) {
-        await updateTransaction({ id: transaction.id, amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId });
+        await updateTransaction({ id: transaction.id, amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, account_id: accountId });
         if (db && params.msgId) {
           const newContent = JSON.stringify({ id: transaction.id, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() });
           await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", newContent, params.msgId);
           qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
       } else {
-        const txId = await createTransaction({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, source: "manual" });
+        const txId = await createTransaction({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, source: "manual", account_id: accountId });
         await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
         await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
       }
@@ -196,6 +201,33 @@ export default function ManualEntryScreen() {
 
         {/* Category Picker */}
         <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
+
+        {/* Account selector */}
+        {accounts.length > 0 && (
+          <View style={styles.accountSection}>
+            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 8 }}>账户（可选）</AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.accountChip, accountId === null && styles.accountChipActive]}
+                onPress={() => setAccountId(null)}
+                activeOpacity={0.7}
+              >
+                <AppText size="md" weight="medium" color={accountId === null ? colors.white : colors.textLight}>不选择</AppText>
+              </TouchableOpacity>
+              {accounts.map((a) => (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[styles.accountChip, accountId === a.id && styles.accountChipActive]}
+                  onPress={() => setAccountId(a.id)}
+                  activeOpacity={0.7}
+                >
+                  <AppText style={{ fontSize: 16 }}>{a.icon}</AppText>
+                  <AppText size="md" weight="medium" color={accountId === a.id ? colors.white : colors.text}>{a.name}</AppText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Date selector — arrows + tappable center */}
         <View style={styles.dateCard}>
@@ -441,5 +473,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  // Account selector
+  accountSection: {
+    marginTop: 20,
+  },
+  accountChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: radii.md, backgroundColor: colors.cream,
+  },
+  accountChipActive: {
+    backgroundColor: colors.sage,
   },
 });
