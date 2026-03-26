@@ -84,6 +84,9 @@ const HORIZONTAL_OVERHEAD = 64;
 const Y_AXIS_WIDTH = 45;
 const BAR_WIDTH = 6;
 const INITIAL_SPACING = 8;
+const TOTAL_PX = 200;
+const NUM_SECTIONS = 5;
+const END_SPACING = 20;
 
 export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const { width: screenWidth } = useWindowDimensions();
@@ -101,9 +104,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const absNeg = Math.abs(minNeg);
   const hasNeg = minNeg < 0;
 
-  // 统一 step：取正负最大绝对值，均匀分 5 格
-  const TOTAL_PX = 200;
-  const NUM_SECTIONS = 5;
   const maxAbs = Math.max(maxPos, absNeg, 1);
   const stepValue = Math.ceil(maxAbs / NUM_SECTIONS);
 
@@ -115,9 +115,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const pxPerSection = Math.round(TOTAL_PX / totalSections);
   const positiveHeight = pxPerSection * sectionsAbove;
 
-
   // 动态计算 spacing，让柱子刚好铺满可用宽度
-  const END_SPACING = 20;
   const chartAreaWidth =
     screenWidth - HORIZONTAL_OVERHEAD - Y_AXIS_WIDTH - END_SPACING;
   const numBars = dailyData.length || 1;
@@ -240,7 +238,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           noOfSectionsBelowXAxis={sectionsBelow}
           xAxisLabelsAtBottom
           labelsExtraHeight={28}
-          endSpacing={20}
+          endSpacing={END_SPACING}
         />
       )}
 
