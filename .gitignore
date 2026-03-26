@@ -29,6 +29,8 @@ apps/mobile/package-lock.json
 .claude/worktrees/
 .claude/*local*
 .claude/hook-logs/
+.claude/session-logs/
+.remember/
 
 *.swp
 
