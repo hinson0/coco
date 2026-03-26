@@ -1,28 +1,38 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../ui/AppText';
 import { colors, shadows } from '../../constants/theme';
+import type { AvatarType } from '@coco/shared';
 
 interface ProfileHeaderProps {
   readonly name: string;
   readonly daysCount: number;
+  readonly avatarType?: AvatarType;
+  readonly avatarValue?: string;
+  readonly onAvatarPress?: () => void;
   readonly onSettingsPress?: () => void;
 }
 
-export function ProfileHeader({ name, daysCount, onSettingsPress }: ProfileHeaderProps) {
+export function ProfileHeader({ name, daysCount, avatarType = 'emoji', avatarValue = '🌿', onAvatarPress, onSettingsPress }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.settingsBtn} onPress={onSettingsPress} activeOpacity={0.7}>
         <AppText size="2xl">⚙️</AppText>
       </TouchableOpacity>
-      <LinearGradient
-        colors={[colors.sagePale, colors.coralPale]}
-        style={styles.avatar}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <AppText size="3xl">🌿</AppText>
-      </LinearGradient>
+      <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.8}>
+        <LinearGradient
+          colors={[colors.sagePale, colors.coralPale]}
+          style={styles.avatar}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {avatarType === 'image' ? (
+            <Image source={{ uri: avatarValue }} style={styles.avatarImage} />
+          ) : (
+            <AppText size="3xl">{avatarValue}</AppText>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
       <AppText size="4xl" weight="bold" style={styles.name}>{name}</AppText>
       <AppText size="md" color={colors.textLighter} style={styles.subtitle}>
         已记账 {daysCount} 天
@@ -58,6 +68,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
   },
   name: {
     textAlign: 'center',

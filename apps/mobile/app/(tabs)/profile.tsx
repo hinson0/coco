@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useProfile, useInitProfile } from '../../hooks/useLocalProfile';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
@@ -53,8 +56,12 @@ export default function ProfileScreen() {
   const { data: txData } = useLocalTransactions();
   const transactions = txData?.data ?? [];
   const { monthlyCount, streak, budgetMonths } = computeStats(transactions);
+  const { data: profile } = useProfile();
+  const { mutate: initProfile } = useInitProfile();
 
-  const userName = session?.user?.email?.split('@')[0] ?? '棉花用户';
+  useEffect(() => { initProfile(); }, []);
+
+  const userName = profile?.nickname ?? session?.user?.email?.split('@')[0] ?? '棉花用户';
 
   const handleSignOut = () => {
     Alert.alert('退出登录', '确定要退出吗？', [
@@ -71,7 +78,13 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ProfileHeader name={userName} daysCount={streak} />
+      <ProfileHeader
+        name={userName}
+        daysCount={streak}
+        avatarType={profile?.avatar_type}
+        avatarValue={profile?.avatar_value}
+        onAvatarPress={() => router.push('/profile-edit')}
+      />
 
       <StatsStrip items={statsItems} />
 
@@ -82,11 +95,11 @@ export default function ProfileScreen() {
         资产管理
       </AppText>
       <Card padding={0} style={styles.menuCard}>
-        <MenuItem icon="💳" iconBg={colors.sagePale} title="我的账户" />
+        <MenuItem icon="💳" iconBg={colors.sagePale} title="我的账户" onPress={() => router.push('/accounts')} />
         <View style={styles.separator} />
-        <MenuItem icon="🎯" iconBg={colors.honeyPale} title="预算设置" />
+        <MenuItem icon="🎯" iconBg={colors.honeyPale} title="预算设置" onPress={() => router.push('/budget-manage')} />
         <View style={styles.separator} />
-        <MenuItem icon="🏷️" iconBg={colors.coralPale} title="分类管理" />
+        <MenuItem icon="🏷️" iconBg={colors.coralPale} title="分类管理" onPress={() => router.push('/category-manage')} />
       </Card>
 
       {/* 工具 */}
