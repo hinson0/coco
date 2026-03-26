@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useCreateCategory, useUpdateCategory } from "../hooks/useLocalCategories";
+import { useLocalCategories, useCreateCategory, useUpdateCategory } from "../hooks/useLocalCategories";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
@@ -14,6 +14,7 @@ export default function CategoryEditScreen() {
   const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string }>();
   const isEdit = !!params.id;
 
+  const { data: categories = [] } = useLocalCategories();
   const { mutateAsync: createCategory } = useCreateCategory();
   const { mutateAsync: updateCategory } = useUpdateCategory();
 
@@ -37,16 +38,25 @@ export default function CategoryEditScreen() {
   }, []);
 
   const handleSave = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       Alert.alert("请输入分类名称");
+      return;
+    }
+    // 重名校验：同类型下名称不能重复（编辑时排除自身）
+    const duplicate = categories.find(
+      (c) => c.name === trimmedName && c.type === type && c.id !== params.id
+    );
+    if (duplicate) {
+      Alert.alert("名称重复", `已存在同名的${type === "expense" ? "支出" : "收入"}分类`);
       return;
     }
     setSubmitting(true);
     try {
       if (isEdit) {
-        await updateCategory({ id: params.id!, name: name.trim(), icon });
+        await updateCategory({ id: params.id!, name: trimmedName, icon });
       } else {
-        await createCategory({ name: name.trim(), icon, type });
+        await createCategory({ name: trimmedName, icon, type });
       }
       router.back();
     } catch {

@@ -99,6 +99,10 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     "account_id",
     "TEXT REFERENCES accounts(id)",
   );
+  // 分类名称 + 类型唯一（仅未删除的），防止同类型下重名
+  await db.execAsync(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
+  );
 }
 
 async function addColumnIfNotExists(
