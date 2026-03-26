@@ -1,12 +1,12 @@
 // 分类添加/编辑页面 — emoji 图标选择，名称输入，类型选择（仅新增时）
-import { useState } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { useState, useEffect } from "react";
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCreateCategory, useUpdateCategory } from "../hooks/useLocalCategories";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
-import { colors, radii, spacing } from "../constants/theme";
+import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { TransactionType } from "@coco/shared";
 
 export default function CategoryEditScreen() {
@@ -22,6 +22,13 @@ export default function CategoryEditScreen() {
   const [type, setType] = useState<TransactionType>((params.type as TransactionType) ?? "expense");
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -50,13 +57,7 @@ export default function CategoryEditScreen() {
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">{isEdit ? "编辑分类" : "添加分类"}</AppText>
-        <TouchableOpacity onPress={handleSave} disabled={submitting} activeOpacity={0.7}>
-          {submitting ? (
-            <ActivityIndicator color={colors.sage} size="small" />
-          ) : (
-            <AppText size="xl" weight="semibold" color={colors.sage}>保存</AppText>
-          )}
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
       <View style={styles.iconSection}>
@@ -107,6 +108,21 @@ export default function CategoryEditScreen() {
         onSelect={setIcon}
         onClose={() => setShowEmojiPicker(false)}
       />
+
+      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+        <TouchableOpacity
+          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -137,5 +153,28 @@ const styles = StyleSheet.create({
   typeBtn: {
     flex: 1, paddingVertical: 14, borderRadius: radii.md,
     backgroundColor: colors.cream, alignItems: "center",
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: 12,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
+  },
+  saveBtn: {
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.sage,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.md,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

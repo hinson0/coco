@@ -1,6 +1,6 @@
 // 用户资料编辑页面 — 修改头像和昵称
 import { useState, useEffect } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ActivityIndicator } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ActivityIndicator, Keyboard } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,7 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useProfile, useUpdateProfile, useEnsureProfile } from "../hooks/useLocalProfile";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
-import { colors, radii, spacing } from "../constants/theme";
+import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { AvatarType } from "@coco/shared";
 
 export default function ProfileEditScreen() {
@@ -24,6 +24,13 @@ export default function ProfileEditScreen() {
   const [avatarValue, setAvatarValue] = useState("🌿");
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -82,13 +89,7 @@ export default function ProfileEditScreen() {
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">编辑资料</AppText>
-        <TouchableOpacity onPress={handleSave} disabled={submitting} activeOpacity={0.7}>
-          {submitting ? (
-            <ActivityIndicator color={colors.sage} size="small" />
-          ) : (
-            <AppText size="xl" weight="semibold" color={colors.sage}>保存</AppText>
-          )}
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
       {/* Avatar */}
@@ -131,6 +132,21 @@ export default function ProfileEditScreen() {
         onSelect={(emoji) => { setAvatarType("emoji"); setAvatarValue(emoji); }}
         onClose={() => setShowEmojiPicker(false)}
       />
+
+      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+        <TouchableOpacity
+          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -161,4 +177,27 @@ const styles = StyleSheet.create({
     borderRadius: radii.md, padding: spacing.xl,
   },
   input: { fontSize: 16, color: colors.text, fontWeight: "500" },
+  bottomBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: 12,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
+  },
+  saveBtn: {
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.sage,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.md,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
