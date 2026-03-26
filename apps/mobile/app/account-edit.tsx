@@ -1,45 +1,55 @@
-// apps/mobile/app/account-edit.tsx
-// 账户添加/编辑页面：预设模板 + emoji 图标 + 类型选择 + 初始余额
-import { useState, useEffect } from "react";
+// 账户添加/编辑页面 — 类型选择 + 动态 placeholder + emoji 图标 + 初始余额
+import { useState, useEffect, useRef } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreateAccount, useUpdateAccount } from "../hooks/useLocalAccounts";
+import { useCreateAccount, useUpdateAccount, useDeleteAccount } from "../hooks/useLocalAccounts";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { AccountType } from "@coco/shared";
 
-const PRESETS: { name: string; icon: string; type: AccountType }[] = [
-  { name: "现金", icon: "💰", type: "cash" },
-  { name: "银行卡", icon: "🏦", type: "bank" },
-  { name: "微信", icon: "💚", type: "e_wallet" },
-  { name: "支付宝", icon: "💙", type: "e_wallet" },
-  { name: "信用卡", icon: "💳", type: "credit" },
-];
+// 账户类型配置：图标、标签、默认名称、placeholder
+interface TypeConfig {
+  readonly icon: string;
+  readonly label: string;
+  readonly dbType: AccountType;
+  readonly autoName?: string;        // 自动填充的名称（微信/支付宝/现金）
+  readonly placeholder?: string;     // 名称输入框 placeholder
+}
 
-const TYPE_LABELS: Record<AccountType, string> = {
-  cash: "现金", bank: "银行卡", e_wallet: "电子钱包", credit: "信用卡", custom: "自定义",
-};
+const TYPE_OPTIONS: readonly TypeConfig[] = [
+  { icon: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
+  { icon: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
+  { icon: "💚", label: "微信", dbType: "e_wallet", autoName: "微信钱包" },
+  { icon: "💙", label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
+  { icon: "💰", label: "现金", dbType: "cash", autoName: "现金" },
+  { icon: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
+];
 
 export default function AccountEditScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string; initialBalance?: string; isDefault?: string }>();
+  const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string; initialBalance?: string }>();
   const isEdit = !!params.id;
-  const isDefault = params.isDefault === "1";
 
   const qc = useQueryClient();
   const { mutateAsync: createAccount } = useCreateAccount();
   const { mutateAsync: updateAccount } = useUpdateAccount();
+  const { mutateAsync: deleteAccount } = useDeleteAccount();
 
+  // 编辑时从 params 匹配当前类型配置
+  const initialTypeConfig = TYPE_OPTIONS.find((t) => t.dbType === params.type) ?? TYPE_OPTIONS[0];
+
+  const [selectedType, setSelectedType] = useState<TypeConfig>(initialTypeConfig);
   const [name, setName] = useState(params.name ?? "");
-  const [icon, setIcon] = useState(params.icon ?? "💰");
-  const [type, setType] = useState<AccountType>((params.type as AccountType) ?? "cash");
-  const [initialBalance, setInitialBalance] = useState(params.initialBalance ?? "0");
+  const [icon, setIcon] = useState(params.icon ?? initialTypeConfig.icon);
+  const [initialBalance, setInitialBalance] = useState(params.initialBalance ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const nameRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -47,13 +57,38 @@ export default function AccountEditScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  const [fromPreset, setFromPreset] = useState(false);
+  // 新建时自动聚焦名称输入框（有 autoName 的类型不需要）
+  useEffect(() => {
+    if (!isEdit && !selectedType.autoName) {
+      const timer = setTimeout(() => nameRef.current?.focus(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
-  const handlePreset = (preset: typeof PRESETS[0]) => {
-    setName(preset.name);
-    setIcon(preset.icon);
-    setType(preset.type);
-    setFromPreset(true);
+  const handleTypeSelect = (config: TypeConfig) => {
+    setSelectedType(config);
+    setIcon(config.icon);
+    if (config.autoName) {
+      setName(config.autoName);
+    } else {
+      setName("");
+      // 切换到需要手动输入的类型时聚焦
+      setTimeout(() => nameRef.current?.focus(), 300);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert("删除账户", `确定要删除"${name}"吗？已有的交易记录不会受影响。`, [
+      { text: "取消", style: "cancel" },
+      {
+        text: "删除", style: "destructive", onPress: async () => {
+          await deleteAccount(params.id!);
+          await qc.invalidateQueries({ queryKey: ["accounts"] });
+          await qc.invalidateQueries({ queryKey: ["total-assets"] });
+          router.back();
+        }
+      },
+    ]);
   };
 
   const handleSave = async () => {
@@ -61,7 +96,7 @@ export default function AccountEditScreen() {
       Alert.alert("请输入账户名称");
       return;
     }
-    const numBalance = parseFloat(initialBalance);
+    const numBalance = parseFloat(initialBalance || "0");
     if (isNaN(numBalance)) {
       Alert.alert("请输入有效金额");
       return;
@@ -69,9 +104,9 @@ export default function AccountEditScreen() {
     setSubmitting(true);
     try {
       if (isEdit) {
-        await updateAccount({ id: params.id!, name: name.trim(), icon, type, initial_balance: numBalance });
+        await updateAccount({ id: params.id!, name: name.trim(), icon, type: selectedType.dbType, initial_balance: numBalance });
       } else {
-        await createAccount({ name: name.trim(), icon, type, initial_balance: numBalance, is_default: fromPreset });
+        await createAccount({ name: name.trim(), icon, type: selectedType.dbType, initial_balance: numBalance });
       }
       await qc.invalidateQueries({ queryKey: ["accounts"] });
       await qc.invalidateQueries({ queryKey: ["total-assets"] });
@@ -90,101 +125,89 @@ export default function AccountEditScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
-        <AppText size="2xl" weight="semibold">{isDefault ? "查看账户" : isEdit ? "编辑账户" : "添加账户"}</AppText>
-        {isDefault ? (
-          <AppText size="sm" color={colors.textLighter}>预设</AppText>
+        <AppText size="2xl" weight="semibold">{isEdit ? "编辑账户" : "添加账户"}</AppText>
+        {isEdit ? (
+          <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
+            <AppText size="xl" color="#DC2626">删除</AppText>
+          </TouchableOpacity>
         ) : (
           <View style={{ width: 36 }} />
         )}
       </View>
 
-      <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-        {/* Presets (only for new) */}
-        {!isEdit && (
-          <View style={styles.section}>
-            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 10 }}>快速添加</AppText>
-            <View style={styles.presetRow}>
-              {PRESETS.map((p) => (
+      <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 80 }}>
+        {/* 账户类型选择 */}
+        <View style={styles.section}>
+          <AppText size="md" weight="semibold" color={colors.textLighter} style={styles.sectionLabel}>账户类型</AppText>
+          <View style={styles.typeChips}>
+            {TYPE_OPTIONS.map((config) => {
+              const isActive = selectedType.label === config.label;
+              return (
                 <TouchableOpacity
-                  key={p.name}
-                  style={[styles.presetChip, name === p.name && styles.presetChipActive]}
-                  onPress={() => handlePreset(p)}
-                  activeOpacity={0.7}
+                  key={config.label}
+                  style={[styles.typeChip, isActive && styles.typeChipActive]}
+                  onPress={() => !isEdit && handleTypeSelect(config)}
+                  activeOpacity={isEdit ? 1 : 0.7}
+                  disabled={isEdit}
                 >
-                  <AppText style={{ fontSize: 18 }}>{p.icon}</AppText>
-                  <AppText size="md" weight="medium"
-                    color={name === p.name ? colors.white : colors.text}>
-                    {p.name}
+                  <AppText style={{ fontSize: 16 }}>{config.icon}</AppText>
+                  <AppText size="md" weight={isActive ? "semibold" : "medium"}
+                    color={isActive ? colors.sage : colors.textLight}>
+                    {config.label}
                   </AppText>
                 </TouchableOpacity>
-              ))}
-            </View>
+              );
+            })}
           </View>
-        )}
-
-        {/* Icon */}
-        <View style={styles.iconSection}>
-          <TouchableOpacity onPress={() => !isDefault && setShowEmojiPicker(true)} activeOpacity={isDefault ? 1 : 0.8}>
-            <View style={styles.iconPreview}>
-              <AppText style={{ fontSize: 36 }}>{icon}</AppText>
-            </View>
-          </TouchableOpacity>
-          {!isDefault && <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换图标</AppText>}
         </View>
 
-        {/* Fields */}
-        <View style={styles.fieldCard}>
-          {/* Name */}
-          <View style={styles.field}>
-            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>账户名称</AppText>
+        {/* 图标 */}
+        <View style={styles.iconSection}>
+          <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
+            <LinearGradient
+              colors={[colors.sagePale, colors.coralPale]}
+              style={styles.iconPreview}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <AppText style={{ fontSize: 36 }}>{icon}</AppText>
+            </LinearGradient>
+          </TouchableOpacity>
+          <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换图标</AppText>
+        </View>
+
+        {/* 表单 */}
+        <View style={styles.formCard}>
+          {/* 账户名称 */}
+          <View style={styles.formField}>
+            <AppText size="sm" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>账户名称</AppText>
             <TextInput
-              style={[styles.input, isDefault && { color: colors.textLighter }]}
+              ref={nameRef}
+              style={styles.fieldInput}
               value={name}
               onChangeText={setName}
-              placeholder="输入账户名称"
-              editable={!isDefault}
-              placeholderTextColor={colors.textLighter}
+              placeholder={selectedType.placeholder ?? "输入账户名称"}
+              placeholderTextColor={colors.creamDeeper}
               maxLength={20}
+              editable={!selectedType.autoName || isEdit}
             />
           </View>
 
+          {/* 分隔线 */}
           <View style={styles.fieldSep} />
 
-          {/* Type */}
-          <View style={styles.field}>
-            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>账户类型</AppText>
-            <View style={styles.typeRow}>
-              {(Object.keys(TYPE_LABELS) as AccountType[]).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.typeChip, type === t && styles.typeChipActive]}
-                  onPress={() => setType(t)}
-                  activeOpacity={0.7}
-                >
-                  <AppText size="sm" weight="medium"
-                    color={type === t ? colors.white : colors.textLight}>
-                    {TYPE_LABELS[t]}
-                  </AppText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.fieldSep} />
-
-          {/* Initial balance */}
-          <View style={styles.field}>
-            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>初始余额</AppText>
+          {/* 初始余额 */}
+          <View style={styles.formField}>
+            <AppText size="sm" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>初始余额</AppText>
             <View style={styles.balanceRow}>
-              <AppText style={{ fontSize: 20, fontWeight: "700", color: colors.textLighter }}>¥</AppText>
+              <AppText style={styles.balancePrefix}>¥</AppText>
               <TextInput
-                style={[styles.balanceInput, isDefault && { color: colors.textLighter }]}
+                style={styles.balanceInput}
                 value={initialBalance}
                 onChangeText={setInitialBalance}
                 placeholder="0.00"
-                placeholderTextColor={colors.textLighter}
+                placeholderTextColor={colors.creamDeeper}
                 keyboardType="decimal-pad"
-                editable={!isDefault}
               />
             </View>
           </View>
@@ -197,22 +220,21 @@ export default function AccountEditScreen() {
         onClose={() => setShowEmojiPicker(false)}
       />
 
-      {!isDefault && (
-        <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
-          <TouchableOpacity
-            style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={submitting}
-            activeOpacity={0.8}
-          >
-            {submitting ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* 底部保存按钮 */}
+      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+        <TouchableOpacity
+          style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+          onPress={handleSave}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.white} size="small" />
+          ) : (
+            <AppText size="2xl" weight="semibold" color={colors.white}>{isEdit ? "保存修改" : "保存"}</AppText>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -229,56 +251,53 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
   },
   body: { flex: 1 },
+
+  // Section
   section: { paddingHorizontal: spacing.xxl, paddingTop: spacing.xxl },
-  presetRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  presetChip: {
+  sectionLabel: { marginBottom: 10 },
+
+  // Type chips
+  typeChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  typeChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10,
+    paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: radii.md, backgroundColor: colors.cream,
+    borderWidth: 2, borderColor: "transparent",
   },
-  presetChipActive: { backgroundColor: colors.sage },
+  typeChipActive: {
+    backgroundColor: colors.sagePale,
+    borderColor: colors.sage,
+  },
+
+  // Icon
   iconSection: { alignItems: "center", paddingVertical: 24 },
   iconPreview: {
     width: 72, height: 72, borderRadius: 22,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
-    ...shadows.sm,
-  },
-  fieldCard: {
-    marginHorizontal: spacing.xxl, backgroundColor: colors.cream,
-    borderRadius: radii.md, overflow: "hidden",
-  },
-  field: { padding: spacing.xl },
-  fieldSep: { height: 1, backgroundColor: colors.creamDark, marginHorizontal: spacing.xl },
-  input: { fontSize: 16, color: colors.text, fontWeight: "500" },
-  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  typeChip: {
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: radii.sm, backgroundColor: colors.white,
-  },
-  typeChipActive: { backgroundColor: colors.sage },
-  balanceRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  balanceInput: { flex: 1, fontSize: 24, fontWeight: "700", color: colors.text },
-  bottomBar: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: 12,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.creamDark,
-  },
-  saveBtn: {
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.sage,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center", justifyContent: "center",
     ...shadows.md,
   },
-  saveBtnDisabled: {
-    opacity: 0.6,
+
+  // Form
+  formCard: {
+    marginHorizontal: spacing.xxl, backgroundColor: colors.cream,
+    borderRadius: radii.lg, overflow: "hidden",
   },
-  saveBtnText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: "600",
+  formField: { padding: spacing.xl },
+  fieldLabel: { marginBottom: 6, letterSpacing: 0.5 },
+  fieldInput: { fontSize: 15, color: colors.text, fontWeight: "500" },
+  fieldSep: { height: 1, backgroundColor: colors.creamDark, marginHorizontal: spacing.xl },
+  balanceRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  balancePrefix: { fontSize: 20, fontWeight: "700", color: colors.textLighter },
+  balanceInput: { flex: 1, fontSize: 28, fontWeight: "700", color: colors.text },
+
+  // Bottom bar
+  bottomBar: {
+    paddingHorizontal: spacing.xl, paddingTop: 12,
+    backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.creamDark,
   },
+  saveBtn: {
+    height: 48, borderRadius: radii.md, backgroundColor: colors.sage,
+    alignItems: "center", justifyContent: "center", ...shadows.md,
+  },
+  saveBtnDisabled: { opacity: 0.6 },
 });
