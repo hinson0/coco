@@ -4,7 +4,7 @@ import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocalCategories, useCreateCategory, useUpdateCategory } from "../hooks/useLocalCategories";
+import { useLocalCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from "../hooks/useLocalCategories";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
@@ -19,6 +19,20 @@ export default function CategoryEditScreen() {
   const { data: categories = [] } = useLocalCategories();
   const { mutateAsync: createCategory } = useCreateCategory();
   const { mutateAsync: updateCategory } = useUpdateCategory();
+  const { mutateAsync: deleteCategory } = useDeleteCategory();
+
+  const handleDelete = () => {
+    Alert.alert("删除分类", `确定要删除"${name}"吗？已有的交易记录不会受影响。`, [
+      { text: "取消", style: "cancel" },
+      {
+        text: "删除", style: "destructive", onPress: async () => {
+          await deleteCategory(params.id!);
+          await qc.invalidateQueries({ queryKey: ["categories"] });
+          router.back();
+        }
+      },
+    ]);
+  };
 
   const [name, setName] = useState(params.name ?? "");
   const [icon, setIcon] = useState(params.icon ?? "📦");
@@ -77,7 +91,13 @@ export default function CategoryEditScreen() {
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">{isEdit ? "编辑分类" : "添加分类"}</AppText>
-        <View style={{ width: 36 }} />
+        {isEdit ? (
+          <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
+            <AppText size="xl" color="#DC2626">删除</AppText>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       <View style={styles.iconSection}>
