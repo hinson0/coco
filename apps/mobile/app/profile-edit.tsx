@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProfile, useUpdateProfile, useEnsureProfile } from "../hooks/useLocalProfile";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
@@ -13,6 +14,7 @@ import type { AvatarType } from "@coco/shared";
 
 export default function ProfileEditScreen() {
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const { data: profile } = useProfile();
   const { mutateAsync: updateProfile } = useUpdateProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
@@ -73,6 +75,7 @@ export default function ProfileEditScreen() {
         avatar_type: avatarType,
         avatar_value: avatarValue,
       });
+      await qc.invalidateQueries({ queryKey: ["profile"] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

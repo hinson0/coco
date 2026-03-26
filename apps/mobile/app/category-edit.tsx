@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalCategories, useCreateCategory, useUpdateCategory } from "../hooks/useLocalCategories";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
@@ -14,6 +15,7 @@ export default function CategoryEditScreen() {
   const params = useLocalSearchParams<{ id?: string; name?: string; icon?: string; type?: string }>();
   const isEdit = !!params.id;
 
+  const qc = useQueryClient();
   const { data: categories = [] } = useLocalCategories();
   const { mutateAsync: createCategory } = useCreateCategory();
   const { mutateAsync: updateCategory } = useUpdateCategory();
@@ -58,6 +60,8 @@ export default function CategoryEditScreen() {
       } else {
         await createCategory({ name: trimmedName, icon, type });
       }
+      // 等缓存刷新完再返回，避免列表页短暂显示旧数据
+      await qc.invalidateQueries({ queryKey: ["categories"] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

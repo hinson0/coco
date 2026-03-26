@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { View, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCreateBudget, useUpdateBudget } from "../hooks/useLocalBudgets";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 import { useCategoryBudgets } from "../hooks/useLocalBudgets";
@@ -15,6 +16,7 @@ export default function BudgetCategoryEditScreen() {
   const params = useLocalSearchParams<{ id?: string; categoryId?: string; amount?: string }>();
   const isEdit = !!params.id;
 
+  const qc = useQueryClient();
   const { data: categories = [] } = useLocalCategories();
   const { data: existingBudgets = [] } = useCategoryBudgets();
   const { mutateAsync: createBudget } = useCreateBudget();
@@ -68,6 +70,7 @@ export default function BudgetCategoryEditScreen() {
           start_date: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
         });
       }
+      await qc.invalidateQueries({ queryKey: ["budgets"] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");
