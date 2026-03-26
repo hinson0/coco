@@ -78,7 +78,16 @@ export default function AccountsScreen() {
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">我的账户</AppText>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity
+          onPress={() => Alert.alert(
+            "关于账户",
+            "账户用来追踪你的钱放在哪里（微信、银行卡、现金等）。\n\n记账时可选择从哪个账户支出/收入，余额会自动计算。\n\n当前余额 = 初始余额 + 收入 - 支出"
+          )}
+          style={styles.helpBtn}
+          activeOpacity={0.7}
+        >
+          <AppText size="xl">❓</AppText>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -123,6 +132,10 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 36, height: 36, borderRadius: radii.sm,
     backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+  },
+  helpBtn: {
+    width: 36, height: 36, borderRadius: radii.sm,
+    alignItems: "center", justifyContent: "center",
   },
   listContent: { padding: spacing.xl, paddingBottom: 40 },
   totalCard: {
