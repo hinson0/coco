@@ -54,6 +54,8 @@ export function useEnsureProfile() {
   });
 }
 
+// UPSERT：记录不存在时自动创建，存在时更新。
+// 解决 db/session 异步初始化导致 ensureProfile 可能未执行的竞态问题。
 export function useUpdateProfile() {
   const { db } = useOfflineContext();
   const { session } = useAuth();
@@ -64,17 +66,24 @@ export function useUpdateProfile() {
       if (!db || !session?.user) throw new Error("Database or session not available");
       const userId = session.user.id;
       const now = new Date().toISOString();
+      const nickname = input.nickname ?? session.user.email?.split("@")[0] ?? "棉花用户";
+      const avatarType = input.avatar_type ?? "emoji";
+      const avatarValue = input.avatar_value ?? "🌿";
 
-      const fields: string[] = ["updated_at = ?"];
-      const values: (string | number)[] = [now];
-      if (input.nickname !== undefined) { fields.push("nickname = ?"); values.push(input.nickname); }
-      if (input.avatar_type !== undefined) { fields.push("avatar_type = ?"); values.push(input.avatar_type); }
-      if (input.avatar_value !== undefined) { fields.push("avatar_value = ?"); values.push(input.avatar_value); }
-
-      values.push(userId);
       await db.runAsync(
-        `UPDATE user_profiles SET ${fields.join(", ")} WHERE id = ?`,
-        ...values
+        `INSERT INTO user_profiles (id, nickname, avatar_type, avatar_value, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           nickname = excluded.nickname,
+           avatar_type = excluded.avatar_type,
+           avatar_value = excluded.avatar_value,
+           updated_at = excluded.updated_at`,
+        userId,
+        nickname,
+        avatarType,
+        avatarValue,
+        now,
+        now
       );
     },
     onSuccess: () => {
