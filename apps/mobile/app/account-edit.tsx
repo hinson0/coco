@@ -1,6 +1,6 @@
 // 账户添加/编辑页面 — 类型选择 + 动态 placeholder + emoji 图标 + 初始余额
 import { useState, useEffect, useRef } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard, Image, type ImageSourcePropType } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,23 +11,38 @@ import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { AccountType } from "@coco/shared";
 
+// 品牌图标资源
+const BRAND_ICONS = {
+  wechat: require("../assets/images/wechat.png"),
+  alipay: require("../assets/images/alipay.png"),
+} as const;
+
 // 账户类型配置：图标、标签、默认名称、placeholder
 interface TypeConfig {
-  readonly icon: string;
+  readonly emoji?: string;                   // emoji 图标（普通类型）
+  readonly brandIcon?: ImageSourcePropType;  // 品牌图标（微信/支付宝）
   readonly label: string;
   readonly dbType: AccountType;
-  readonly autoName?: string;        // 自动填充的名称（微信/支付宝/现金）
-  readonly placeholder?: string;     // 名称输入框 placeholder
+  readonly autoName?: string;
+  readonly placeholder?: string;
 }
 
 const TYPE_OPTIONS: readonly TypeConfig[] = [
-  { icon: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
-  { icon: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
-  { icon: "💚", label: "微信", dbType: "e_wallet", autoName: "微信钱包" },
-  { icon: "💙", label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
-  { icon: "💰", label: "现金", dbType: "cash", autoName: "现金" },
-  { icon: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
+  { emoji: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
+  { emoji: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
+  { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信钱包" },
+  { brandIcon: BRAND_ICONS.alipay, label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
+  { emoji: "💰", label: "现金", dbType: "cash", autoName: "现金" },
+  { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
 ];
+
+// 渲染类型图标（品牌图片 or emoji）
+function TypeIcon({ config, size = 16 }: { config: TypeConfig; size?: number }) {
+  if (config.brandIcon) {
+    return <Image source={config.brandIcon} style={{ width: size, height: size }} resizeMode="contain" />;
+  }
+  return <AppText style={{ fontSize: size }}>{config.emoji}</AppText>;
+}
 
 export default function AccountEditScreen() {
   const insets = useSafeAreaInsets();
@@ -44,7 +59,7 @@ export default function AccountEditScreen() {
 
   const [selectedType, setSelectedType] = useState<TypeConfig>(initialTypeConfig);
   const [name, setName] = useState(params.name ?? "");
-  const [icon, setIcon] = useState(params.icon ?? initialTypeConfig.icon);
+  const [icon, setIcon] = useState(params.icon ?? initialTypeConfig.emoji ?? "📦");
   const [initialBalance, setInitialBalance] = useState(params.initialBalance ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -67,7 +82,7 @@ export default function AccountEditScreen() {
 
   const handleTypeSelect = (config: TypeConfig) => {
     setSelectedType(config);
-    setIcon(config.icon);
+    setIcon(config.emoji ?? "📦");
     if (config.autoName) {
       setName(config.autoName);
     } else {
@@ -150,7 +165,7 @@ export default function AccountEditScreen() {
                   activeOpacity={isEdit ? 1 : 0.7}
                   disabled={isEdit}
                 >
-                  <AppText style={{ fontSize: 16 }}>{config.icon}</AppText>
+                  <TypeIcon config={config} size={18} />
                   <AppText size="md" weight={isActive ? "semibold" : "medium"}
                     color={isActive ? colors.sage : colors.textLight}>
                     {config.label}
