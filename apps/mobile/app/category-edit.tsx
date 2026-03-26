@@ -1,5 +1,5 @@
 // 分类添加/编辑页面 — emoji 图标选择，名称输入，类型选择（仅新增时）
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,11 +23,17 @@ export default function CategoryEditScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const nameRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
     return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => nameRef.current?.focus(), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSave = async () => {
@@ -72,6 +78,7 @@ export default function CategoryEditScreen() {
       <View style={styles.fieldCard}>
         <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>分类名称</AppText>
         <TextInput
+          ref={nameRef}
           style={styles.input}
           value={name}
           onChangeText={setName}
