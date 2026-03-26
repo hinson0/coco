@@ -103,6 +103,8 @@ export default function CategoryEditScreen() {
         </View>
       )}
 
+      <View style={{ flex: 1 }} />
+
       <EmojiPicker
         visible={showEmojiPicker}
         onSelect={setIcon}
