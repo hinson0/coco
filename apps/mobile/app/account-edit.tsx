@@ -30,7 +30,7 @@ interface TypeConfig {
 const TYPE_OPTIONS: readonly TypeConfig[] = [
   { emoji: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
   { emoji: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
-  { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信钱包" },
+  { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信" },
   { brandIcon: BRAND_ICONS.alipay, label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
   { emoji: "💰", label: "现金", dbType: "cash", autoName: "现金" },
   { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
@@ -65,6 +65,7 @@ export default function AccountEditScreen() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
+  const balanceRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
@@ -72,10 +73,11 @@ export default function AccountEditScreen() {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  // 新建时自动聚焦名称输入框（有 autoName 的类型不需要）
+  // 新建时自动聚焦：有 autoName 的聚焦金额，否则聚焦名称
   useEffect(() => {
-    if (!isEdit && !selectedType.autoName) {
-      const timer = setTimeout(() => nameRef.current?.focus(), 500);
+    if (!isEdit) {
+      const ref = selectedType.autoName ? balanceRef : nameRef;
+      const timer = setTimeout(() => ref.current?.focus(), 500);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -85,9 +87,10 @@ export default function AccountEditScreen() {
     setIcon(config.emoji ?? "📦");
     if (config.autoName) {
       setName(config.autoName);
+      // 名称自动填充且不可编辑，聚焦到金额
+      setTimeout(() => balanceRef.current?.focus(), 300);
     } else {
       setName("");
-      // 切换到需要手动输入的类型时聚焦
       setTimeout(() => nameRef.current?.focus(), 300);
     }
   };
@@ -204,7 +207,7 @@ export default function AccountEditScreen() {
               placeholder={selectedType.placeholder ?? "输入账户名称"}
               placeholderTextColor={colors.creamDeeper}
               maxLength={20}
-              editable={!selectedType.autoName || isEdit}
+              editable={!selectedType.brandIcon || isEdit}
             />
           </View>
 
@@ -217,6 +220,7 @@ export default function AccountEditScreen() {
             <View style={styles.balanceRow}>
               <AppText style={styles.balancePrefix}>¥</AppText>
               <TextInput
+                ref={balanceRef}
                 style={styles.balanceInput}
                 value={initialBalance}
                 onChangeText={setInitialBalance}
