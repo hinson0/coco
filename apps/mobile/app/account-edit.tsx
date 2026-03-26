@@ -28,8 +28,8 @@ interface TypeConfig {
 }
 
 const TYPE_OPTIONS: readonly TypeConfig[] = [
-  { emoji: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
-  { emoji: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行 / 邮政" },
+  { emoji: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行" },
+  { emoji: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行" },
   { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信" },
   { brandIcon: BRAND_ICONS.alipay, label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
   { emoji: "💰", label: "现金", dbType: "cash", autoName: "现金" },
