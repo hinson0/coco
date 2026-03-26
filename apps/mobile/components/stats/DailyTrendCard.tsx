@@ -238,7 +238,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dataPointsColor={activeColor}
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
-          negativeStepHeight={pxPerSection}
           xAxisLabelsAtBottom
           labelsExtraHeight={28}
           endSpacing={20}
