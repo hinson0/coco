@@ -99,7 +99,16 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     "account_id",
     "TEXT REFERENCES accounts(id)",
   );
-  // 分类名称 + 类型唯一（仅未删除的），防止同类型下重名
+  // 清理已有重复分类（保留最早创建的，软删除其余），然后建唯一索引
+  await db.execAsync(`
+    UPDATE categories SET deleted_at = datetime('now')
+    WHERE deleted_at IS NULL
+      AND rowid NOT IN (
+        SELECT MIN(rowid) FROM categories
+        WHERE deleted_at IS NULL
+        GROUP BY name, type
+      )
+  `);
   await db.execAsync(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
   );
