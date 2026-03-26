@@ -129,30 +129,16 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
     day === 1 || (day - 1) % 5 === 0 || day === dailyData.length;
 
   const yAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
-  const xAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
 
-  const barData = values.map((v, i) => {
-    const day = parseInt(dailyData[i].date.slice(8), 10);
-    const showLabel = shouldShowLabel(day);
-    return {
-      value: v,
-      frontColor: v < 0 ? colors.coralLight : activeColor,
-      label: showLabel ? dailyData[i].date.slice(5) : "",
-      labelTextStyle: showLabel ? xAxisTextStyle : undefined,
-      labelWidth: showLabel ? 30 : undefined,
-    };
-  });
+  const barData = values.map((v) => ({
+    value: v,
+    frontColor: v < 0 ? colors.coralLight : activeColor,
+  }));
 
-  const lineData = values.map((v, i) => {
-    const day = parseInt(dailyData[i].date.slice(8), 10);
-    const showLabel = shouldShowLabel(day);
-    return {
-      value: v,
-      label: showLabel ? dailyData[i].date.slice(5) : "",
-      labelTextStyle: showLabel ? xAxisTextStyle : undefined,
-      dataPointColor: activeColor,
-    };
-  });
+  const lineData = values.map((v) => ({
+    value: v,
+    dataPointColor: activeColor,
+  }));
   const formatYLabel = (v: string) => {
     const raw = Number(v);
     const sign = raw < 0 ? "-" : "";
@@ -205,14 +191,10 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dashGap={4}
           dashWidth={3}
           backgroundColor={colors.white}
-          xAxisLabelTextStyle={xAxisTextStyle}
           initialSpacing={INITIAL_SPACING}
           spacing={barSpacing}
           noOfSectionsBelowXAxis={sectionsBelow}
           negativeStepHeight={pxPerSection}
-          autoShiftLabels
-          xAxisLabelsAtBottom
-          labelsExtraHeight={20}
           endSpacing={END_SPACING}
         />
       ) : (
@@ -231,17 +213,34 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dashGap={4}
           dashWidth={3}
           color={activeColor}
-          xAxisLabelTextStyle={xAxisTextStyle}
           initialSpacing={INITIAL_SPACING}
           spacing={barSpacing}
           dataPointsColor={activeColor}
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
-          xAxisLabelsAtBottom
-          labelsExtraHeight={28}
           endSpacing={END_SPACING}
         />
       )}
+
+      {/* X-axis date labels — rendered outside chart to avoid negative-area positioning issues */}
+      <View style={styles.xAxisLabels}>
+        {dailyData.map((d) => {
+          const day = parseInt(d.date.slice(8), 10);
+          const show = shouldShowLabel(day);
+          return (
+            <View
+              key={d.date}
+              style={{ width: BAR_WIDTH + barSpacing, alignItems: "center" }}
+            >
+              {show && (
+                <AppText size="xs" color={colors.textLighter}>
+                  {d.date.slice(5)}
+                </AppText>
+              )}
+            </View>
+          );
+        })}
+      </View>
 
       {/* Chart type toggle */}
       <View style={styles.chartTypeTabs}>
@@ -286,6 +285,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 12,
+  },
+  xAxisLabels: {
+    flexDirection: "row",
+    marginLeft: Y_AXIS_WIDTH + INITIAL_SPACING,
+    marginTop: 4,
   },
   chartTypeTabs: {
     flexDirection: "row",
