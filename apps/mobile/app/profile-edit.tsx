@@ -127,6 +127,8 @@ export default function ProfileEditScreen() {
         </AppText>
       </View>
 
+      <View style={{ flex: 1 }} />
+
       <EmojiPicker
         visible={showEmojiPicker}
         onSelect={(emoji) => { setAvatarType("emoji"); setAvatarValue(emoji); }}
