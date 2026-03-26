@@ -224,19 +224,15 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
 
       {/* X-axis date labels — rendered outside chart to avoid negative-area positioning issues */}
       <View style={styles.xAxisLabels}>
-        {dailyData.map((d) => {
+        {dailyData.map((d, i) => {
           const day = parseInt(d.date.slice(8), 10);
-          const show = shouldShowLabel(day);
+          if (!shouldShowLabel(day)) return null;
+          const left = i * (BAR_WIDTH + barSpacing) + BAR_WIDTH / 2 - 15;
           return (
-            <View
-              key={d.date}
-              style={{ width: BAR_WIDTH + barSpacing, alignItems: "center" }}
-            >
-              {show && (
-                <AppText size="xs" color={colors.textLighter}>
-                  {d.date.slice(5)}
-                </AppText>
-              )}
+            <View key={d.date} style={[styles.xAxisLabelItem, { left }]}>
+              <AppText size="xs" color={colors.textLighter}>
+                {d.date.slice(5)}
+              </AppText>
             </View>
           );
         })}
@@ -287,9 +283,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   xAxisLabels: {
-    flexDirection: "row",
+    position: "relative",
     marginLeft: Y_AXIS_WIDTH + INITIAL_SPACING,
+    height: 16,
     marginTop: 4,
+  },
+  xAxisLabelItem: {
+    position: "absolute",
+    width: 30,
+    alignItems: "center",
   },
   chartTypeTabs: {
     flexDirection: "row",
