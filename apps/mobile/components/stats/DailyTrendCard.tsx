@@ -115,9 +115,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const pxPerSection = Math.round(TOTAL_PX / totalSections);
   const positiveHeight = pxPerSection * sectionsAbove;
 
-  // TODO(Task 2): 移除下面两个别名——LineChart 迁移到统一 stepValue 后不再需要
-  const posStep = stepValue;
-  const negStep = stepValue;
 
   // 动态计算 spacing，让柱子刚好铺满可用宽度
   const END_SPACING = 20;
@@ -135,8 +132,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
 
   const yAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
   const xAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
-  // 负值柱子的标签被库旋转 180°，用反向旋转抵消
-  const negLabelStyle = { ...xAxisTextStyle, transform: [{ rotate: '180deg' }] as const };
 
   const barData = values.map((v, i) => {
     const day = parseInt(dailyData[i].date.slice(8), 10);
@@ -145,9 +140,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
       value: v,
       frontColor: v < 0 ? colors.coralLight : activeColor,
       label: showLabel ? dailyData[i].date.slice(5) : "",
-      labelTextStyle: showLabel
-        ? (v < 0 ? negLabelStyle : xAxisTextStyle)
-        : undefined,
+      labelTextStyle: showLabel ? xAxisTextStyle : undefined,
       labelWidth: showLabel ? 30 : undefined,
     };
   });
