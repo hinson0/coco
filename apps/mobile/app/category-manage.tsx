@@ -1,6 +1,6 @@
 // 分类列表管理页面 — 支出/收入 Tab 切换，预设保护，软删除
 import { useState } from "react";
-import { View, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalCategories, useDeleteCategory } from "../hooks/useLocalCategories";
@@ -15,6 +15,8 @@ export default function CategoryManageScreen() {
   const [activeTab, setActiveTab] = useState<TransactionType>("expense");
 
   const filtered = categories.filter((c) => c.type === activeTab);
+  const defaultCategories = filtered.filter((c) => c.is_default);
+  const customCategories = filtered.filter((c) => !c.is_default);
 
   const handleDelete = (id: string, name: string) => {
     Alert.alert("删除分类", `确定要删除"${name}"吗？已有的交易记录不会受影响。`, [
@@ -50,41 +52,47 @@ export default function CategoryManageScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            {item.is_default ? (
-              <View style={styles.rowContent}>
-                <View style={styles.iconBox}>
-                  <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
-                </View>
-                <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
-                <AppText size="sm" color={colors.textLighter}>预设</AppText>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.rowContent}
-                  onPress={() => router.push({ pathname: "/category-edit", params: { id: item.id, name: item.name, icon: item.icon, type: item.type } })}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.iconBox}>
+      <ScrollView contentContainerStyle={styles.list}>
+        {/* 默认分类 — 网格展示 */}
+        {defaultCategories.length > 0 && (
+          <>
+            <AppText size="md" color={colors.textLighter} weight="semibold" style={styles.sectionLabel}>预设分类</AppText>
+            <View style={styles.grid}>
+              {defaultCategories.map((item) => (
+                <View key={item.id} style={styles.gridItem}>
+                  <View style={styles.gridIcon}>
                     <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
                   </View>
-                  <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
-                  <AppText size="xl" color={colors.textLighter}>›</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)} activeOpacity={0.7}>
-                  <AppText size="md" color="#DC2626">删除</AppText>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+                  <AppText size="sm" weight="medium" color={colors.textLight} numberOfLines={1}>{item.name}</AppText>
+                </View>
+              ))}
+            </View>
+          </>
         )}
-      />
+
+        {/* 自定义分类 — 列表展示 */}
+        {customCategories.length > 0 && (
+          <AppText size="md" color={colors.textLighter} weight="semibold" style={styles.sectionLabel}>自定义分类</AppText>
+        )}
+        {customCategories.map((item) => (
+          <View key={item.id} style={styles.row}>
+            <TouchableOpacity
+              style={styles.rowContent}
+              onPress={() => router.push({ pathname: "/category-edit", params: { id: item.id, name: item.name, icon: item.icon, type: item.type } })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconBox}>
+                <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
+              </View>
+              <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
+              <AppText size="xl" color={colors.textLighter}>›</AppText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)} activeOpacity={0.7}>
+              <AppText size="md" color="#DC2626">删除</AppText>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
@@ -118,6 +126,18 @@ const styles = StyleSheet.create({
   tabActiveExpense: { backgroundColor: colors.coral },
   tabActiveIncome: { backgroundColor: colors.sage },
   list: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
+  sectionLabel: { marginBottom: spacing.md, marginTop: spacing.sm },
+  grid: {
+    flexDirection: "row", flexWrap: "wrap", marginBottom: spacing.xl,
+  },
+  gridItem: {
+    width: "20%", alignItems: "center", marginBottom: spacing.lg,
+  },
+  gridIcon: {
+    width: 44, height: 44, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: "center", justifyContent: "center",
+    marginBottom: 4, ...shadows.sm,
+  },
   row: {
     backgroundColor: colors.white, borderRadius: radii.md,
     marginBottom: spacing.md, ...shadows.sm, overflow: "hidden",
