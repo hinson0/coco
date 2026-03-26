@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { useProfile, useUpdateProfile } from "../hooks/useLocalProfile";
+import { useProfile, useUpdateProfile, useEnsureProfile } from "../hooks/useLocalProfile";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing } from "../constants/theme";
@@ -15,6 +15,9 @@ export default function ProfileEditScreen() {
   const insets = useSafeAreaInsets();
   const { data: profile } = useProfile();
   const { mutateAsync: updateProfile } = useUpdateProfile();
+  const { mutate: ensureProfile } = useEnsureProfile();
+
+  useEffect(() => { ensureProfile(); }, []);
 
   const [nickname, setNickname] = useState("");
   const [avatarType, setAvatarType] = useState<AvatarType>("emoji");

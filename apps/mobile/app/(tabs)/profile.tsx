@@ -3,7 +3,7 @@ import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocalTransactions } from '../../hooks/useLocalTransactions';
-import { useProfile, useInitProfile } from '../../hooks/useLocalProfile';
+import { useProfile, useEnsureProfile } from '../../hooks/useLocalProfile';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
@@ -57,9 +57,9 @@ export default function ProfileScreen() {
   const transactions = txData?.data ?? [];
   const { monthlyCount, streak, budgetMonths } = computeStats(transactions);
   const { data: profile } = useProfile();
-  const { mutate: initProfile } = useInitProfile();
+  const { mutate: ensureProfile } = useEnsureProfile();
 
-  useEffect(() => { initProfile(); }, []);
+  useEffect(() => { ensureProfile(); }, []);
 
   const userName = profile?.nickname ?? session?.user?.email?.split('@')[0] ?? '棉花用户';
 
