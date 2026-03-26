@@ -195,14 +195,20 @@ export default function AccountEditScreen() {
                 ref={nameRef}
                 style={styles.fieldInput}
                 value={name}
-                onChangeText={setName}
+                onChangeText={(text) => {
+                  // 拦截换行符，跳转到金额输入框
+                  if (text.includes("\n")) {
+                    balanceRef.current?.focus();
+                    return;
+                  }
+                  setName(text);
+                }}
                 placeholder={selectedType.placeholder ?? "输入账户名称"}
                 placeholderTextColor={colors.creamDeeper}
                 maxLength={20}
                 editable={!selectedType.autoName || isEdit}
-                returnKeyType="next"
-                blurOnSubmit={false}
-                onSubmitEditing={() => balanceRef.current?.focus()}
+                multiline
+                numberOfLines={1}
               />
             </View>
           </View>
