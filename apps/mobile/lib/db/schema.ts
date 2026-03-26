@@ -54,9 +54,65 @@ const CREATE_CHAT_MESSAGES = `
   );
 `;
 
+// 用户个人资料表（头像 + 昵称，本地存储 + 后台同步到 Supabase）
+const CREATE_USER_PROFILES = `
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      id TEXT PRIMARY KEY,
+      nickname TEXT,
+      avatar_type TEXT NOT NULL DEFAULT 'emoji',
+      avatar_value TEXT NOT NULL DEFAULT '🌿',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `;
+
+// 资金账户表（多账户余额追踪）
+const CREATE_ACCOUNTS = `
+    CREATE TABLE IF NOT EXISTS accounts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('cash', 'bank', 'e_wallet', 'credit', 'custom')),
+      initial_balance REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      deleted_at TEXT
+    );
+  `;
+
 export async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(CREATE_CATEGORIES);
   await db.execAsync(CREATE_TRANSACTIONS);
   await db.execAsync(CREATE_BUDGETS);
   await db.execAsync(CREATE_CHAT_MESSAGES);
+  await db.execAsync(CREATE_USER_PROFILES); // 新增
+  await db.execAsync(CREATE_ACCOUNTS); // 新增
+  await runMigrations(db); // 新增
+}
+
+// 增量迁移：给已有表添加新字段（幂等，重复执行不报错）
+async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
+  await addColumnIfNotExists(db, "categories", "deleted_at", "TEXT");
+  await addColumnIfNotExists(
+    db,
+    "transactions",
+    "account_id",
+    "TEXT REFERENCES accounts(id)",
+  );
+}
+
+async function addColumnIfNotExists(
+  db: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  const info = await db.getAllAsync<{ name: string }>(
+    `PRAGMA table_info(${table})`,
+  );
+  if (!info.some((col) => col.name === column)) {
+    await db.execAsync(
+      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`,
+    );
+  }
 }
