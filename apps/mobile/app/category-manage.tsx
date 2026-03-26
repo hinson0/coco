@@ -56,24 +56,31 @@ export default function CategoryManageScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <TouchableOpacity
-              style={styles.rowContent}
-              onPress={() => router.push({ pathname: "/category-edit", params: { id: item.id, name: item.name, icon: item.icon, type: item.type } })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.iconBox}>
-                <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
-              </View>
-              <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
-              {item.is_default && (
+            {item.is_default ? (
+              <View style={styles.rowContent}>
+                <View style={styles.iconBox}>
+                  <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
+                </View>
+                <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
                 <AppText size="sm" color={colors.textLighter}>预设</AppText>
-              )}
-              <AppText size="xl" color={colors.textLighter}>›</AppText>
-            </TouchableOpacity>
-            {!item.is_default && (
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)} activeOpacity={0.7}>
-                <AppText size="md" color="#DC2626">删除</AppText>
-              </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.rowContent}
+                  onPress={() => router.push({ pathname: "/category-edit", params: { id: item.id, name: item.name, icon: item.icon, type: item.type } })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.iconBox}>
+                    <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
+                  </View>
+                  <AppText size="xl" weight="medium" style={{ flex: 1 }}>{item.name}</AppText>
+                  <AppText size="xl" color={colors.textLighter}>›</AppText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)} activeOpacity={0.7}>
+                  <AppText size="md" color="#DC2626">删除</AppText>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         )}
