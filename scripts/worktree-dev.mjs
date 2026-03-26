@@ -30,19 +30,30 @@ if (!existsSync(resolve(dir, "node_modules"))) {
   run("pnpm install", { cwd: dir });
 }
 
-// 临时修改 mobile 的 package name，方便多 worktree 调试时区分
-const mobilePkgPath = resolve(dir, "apps/mobile/package.json");
+// 临时修改 package.json name + app.json name，方便多 worktree 调试时区分
+const wtName = `worktree-${name}`;
+const mobileDir = resolve(dir, "apps/mobile");
+
+const mobilePkgPath = resolve(mobileDir, "package.json");
 const originalPkg = readFileSync(mobilePkgPath, "utf-8");
 const pkg = JSON.parse(originalPkg);
-const originalName = pkg.name;
-pkg.name = `worktree-${name}`;
+const originalPkgName = pkg.name;
+pkg.name = wtName;
 writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
-console.log(`📛 mobile name: ${originalName} → ${pkg.name}`);
 
-// dev server 结束后恢复原始 name
+const appJsonPath = resolve(mobileDir, "app.json");
+const originalAppJson = readFileSync(appJsonPath, "utf-8");
+const appJson = JSON.parse(originalAppJson);
+appJson.expo.name = wtName;
+writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
+
+console.log(`📛 mobile name: ${originalPkgName} → ${wtName}`);
+
+// dev server 结束后恢复原始文件
 const restore = () => {
   writeFileSync(mobilePkgPath, originalPkg);
-  console.log(`\n📛 mobile name 已恢复: ${originalName}`);
+  writeFileSync(appJsonPath, originalAppJson);
+  console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
 };
 process.on("SIGINT", () => { restore(); process.exit(0); });
 process.on("SIGTERM", () => { restore(); process.exit(0); });
