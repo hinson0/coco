@@ -93,7 +93,7 @@ export default function CategoryEditScreen() {
         <AppText size="2xl" weight="semibold">{isEdit ? "编辑分类" : "添加分类"}</AppText>
         {isEdit ? (
           <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
-            <AppText size="xl" color="#DC2626">删除</AppText>
+            <AppText size="3xl">🗑️</AppText>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 36 }} />
