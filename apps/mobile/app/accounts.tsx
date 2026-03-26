@@ -79,10 +79,7 @@ export default function AccountsScreen() {
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">我的账户</AppText>
         <TouchableOpacity
-          onPress={() => Alert.alert(
-            "关于账户",
-            "账户用来追踪你的钱放在哪里（微信、银行卡、现金等）。\n\n记账时可选择从哪个账户支出/收入，余额会自动计算。\n\n当前余额 = 初始余额 + 收入 - 支出"
-          )}
+          onPress={() => router.push("/accounts-help")}
           style={styles.helpBtn}
           activeOpacity={0.7}
         >
