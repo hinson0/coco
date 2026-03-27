@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import {
+  type GestureResponderEvent,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { colors, shadows } from "../../constants/theme";
 import { getDimensionValue, type DailyDataPoint } from "../../utils/statsUtils";
 import { AppText } from "../ui/AppText";
 import { Card } from "../ui/Card";
 
-type Dimension = "expense" | "income" | "balance";
+export type Dimension = "expense" | "income" | "balance";
 
 const DIMENSION_LABELS: Record<Dimension, string> = {
   expense: "支出",
@@ -21,6 +27,8 @@ const DIMENSION_COLORS: Record<Dimension, string> = {
 
 interface DailyTrendCardProps {
   readonly dailyData: DailyDataPoint[];
+  readonly dimension: Dimension;
+  readonly onDimensionChange: (d: Dimension) => void;
 }
 
 function DimensionTab({
@@ -62,9 +70,8 @@ const NUM_SECTIONS = 5;
 const END_SPACING = 4;
 const TOOLTIP_WIDTH = 120;
 
-export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
+export function DailyTrendCard({ dailyData, dimension, onDimensionChange }: DailyTrendCardProps) {
   const { width: screenWidth } = useWindowDimensions();
-  const [dimension, setDimension] = useState<Dimension>("expense");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const values = useMemo(
@@ -104,18 +111,20 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
 
   const yAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
 
-  const handlePointPress = (_item: any, index: number) => {
-    setSelectedIndex((prev) => (prev === index ? null : index));
-  };
+  const pointStep = BAR_WIDTH + barSpacing;
+  const handleChartPress = useCallback(
+    (e: GestureResponderEvent) => {
+      const x = e.nativeEvent.locationX - INITIAL_SPACING - BAR_WIDTH / 2;
+      const idx = Math.round(x / pointStep);
+      const clamped = Math.max(0, Math.min(idx, numBars - 1));
+      setSelectedIndex((prev) => (prev === clamped ? null : clamped));
+    },
+    [pointStep, numBars],
+  );
 
-  const lineData = values.map((v, i) => ({
+  const lineData = values.map((v) => ({
     value: v,
     dataPointColor: activeColor,
-    showStrip: i === selectedIndex,
-    stripColor: colors.textLighter,
-    stripWidth: 1,
-    stripOpacity: 0.4,
-    stripHeight: positiveHeight + sectionsBelow * pxPerSection,
   }));
 
   const formatYLabel = (v: string) => {
@@ -130,7 +139,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   };
 
   const handleDimensionChange = (d: Dimension) => {
-    setDimension(d);
+    onDimensionChange(d);
     setSelectedIndex(null);
   };
 
@@ -169,22 +178,33 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
 
       {/* Chart + tooltip overlay */}
       <View style={styles.chartWrapper}>
-        {/* Tooltip — absolute overlay, does not affect layout */}
-        {tooltipPoint != null && (
-          <View style={[styles.tooltipPositioner, { left: tooltipLeft }]}>
-            <View style={styles.tooltip}>
-              <AppText size="sm" weight="semibold" color={colors.text}>
-                {tooltipPoint.date.slice(5)}
-              </AppText>
-              <AppText size="sm" color={colors.text}>
-                {DIMENSION_LABELS[dimension]}: ¥
-                {tooltipValue.toLocaleString("zh-CN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </AppText>
+        {/* Tooltip + vertical indicator — absolute overlay, does not affect layout */}
+        {tooltipPoint != null && selectedIndex !== null && (
+          <>
+            <View style={[styles.tooltipPositioner, { left: tooltipLeft }]}>
+              <View style={styles.tooltip}>
+                <AppText size="sm" weight="semibold" color={colors.text}>
+                  {tooltipPoint.date.slice(5)}
+                </AppText>
+                <AppText size="sm" color={colors.text}>
+                  {DIMENSION_LABELS[dimension]}: ¥
+                  {tooltipValue.toLocaleString("zh-CN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </AppText>
+              </View>
             </View>
-          </View>
+            <View
+              style={[
+                styles.stripLine,
+                {
+                  left: selectedIndex * (BAR_WIDTH + barSpacing) + BAR_WIDTH / 2,
+                  height: positiveHeight + sectionsBelow * pxPerSection,
+                },
+              ]}
+            />
+          </>
         )}
 
         <LineChart
@@ -208,9 +228,17 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
           endSpacing={END_SPACING}
-          focusEnabled
-          unFocusOnPressOut={false}
-          onFocus={handlePointPress}
+          disableScroll
+        />
+        {/* 自定义触摸层：替代库的 focusEnabled，解决负值区域触摸检测失灵 */}
+        <Pressable
+          onPress={handleChartPress}
+          style={[
+            styles.touchOverlay,
+            {
+              height: positiveHeight + sectionsBelow * pxPerSection,
+            },
+          ]}
         />
       </View>
 
@@ -279,6 +307,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.creamDark,
     ...shadows.md,
+  },
+  touchOverlay: {
+    position: "absolute",
+    top: 0,
+    left: Y_AXIS_WIDTH,
+    right: 0,
+    zIndex: 8,
+  },
+  stripLine: {
+    position: "absolute",
+    top: 0,
+    marginLeft: Y_AXIS_WIDTH + INITIAL_SPACING,
+    width: 1,
+    backgroundColor: colors.textLighter,
+    opacity: 0.4,
+    zIndex: 5,
   },
   xAxisLabels: {
     position: "relative",
