@@ -7,6 +7,7 @@ export interface Category {
   readonly icon: string;
   readonly type: TransactionType;
   readonly is_default: boolean;
+  readonly deleted_at: string | null;
 }
 
 export interface CreateCategoryInput {
