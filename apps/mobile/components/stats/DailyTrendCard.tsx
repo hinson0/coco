@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
-import { BarChart, LineChart } from "react-native-gifted-charts";
-import { colors } from "../../constants/theme";
+import { LineChart } from "react-native-gifted-charts";
+import { colors, shadows } from "../../constants/theme";
 import { getDimensionValue, type DailyDataPoint } from "../../utils/statsUtils";
 import { AppText } from "../ui/AppText";
 import { Card } from "../ui/Card";
 
 type Dimension = "expense" | "income" | "balance";
-type ChartType = "bar" | "line";
 
 const DIMENSION_LABELS: Record<Dimension, string> = {
   expense: "支出",
@@ -53,32 +52,6 @@ function DimensionTab({
   );
 }
 
-function ChartTypeTab({
-  active,
-  type,
-  onPress,
-}: {
-  active: ChartType;
-  type: ChartType;
-  onPress: () => void;
-}) {
-  const isActive = active === type;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chartTab, isActive && styles.chartTabActive]}
-    >
-      <AppText
-        size="sm"
-        weight="semibold"
-        color={isActive ? colors.text : colors.textLighter}
-      >
-        {type === "bar" ? "柱状图" : "折线图"}
-      </AppText>
-    </Pressable>
-  );
-}
-
 // Card padding(16)*2 + screen horizontal padding (estimated 32)
 const HORIZONTAL_OVERHEAD = 64;
 const Y_AXIS_WIDTH = 45;
@@ -86,12 +59,13 @@ const BAR_WIDTH = 6;
 const INITIAL_SPACING = 8;
 const TOTAL_PX = 200;
 const NUM_SECTIONS = 5;
-const END_SPACING = 20;
+const END_SPACING = 4;
+const TOOLTIP_WIDTH = 120;
 
 export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [dimension, setDimension] = useState<Dimension>("expense");
-  const [chartType, setChartType] = useState<ChartType>("bar");
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const values = useMemo(
     () => dailyData.map((d) => getDimensionValue(d, dimension)),
@@ -115,7 +89,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   const pxPerSection = Math.round(TOTAL_PX / totalSections);
   const positiveHeight = pxPerSection * sectionsAbove;
 
-  // 动态计算 spacing，让柱子刚好铺满可用宽度
+  // 动态计算 spacing，让数据点刚好铺满可用宽度
   const chartAreaWidth =
     screenWidth - HORIZONTAL_OVERHEAD - Y_AXIS_WIDTH - END_SPACING;
   const numBars = dailyData.length || 1;
@@ -130,15 +104,20 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
 
   const yAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
 
-  const barData = values.map((v) => ({
-    value: v,
-    frontColor: v < 0 ? colors.coralLight : activeColor,
-  }));
+  const handlePointPress = (_item: any, index: number) => {
+    setSelectedIndex((prev) => (prev === index ? null : index));
+  };
 
-  const lineData = values.map((v) => ({
+  const lineData = values.map((v, i) => ({
     value: v,
     dataPointColor: activeColor,
+    showStrip: i === selectedIndex,
+    stripColor: colors.textLighter,
+    stripWidth: 1,
+    stripOpacity: 0.4,
+    stripHeight: positiveHeight + sectionsBelow * pxPerSection,
   }));
+
   const formatYLabel = (v: string) => {
     const raw = Number(v);
     const sign = raw < 0 ? "-" : "";
@@ -149,6 +128,22 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
       return `${sign}${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`;
     return v;
   };
+
+  const handleDimensionChange = (d: Dimension) => {
+    setDimension(d);
+    setSelectedIndex(null);
+  };
+
+  // Tooltip 内容
+  const tooltipPoint = selectedIndex !== null ? dailyData[selectedIndex] : null;
+  const tooltipValue =
+    tooltipPoint != null ? getDimensionValue(tooltipPoint, dimension) : 0;
+  const tooltipLeft =
+    selectedIndex !== null
+      ? selectedIndex * (BAR_WIDTH + barSpacing) +
+        BAR_WIDTH / 2 -
+        TOOLTIP_WIDTH / 2
+      : 0;
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
@@ -166,38 +161,32 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
               key={d}
               active={dimension}
               dim={d}
-              onPress={() => setDimension(d)}
+              onPress={() => handleDimensionChange(d)}
             />
           ))}
         </View>
       </View>
 
-      {/* Chart */}
-      {chartType === "bar" ? (
-        <BarChart
-          data={barData}
-          height={positiveHeight}
-          barWidth={BAR_WIDTH}
-          barBorderRadius={3}
-          noOfSections={sectionsAbove}
-          stepValue={stepValue}
-          yAxisTextStyle={yAxisTextStyle}
-          formatYLabel={formatYLabel}
-          yAxisLabelWidth={Y_AXIS_WIDTH}
-          yAxisThickness={0}
-          xAxisThickness={1}
-          xAxisColor={colors.creamDark}
-          rulesColor={colors.creamDark}
-          dashGap={4}
-          dashWidth={3}
-          backgroundColor={colors.white}
-          initialSpacing={INITIAL_SPACING}
-          spacing={barSpacing}
-          noOfSectionsBelowXAxis={sectionsBelow}
-          negativeStepHeight={pxPerSection}
-          endSpacing={END_SPACING}
-        />
-      ) : (
+      {/* Chart + tooltip overlay */}
+      <View style={styles.chartWrapper}>
+        {/* Tooltip — absolute overlay, does not affect layout */}
+        {tooltipPoint != null && (
+          <View style={[styles.tooltipPositioner, { left: tooltipLeft }]}>
+            <View style={styles.tooltip}>
+              <AppText size="sm" weight="semibold" color={colors.text}>
+                {tooltipPoint.date.slice(5)}
+              </AppText>
+              <AppText size="sm" color={colors.text}>
+                {DIMENSION_LABELS[dimension]}: ¥
+                {tooltipValue.toLocaleString("zh-CN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </AppText>
+            </View>
+          </View>
+        )}
+
         <LineChart
           data={lineData}
           height={positiveHeight}
@@ -219,8 +208,11 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
           dataPointsRadius={3}
           noOfSectionsBelowXAxis={sectionsBelow}
           endSpacing={END_SPACING}
+          focusEnabled
+          unFocusOnPressOut={false}
+          onFocus={handlePointPress}
         />
-      )}
+      </View>
 
       {/* X-axis date labels — rendered outside chart to avoid negative-area positioning issues */}
       <View style={styles.xAxisLabels}>
@@ -236,20 +228,6 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
             </View>
           );
         })}
-      </View>
-
-      {/* Chart type toggle */}
-      <View style={styles.chartTypeTabs}>
-        <ChartTypeTab
-          active={chartType}
-          type="bar"
-          onPress={() => setChartType("bar")}
-        />
-        <ChartTypeTab
-          active={chartType}
-          type="line"
-          onPress={() => setChartType("line")}
-        />
       </View>
     </Card>
   );
@@ -282,6 +260,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 12,
   },
+  chartWrapper: {
+    position: "relative",
+  },
+  tooltipPositioner: {
+    position: "absolute",
+    top: 0,
+    marginLeft: Y_AXIS_WIDTH + INITIAL_SPACING,
+    width: TOOLTIP_WIDTH,
+    alignItems: "center" as const,
+    zIndex: 10,
+  },
+  tooltip: {
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: colors.creamDark,
+    ...shadows.md,
+  },
   xAxisLabels: {
     position: "relative",
     marginLeft: Y_AXIS_WIDTH + INITIAL_SPACING,
@@ -292,19 +290,5 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 30,
     alignItems: "center",
-  },
-  chartTypeTabs: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 12,
-  },
-  chartTab: {
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-  },
-  chartTabActive: {
-    backgroundColor: colors.honeyPale,
   },
 });
