@@ -98,7 +98,10 @@ export function CategoryRankCard({
     <Card radius="lg" shadow="md" padding={16}>
       {/* Header */}
       <View style={styles.header}>
-        <AppText size="lg" weight="semibold" color={colors.text}>{title}</AppText>
+        <View style={styles.titleRow}>
+          <View style={styles.titleAccent} />
+          <AppText size="lg" weight="semibold" color={colors.text}>{title}</AppText>
+        </View>
         <View style={styles.tabs}>
           {(['expense', 'income', 'balance'] as const).map((d) => (
             <Pressable
@@ -271,6 +274,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  titleAccent: {
+    width: 3,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: colors.honey,
   },
   tabs: {
     flexDirection: 'row',
