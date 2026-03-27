@@ -36,9 +36,12 @@ export function TransactionRankCard({
     <Card radius="lg" shadow="md" padding={16}>
       {/* Header */}
       <View style={styles.header}>
-        <AppText size="lg" weight="semibold" color={colors.text}>
-          明细排行榜
-        </AppText>
+        <View style={styles.titleRow}>
+          <View style={styles.titleAccent} />
+          <AppText size="lg" weight="semibold" color={colors.text}>
+            明细排行榜
+          </AppText>
+        </View>
         <View style={styles.tabs}>
           {(['expense', 'income'] as const).map((t) => (
             <Pressable
@@ -129,6 +132,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  titleAccent: {
+    width: 3,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: colors.honey,
   },
   tabs: {
     flexDirection: 'row',
