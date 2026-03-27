@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Card } from '../ui/Card';
 import { AppText } from '../ui/AppText';
 import { colors } from '../../constants/theme';
 import type { RankedTransaction } from '../../utils/statsUtils';
+import type { Dimension } from './DailyTrendCard';
 
 interface TransactionRankCardProps {
   readonly expenseTransactions: RankedTransaction[];
   readonly incomeTransactions: RankedTransaction[];
+  readonly dimension: Dimension;
 }
 
 /**
@@ -25,9 +27,17 @@ const MAX_EXPANDED = 10;
 export function TransactionRankCard({
   expenseTransactions,
   incomeTransactions,
+  dimension,
 }: TransactionRankCardProps) {
   const [tab, setTab] = useState<'expense' | 'income'>('expense');
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (dimension === 'expense' || dimension === 'income') {
+      setTab(dimension);
+      setExpanded(false);
+    }
+  }, [dimension]);
 
   const data = tab === 'expense' ? expenseTransactions : incomeTransactions;
   const visible = expanded ? data.slice(0, MAX_EXPANDED) : data.slice(0, MAX_VISIBLE);
@@ -41,26 +51,6 @@ export function TransactionRankCard({
           <AppText size="lg" weight="semibold" color={colors.text}>
             明细排行榜
           </AppText>
-        </View>
-        <View style={styles.tabs}>
-          {(['expense', 'income'] as const).map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => {
-                setTab(t);
-                setExpanded(false);
-              }}
-              style={[styles.tab, tab === t && styles.tabActive]}
-            >
-              <AppText
-                size="sm"
-                weight="semibold"
-                color={tab === t ? colors.white : colors.textLighter}
-              >
-                {t === 'expense' ? '支出' : '收入'}
-              </AppText>
-            </Pressable>
-          ))}
         </View>
       </View>
 
@@ -143,20 +133,6 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 2,
     backgroundColor: colors.honey,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.creamDark,
-    borderRadius: 12,
-    padding: 2,
-  },
-  tab: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  tabActive: {
-    backgroundColor: colors.coral,
   },
   list: {
     gap: 4,
