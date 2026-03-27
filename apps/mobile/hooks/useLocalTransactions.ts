@@ -58,8 +58,8 @@ export function useCreateTransaction() {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at)
-         VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, account_id)
+         VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
         input.category_id,
         input.amount,
@@ -70,12 +70,15 @@ export function useCreateTransaction() {
         input.raw_input ?? null,
         input.receipt_url ?? null,
         input.ai_confidence ?? null,
-        now
+        now,
+        input.account_id ?? null
       );
       return id;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["account-balance"] });
+      qc.invalidateQueries({ queryKey: ["total-assets"] });
     },
   });
 }
@@ -94,6 +97,7 @@ export function useUpdateTransaction() {
       if (params.type !== undefined) { fields.push("type = ?"); values.push(params.type); }
       if (params.note !== undefined) { fields.push("note = ?"); values.push(params.note); }
       if (params.occurred_at !== undefined) { fields.push("occurred_at = ?"); values.push(params.occurred_at); }
+      if (params.account_id !== undefined) { fields.push("account_id = ?"); values.push(params.account_id as any); }
       if (fields.length === 0) return;
       values.push(params.id);
       await db.runAsync(
@@ -103,6 +107,8 @@ export function useUpdateTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["account-balance"] });
+      qc.invalidateQueries({ queryKey: ["total-assets"] });
     },
   });
 }
@@ -122,6 +128,8 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
+      qc.invalidateQueries({ queryKey: ["account-balance"] });
+      qc.invalidateQueries({ queryKey: ["total-assets"] });
     },
   });
 }

@@ -16,6 +16,7 @@ export interface Transaction {
   readonly ai_confidence: number | null;
   readonly created_at: string;
   readonly deleted_at: string | null;
+  readonly account_id: string | null;
 }
 
 export interface CreateTransactionInput {
@@ -29,6 +30,7 @@ export interface CreateTransactionInput {
   readonly receipt_url?: string;
   readonly ai_confidence?: number;
   readonly skip_chat?: boolean;
+  readonly account_id?: string | null;
 }
 
 export interface UpdateTransactionInput {
@@ -37,4 +39,5 @@ export interface UpdateTransactionInput {
   readonly type?: TransactionType;
   readonly note?: string;
   readonly occurred_at?: string;
+  readonly account_id?: string | null;
 }

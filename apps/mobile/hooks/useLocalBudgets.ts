@@ -74,3 +74,33 @@ export function useDeleteBudget() {
     },
   });
 }
+
+export function useGlobalBudget() {
+  const { db } = useOfflineContext();
+
+  return useQuery({
+    queryKey: ["budgets", "global"],
+    queryFn: async (): Promise<Budget | null> => {
+      if (!db) return null;
+      return db.getFirstAsync<Budget>(
+        "SELECT * FROM budgets WHERE category_id IS NULL AND period = 'monthly' ORDER BY start_date DESC LIMIT 1"
+      );
+    },
+    enabled: !!db,
+  });
+}
+
+export function useCategoryBudgets() {
+  const { db } = useOfflineContext();
+
+  return useQuery({
+    queryKey: ["budgets", "category"],
+    queryFn: async (): Promise<readonly Budget[]> => {
+      if (!db) return [];
+      return db.getAllAsync<Budget>(
+        "SELECT * FROM budgets WHERE category_id IS NOT NULL AND period = 'monthly' ORDER BY start_date DESC"
+      );
+    },
+    enabled: !!db,
+  });
+}
