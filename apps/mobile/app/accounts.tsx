@@ -40,7 +40,7 @@ function AccountRow({ account, onLongPress }: { readonly account: Account; reado
   return (
     <TouchableOpacity
       style={styles.row}
-      onPress={() => router.push({ pathname: "/account-edit", params: { id: account.id, name: account.name, icon: account.icon, type: account.type, initialBalance: String(account.initial_balance), isDefault: account.is_default ? "1" : "0" } })}
+      onPress={() => router.push({ pathname: "/account-edit", params: { id: account.id, name: account.name, icon: account.icon, type: account.type, initialBalance: String(account.initial_balance) } })}
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
@@ -104,7 +104,7 @@ export default function AccountsScreen() {
             </AppText>
           </LinearGradient>
         }
-        renderItem={({ item }) => <AccountRow account={item} onLongPress={item.is_default ? undefined : () => handleDelete(item.id, item.name)} />}
+        renderItem={({ item }) => <AccountRow account={item} onLongPress={() => handleDelete(item.id, item.name)} />}
         ListFooterComponent={
           <TouchableOpacity
             style={styles.addBtn}
