@@ -37,9 +37,12 @@ function Badge({ badge }: { badge: InsightBadge }) {
 export function TrendInsightRow({ items }: TrendInsightRowProps) {
   return (
     <Card radius="lg" shadow="md" padding={16}>
-      <AppText size="lg" weight="semibold" color={colors.text} style={styles.title}>
-        AI 洞察
-      </AppText>
+      <View style={styles.titleRow}>
+        <View style={styles.titleAccent} />
+        <AppText size="lg" weight="semibold" color={colors.text}>
+          AI 洞察
+        </AppText>
+      </View>
       {items.map((item, index) => (
         <View key={item.title}>
           {index > 0 && <View style={styles.divider} />}
@@ -58,8 +61,17 @@ export function TrendInsightRow({ items }: TrendInsightRowProps) {
 }
 
 const styles = StyleSheet.create({
-  title: {
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 12,
+  },
+  titleAccent: {
+    width: 3,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: colors.honey,
   },
   row: {
     flexDirection: 'row',
