@@ -12,7 +12,7 @@ import { getDimensionValue, type DailyDataPoint } from "../../utils/statsUtils";
 import { AppText } from "../ui/AppText";
 import { Card } from "../ui/Card";
 
-type Dimension = "expense" | "income" | "balance";
+export type Dimension = "expense" | "income" | "balance";
 
 const DIMENSION_LABELS: Record<Dimension, string> = {
   expense: "支出",
@@ -27,6 +27,8 @@ const DIMENSION_COLORS: Record<Dimension, string> = {
 
 interface DailyTrendCardProps {
   readonly dailyData: DailyDataPoint[];
+  readonly dimension: Dimension;
+  readonly onDimensionChange: (d: Dimension) => void;
 }
 
 function DimensionTab({
@@ -68,9 +70,8 @@ const NUM_SECTIONS = 5;
 const END_SPACING = 4;
 const TOOLTIP_WIDTH = 120;
 
-export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
+export function DailyTrendCard({ dailyData, dimension, onDimensionChange }: DailyTrendCardProps) {
   const { width: screenWidth } = useWindowDimensions();
-  const [dimension, setDimension] = useState<Dimension>("expense");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const values = useMemo(
@@ -138,7 +139,7 @@ export function DailyTrendCard({ dailyData }: DailyTrendCardProps) {
   };
 
   const handleDimensionChange = (d: Dimension) => {
-    setDimension(d);
+    onDimensionChange(d);
     setSelectedIndex(null);
   };
 
