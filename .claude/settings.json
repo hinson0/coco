@@ -1,6 +1,14 @@
 {
   "permissions": {
-    "allow": ["Edit", "Read", "Write", "Bash", "WebSearch"],
+    "allow": [
+      "Edit",
+      "Read",
+      "Write",
+      "Bash",
+      "WebSearch",
+      "WebFetch",
+      "mcp__plugin_context7__*"
+    ],
     "deny": [
       "Bash(rm -rf *)",
       "Bash(sudo *)",
