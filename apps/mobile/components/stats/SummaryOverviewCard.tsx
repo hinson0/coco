@@ -36,6 +36,7 @@ export function SummaryOverviewCard({
     <Card radius="lg" shadow="md" padding={16}>
       {/* Title row */}
       <View style={styles.titleRow}>
+        <View style={styles.titleAccent} />
         <AppText size="lg" weight="semibold" color={colors.text}>收支总览</AppText>
       </View>
 
@@ -86,7 +87,8 @@ export function SummaryOverviewCard({
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  titleAccent: { width: 3, height: 16, borderRadius: 2, backgroundColor: colors.honey },
   divider:  { height: 1, backgroundColor: colors.creamDark, marginVertical: 10 },
   row:      { flexDirection: 'row' },
   col:      { flex: 1, alignItems: 'center', gap: 4 },
