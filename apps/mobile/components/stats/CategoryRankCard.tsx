@@ -4,21 +4,54 @@ import { PieChart } from 'react-native-gifted-charts';
 import { Card } from '../ui/Card';
 import { AppText } from '../ui/AppText';
 import { colors } from '../../constants/theme';
-import type { CategoryStat } from '../../utils/statsUtils';
+import type { CategoryStat, DailyDataPoint } from '../../utils/statsUtils';
+import type { Dimension } from './DailyTrendCard';
+
+const DIMENSION_LABELS: Record<Dimension, string> = {
+  expense: '支出',
+  income: '收入',
+  balance: '结余',
+};
+
+const TAB_ACTIVE_COLORS: Record<Dimension, string> = {
+  expense: colors.coral,
+  income: colors.sage,
+  balance: colors.honey,
+};
 
 interface CategoryRankCardProps {
   readonly expenseByCategory: CategoryStat[];
   readonly incomeByCategory: CategoryStat[];
+  readonly dailyData: DailyDataPoint[];
+  readonly dimension: Dimension;
+  readonly onDimensionChange: (d: Dimension) => void;
   readonly onCategoryPress?: (categoryId: string) => void;
 }
 
 const MAX_BAR_WIDTH = 120;
 
-export function CategoryRankCard({ expenseByCategory, incomeByCategory, onCategoryPress }: CategoryRankCardProps) {
-  const [tab, setTab] = useState<'expense' | 'income'>('expense');
+function formatAmount(n: number): string {
+  if (n === 0) return '—';
+  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function CategoryRankCard({
+  expenseByCategory,
+  incomeByCategory,
+  dailyData,
+  dimension,
+  onDimensionChange,
+  onCategoryPress,
+}: CategoryRankCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const data = tab === 'expense' ? expenseByCategory : incomeByCategory;
+  const handleTabPress = (d: Dimension) => {
+    onDimensionChange(d);
+    setExpanded(false);
+  };
+
+  // ── 分类排行视图所需数据 ──
+  const data = dimension === 'expense' ? expenseByCategory : incomeByCategory;
   const maxAmt = data[0]?.amount ?? 1;
   const top = data[0];
   const visible = expanded ? data : data.slice(0, 3);
@@ -47,119 +80,186 @@ export function CategoryRankCard({ expenseByCategory, incomeByCategory, onCatego
     );
   }, [top]);
 
+  // ── 结余每日报表所需数据 ──
+  const totals = useMemo(() => {
+    let expense = 0;
+    let income = 0;
+    for (const d of dailyData) {
+      expense += d.expense;
+      income += d.income;
+    }
+    return { expense, income, balance: income - expense };
+  }, [dailyData]);
+
+  const isBalance = dimension === 'balance';
+  const title = isBalance ? '每日报表' : '分类排行榜';
+
   return (
     <Card radius="lg" shadow="md" padding={16}>
       {/* Header */}
       <View style={styles.header}>
-        <AppText size="lg" weight="semibold" color={colors.text}>分类排行榜</AppText>
+        <AppText size="lg" weight="semibold" color={colors.text}>{title}</AppText>
         <View style={styles.tabs}>
-          {(['expense', 'income'] as const).map((t) => (
+          {(['expense', 'income', 'balance'] as const).map((d) => (
             <Pressable
-              key={t}
-              onPress={() => {
-                setTab(t);
-                setExpanded(false);
-              }}
-              style={[styles.tab, tab === t && styles.tabActive]}
+              key={d}
+              onPress={() => handleTabPress(d)}
+              style={[styles.tab, dimension === d && { backgroundColor: TAB_ACTIVE_COLORS[d] }]}
             >
-              <AppText size="sm" weight="semibold" color={tab === t ? colors.white : colors.textLighter}>
-                {t === 'expense' ? '支出' : '收入'}
+              <AppText size="sm" weight="semibold" color={dimension === d ? colors.white : colors.textLighter}>
+                {DIMENSION_LABELS[d]}
               </AppText>
             </Pressable>
           ))}
         </View>
       </View>
 
-      {/* Donut chart */}
-      {data.length > 0 ? (
-        <View style={styles.donutWrap}>
-          <PieChart
-            data={pieData}
-            donut
-            radius={80}
-            innerRadius={52}
-            centerLabelComponent={centerLabel}
-          />
+      {isBalance ? (
+        /* ── 每日报表表格 ── */
+        <View>
+          {/* 表头 */}
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <AppText size="sm" weight="bold" color={colors.text} style={styles.colDate}>日期</AppText>
+            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>支出</AppText>
+            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>收入</AppText>
+            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>结余</AppText>
+          </View>
+
+          {/* 数据行 */}
+          {dailyData.map((d) => {
+            const bal = d.income - d.expense;
+            return (
+              <View key={d.date} style={[styles.tableRow, styles.tableDataRow]}>
+                <AppText size="sm" color={colors.text} style={styles.colDate}>
+                  {d.date.slice(5)}
+                </AppText>
+                <AppText size="sm" color={d.expense > 0 ? colors.coral : colors.textLighter} style={styles.colAmount}>
+                  {formatAmount(d.expense)}
+                </AppText>
+                <AppText size="sm" color={d.income > 0 ? colors.sage : colors.textLighter} style={styles.colAmount}>
+                  {formatAmount(d.income)}
+                </AppText>
+                <AppText size="sm" color={bal < 0 ? colors.coral : bal > 0 ? colors.sage : colors.textLighter} style={styles.colAmount}>
+                  {formatAmount(bal)}
+                </AppText>
+              </View>
+            );
+          })}
+
+          {/* 合计行 */}
+          <View style={[styles.tableRow, styles.tableTotalRow]}>
+            <AppText size="sm" weight="bold" color={colors.text} style={styles.colDate}>合计</AppText>
+            <AppText size="sm" weight="bold" color={colors.coral} style={styles.colAmount}>
+              {formatAmount(totals.expense)}
+            </AppText>
+            <AppText size="sm" weight="bold" color={colors.sage} style={styles.colAmount}>
+              {formatAmount(totals.income)}
+            </AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={totals.balance < 0 ? colors.coral : totals.balance > 0 ? colors.sage : colors.text}
+              style={styles.colAmount}
+            >
+              {formatAmount(totals.balance)}
+            </AppText>
+          </View>
         </View>
       ) : (
-        <AppText size="xl" color={colors.textLighter} style={styles.empty}>
-          暂无数据
-        </AppText>
-      )}
+        /* ── 分类排行原有视图 ── */
+        <>
+          {/* Donut chart */}
+          {data.length > 0 ? (
+            <View style={styles.donutWrap}>
+              <PieChart
+                data={pieData}
+                donut
+                radius={80}
+                innerRadius={52}
+                centerLabelComponent={centerLabel}
+              />
+            </View>
+          ) : (
+            <AppText size="xl" color={colors.textLighter} style={styles.empty}>
+              暂无数据
+            </AppText>
+          )}
 
-      {/* Color legend — 每行 5 个，居中，0% 不显示 */}
-      {legendData.length > 0 && (
-        <View style={styles.legend}>
-          {Array.from({ length: Math.ceil(legendData.length / 5) }, (_, row) =>
-            legendData.slice(row * 5, row * 5 + 5)
-          ).map((rowItems, row) => (
-            <View key={`legend-row-${row}`} style={styles.legendRow}>
-              {rowItems.map((item) => (
-                <View key={`legend-${item.name}-${tab}`} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                  <AppText size="xs" color={colors.textLight}>
-                    {item.name} {item.percent}%
-                  </AppText>
+          {/* Color legend */}
+          {legendData.length > 0 && (
+            <View style={styles.legend}>
+              {Array.from({ length: Math.ceil(legendData.length / 5) }, (_, row) =>
+                legendData.slice(row * 5, row * 5 + 5)
+              ).map((rowItems, row) => (
+                <View key={`legend-row-${row}`} style={styles.legendRow}>
+                  {rowItems.map((item) => (
+                    <View key={`legend-${item.name}-${dimension}`} style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                      <AppText size="xs" color={colors.textLight}>
+                        {item.name} {item.percent}%
+                      </AppText>
+                    </View>
+                  ))}
                 </View>
               ))}
             </View>
-          ))}
-        </View>
-      )}
+          )}
 
-      {/* Rank list */}
-      <View style={styles.list}>
-        {visible.map((item, index) => (
-          <Pressable
-            key={`${item.name}-${tab}`}
-            style={styles.rankRow}
-            onPress={() => item.categoryId && onCategoryPress?.(item.categoryId)}
-          >
-            <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
-              {index + 1}
-            </AppText>
-            <AppText size="xl" style={styles.emoji}>
-              {item.emoji}
-            </AppText>
-            <View style={styles.info}>
-              <AppText size="md" weight="semibold" color={colors.text}>
-                {item.name}
-              </AppText>
+          {/* Rank list */}
+          <View style={styles.list}>
+            {visible.map((item, index) => (
+              <Pressable
+                key={`${item.name}-${dimension}`}
+                style={styles.rankRow}
+                onPress={() => item.categoryId && onCategoryPress?.(item.categoryId)}
+              >
+                <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
+                  {index + 1}
+                </AppText>
+                <AppText size="xl" style={styles.emoji}>
+                  {item.emoji}
+                </AppText>
+                <View style={styles.info}>
+                  <AppText size="md" weight="semibold" color={colors.text}>
+                    {item.name}
+                  </AppText>
+                  <AppText size="sm" color={colors.textLighter}>
+                    {item.count}笔
+                  </AppText>
+                </View>
+                <View style={styles.barWrap}>
+                  <View
+                    style={[
+                      styles.bar,
+                      {
+                        width: (item.amount / maxAmt) * MAX_BAR_WIDTH,
+                        backgroundColor: item.color,
+                      },
+                    ]}
+                  />
+                </View>
+                <AppText
+                  size="sm"
+                  weight="semibold"
+                  color={dimension === 'expense' ? colors.coral : colors.sage}
+                >
+                  {dimension === 'expense' ? '-' : '+'}¥{item.amount.toLocaleString('zh-CN', {
+                    maximumFractionDigits: 0,
+                  })}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Expand toggle */}
+          {data.length > 3 && (
+            <Pressable onPress={() => setExpanded(!expanded)} style={styles.expandBtn}>
               <AppText size="sm" color={colors.textLighter}>
-                {item.count}笔
+                {expanded ? '↑ 收起' : '↓ 查看更多'}
               </AppText>
-            </View>
-            <View style={styles.barWrap}>
-              <View
-                style={[
-                  styles.bar,
-                  {
-                    width: (item.amount / maxAmt) * MAX_BAR_WIDTH,
-                    backgroundColor: item.color,
-                  },
-                ]}
-              />
-            </View>
-            <AppText
-              size="sm"
-              weight="semibold"
-              color={tab === 'expense' ? colors.coral : colors.sage}
-            >
-              {tab === 'expense' ? '-' : '+'}¥{item.amount.toLocaleString('zh-CN', {
-                maximumFractionDigits: 0,
-              })}
-            </AppText>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* Expand toggle */}
-      {data.length > 3 && (
-        <Pressable onPress={() => setExpanded(!expanded)} style={styles.expandBtn}>
-          <AppText size="sm" color={colors.textLighter}>
-            {expanded ? '↑ 收起' : '↓ 查看更多'}
-          </AppText>
-        </Pressable>
+            </Pressable>
+          )}
+        </>
       )}
     </Card>
   );
@@ -174,18 +274,42 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: colors.creamDark,
-    borderRadius: 12,
-    padding: 2,
+    gap: 4,
   },
   tab: {
     paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
-  tabActive: {
-    backgroundColor: colors.coral,
+  // ── 表格样式 ──
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
   },
+  tableHeader: {
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.honey,
+  },
+  tableDataRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.creamDark,
+  },
+  tableTotalRow: {
+    borderTopWidth: 1.5,
+    borderTopColor: colors.honey,
+    marginTop: -StyleSheet.hairlineWidth,
+  },
+  colDate: {
+    width: 60,
+    textAlign: 'center',
+  },
+  colAmount: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  // ── 分类排行样式 ──
   donutWrap: {
     alignItems: 'center',
     marginBottom: 16,

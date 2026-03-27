@@ -5,7 +5,7 @@ import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
 import { AccountSelectorBar } from '../../components/stats/AccountSelectorBar';
 import { SummaryOverviewCard } from '../../components/stats/SummaryOverviewCard';
-import { DailyTrendCard } from '../../components/stats/DailyTrendCard';
+import { DailyTrendCard, type Dimension } from '../../components/stats/DailyTrendCard';
 import { CategoryRankCard } from '../../components/stats/CategoryRankCard';
 import { TransactionRankCard } from '../../components/stats/TransactionRankCard';
 import { TrendInsightRow } from '../../components/stats/TrendInsightRow';
@@ -37,6 +37,7 @@ const AI_INSIGHTS = [
 
 export default function StatsScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [dimension, setDimension] = useState<Dimension>('expense');
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -138,10 +139,13 @@ export default function StatsScreen() {
         avgBalance={avgBalance}
         dateRangeLabel={dateRangeLabel}
       />
-      <DailyTrendCard dailyData={dailyData} />
+      <DailyTrendCard dailyData={dailyData} dimension={dimension} onDimensionChange={setDimension} />
       <CategoryRankCard
         expenseByCategory={expenseByCat}
         incomeByCategory={incomeByCat}
+        dailyData={dailyData}
+        dimension={dimension}
+        onDimensionChange={setDimension}
         onCategoryPress={handleCategoryPress}
       />
       <TransactionRankCard
