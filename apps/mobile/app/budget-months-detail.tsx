@@ -1,22 +1,29 @@
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-import { useOfflineContext } from '../lib/offline-context';
-import { AppText } from '../components/ui/AppText';
-import { Card } from '../components/ui/Card';
-import { colors } from '../constants/theme';
+import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppText } from "../components/ui/AppText";
+import { Card } from "../components/ui/Card";
+import { colors, radii, shadows } from "../constants/theme";
+import { useOfflineContext } from "../lib/offline-context";
 
 function useBudgetMonthsDetail() {
   const { db } = useOfflineContext();
 
   return useQuery({
-    queryKey: ['transactions', 'budget-months-detail'],
+    queryKey: ["transactions", "budget-months-detail"],
     queryFn: async () => {
-      if (!db) return { total: 0, months: [] as { month: string; count: number }[] };
+      if (!db)
+        return { total: 0, months: [] as { month: string; count: number }[] };
 
       const rows = await db.getAllAsync<{ month: string; count: number }>(
-        "SELECT strftime('%Y-%m', occurred_at) as month, COUNT(*) as count FROM transactions WHERE deleted_at IS NULL GROUP BY month ORDER BY month DESC"
+        "SELECT strftime('%Y-%m', occurred_at) as month, COUNT(*) as count FROM transactions WHERE deleted_at IS NULL GROUP BY month ORDER BY month DESC",
       );
 
       return { total: rows.length, months: rows };
@@ -35,8 +42,16 @@ export default function BudgetMonthsDetailScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <AppText size="2xl" onPress={() => router.back()} style={styles.back}>←</AppText>
-        <AppText size="xl" weight="semibold">预算达标月</AppText>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.iconBtn}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <AppText size="2xl" weight="bold" color={colors.text}>
+          预算达标月
+        </AppText>
         <View style={styles.placeholder} />
       </View>
 
@@ -44,39 +59,70 @@ export default function BudgetMonthsDetailScreen() {
         {/* 数字展示 */}
         <View style={styles.heroSection}>
           <AppText style={styles.heroNumber}>{total}</AppText>
-          <AppText size="xl" color={colors.textLight}>月</AppText>
+          <AppText size="xl" color={colors.textLight}>
+            月
+          </AppText>
         </View>
 
         {/* 计算规则 */}
-        <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+        <AppText
+          size="base"
+          color={colors.textLighter}
+          weight="semibold"
+          style={styles.sectionTitle}
+        >
           计算规则
         </AppText>
         <Card style={styles.ruleCard}>
           <View style={styles.ruleRow}>
-            <AppText size="2xl" style={styles.ruleIcon}>📊</AppText>
+            <AppText size="2xl" style={styles.ruleIcon}>
+              📊
+            </AppText>
             <View style={styles.ruleText}>
-              <AppText size="xl" weight="medium">统计有记账的月份</AppText>
-              <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
+              <AppText size="xl" weight="medium">
+                统计有记账的月份
+              </AppText>
+              <AppText
+                size="base"
+                color={colors.textLight}
+                style={styles.ruleDesc}
+              >
                 系统统计所有有过记账记录的不同月份数量
               </AppText>
             </View>
           </View>
           <View style={styles.ruleSeparator} />
           <View style={styles.ruleRow}>
-            <AppText size="2xl" style={styles.ruleIcon}>✅</AppText>
+            <AppText size="2xl" style={styles.ruleIcon}>
+              ✅
+            </AppText>
             <View style={styles.ruleText}>
-              <AppText size="xl" weight="medium">当月有记录即计入</AppText>
-              <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
+              <AppText size="xl" weight="medium">
+                当月有记录即计入
+              </AppText>
+              <AppText
+                size="base"
+                color={colors.textLight}
+                style={styles.ruleDesc}
+              >
                 只要某个月有任意一笔记账记录，该月即被计入
               </AppText>
             </View>
           </View>
           <View style={styles.ruleSeparator} />
           <View style={styles.ruleRow}>
-            <AppText size="2xl" style={styles.ruleIcon}>🎯</AppText>
+            <AppText size="2xl" style={styles.ruleIcon}>
+              🎯
+            </AppText>
             <View style={styles.ruleText}>
-              <AppText size="xl" weight="medium">坚持记账的里程碑</AppText>
-              <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
+              <AppText size="xl" weight="medium">
+                坚持记账的里程碑
+              </AppText>
+              <AppText
+                size="base"
+                color={colors.textLight}
+                style={styles.ruleDesc}
+              >
                 月数越多，说明你的记账习惯越持久
               </AppText>
             </View>
@@ -84,24 +130,40 @@ export default function BudgetMonthsDetailScreen() {
         </Card>
 
         {/* 各月记账详情 */}
-        <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+        <AppText
+          size="base"
+          color={colors.textLighter}
+          weight="semibold"
+          style={styles.sectionTitle}
+        >
           各月记账情况
         </AppText>
         <Card padding={0}>
           {months.map((item, index) => {
-            const [y, m] = item.month.split('-');
+            const [y, m] = item.month.split("-");
             return (
               <View key={item.month}>
                 {index > 0 && <View style={styles.monthSeparator} />}
                 <TouchableOpacity
                   style={styles.monthRow}
                   activeOpacity={0.6}
-                  onPress={() => router.push({ pathname: '/category-detail', params: { year: y, month: String(Number(m) - 1) } })}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/category-detail",
+                      params: { year: y, month: String(Number(m) - 1) },
+                    })
+                  }
                 >
-                  <AppText size="xl" weight="medium">{item.month}</AppText>
+                  <AppText size="xl" weight="medium">
+                    {item.month}
+                  </AppText>
                   <View style={styles.monthRight}>
-                    <AppText size="base" color={colors.textLight}>{item.count} 笔</AppText>
-                    <AppText size="xl" color={colors.textLighter}>›</AppText>
+                    <AppText size="base" color={colors.textLight}>
+                      {item.count} 笔
+                    </AppText>
+                    <AppText size="xl" color={colors.textLighter}>
+                      ›
+                    </AppText>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -109,7 +171,9 @@ export default function BudgetMonthsDetailScreen() {
           })}
           {months.length === 0 && (
             <View style={styles.monthRow}>
-              <AppText size="base" color={colors.textLighter}>暂无记账记录</AppText>
+              <AppText size="base" color={colors.textLighter}>
+                暂无记账记录
+              </AppText>
             </View>
           )}
         </Card>
@@ -121,30 +185,64 @@ export default function BudgetMonthsDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  back: { width: 36 },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...shadows.md,
+  },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   placeholder: { width: 36 },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   heroSection: {
-    alignItems: 'center', paddingVertical: 30, flexDirection: 'row',
-    justifyContent: 'center', gap: 4,
+    alignItems: "center",
+    paddingVertical: 30,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
   },
-  heroNumber: { fontSize: 56, fontWeight: '800', color: colors.honey },
+  heroNumber: { fontSize: 56, fontWeight: "800", color: colors.honey },
   sectionTitle: { paddingTop: 14, paddingBottom: 6, paddingHorizontal: 4 },
   ruleCard: { gap: 0 },
-  ruleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 4 },
-  ruleIcon: { width: 32, textAlign: 'center' },
+  ruleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 4,
+  },
+  ruleIcon: { width: 32, textAlign: "center" },
   ruleText: { flex: 1, gap: 2 },
   ruleDesc: { marginTop: 2 },
-  ruleSeparator: { height: 1, backgroundColor: colors.creamDark, marginVertical: 10, marginLeft: 44 },
-  monthSeparator: { height: 1, backgroundColor: colors.creamDark, marginHorizontal: 18 },
+  ruleSeparator: {
+    height: 1,
+    backgroundColor: colors.creamDark,
+    marginVertical: 10,
+    marginLeft: 44,
+  },
+  monthSeparator: {
+    height: 1,
+    backgroundColor: colors.creamDark,
+    marginHorizontal: 18,
+  },
   monthRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
   monthRight: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });

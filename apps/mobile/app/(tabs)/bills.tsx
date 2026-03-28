@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useQuery } from '@tanstack/react-query';
 import type { Transaction, Category } from '@coco/shared';
 import { useLocalTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
+import { useOfflineContext } from '../../lib/offline-context';
 import { FilterBar, ALL_EXPENSE } from '../../components/bills/FilterBar';
 import { MonthStrip } from '../../components/bills/MonthStrip';
 import { DayGroup } from '../../components/shared/DayGroup';
@@ -88,31 +90,29 @@ function currentMonthLabel(): string {
   return `${now.getFullYear()}年${now.getMonth() + 1}月`;
 }
 
-// ─── Helper: compute month stats ─────────────────────────────────────────────
+// ─── Hook: current month stats from DB ───────────────────────────────────────
 
-interface MonthStats {
-  count: number;
-  total: string;
-}
-
-function computeMonthStats(transactions: readonly Transaction[]): MonthStats {
+function useCurrentMonthStats(categoryId?: string) {
+  const { db } = useOfflineContext();
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-  const monthTxns = transactions.filter(t => {
-    const d = new Date(t.occurred_at);
-    return d.getFullYear() === year && d.getMonth() === month;
+  return useQuery({
+    queryKey: ['transactions', 'month-stats', categoryId ?? 'all'],
+    queryFn: async () => {
+      if (!db) return { count: 0, expense: 0 };
+      const catFilter = categoryId ? ' AND category_id = ?' : '';
+      const params: (string | number)[] = [monthStart, monthEnd];
+      if (categoryId) params.push(categoryId);
+      const row = await db.getFirstAsync<{ count: number; expense: number }>(
+        `SELECT COUNT(*) as count, COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?${catFilter}`,
+        ...params
+      );
+      return { count: row?.count ?? 0, expense: row?.expense ?? 0 };
+    },
+    enabled: !!db,
   });
-
-  const totalExpense = monthTxns
-    .filter(t => t.type === 'expense')
-    .reduce((s, t) => s + t.amount, 0);
-
-  return {
-    count: monthTxns.length,
-    total: fmt(totalExpense),
-  };
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -132,7 +132,8 @@ export default function BillsScreen() {
     ? allTransactions
     : allTransactions.filter(t => t.category_id === activeFilter);
 
-  const monthStats = computeMonthStats(filteredTransactions);
+  const categoryId = activeFilter === ALL_EXPENSE ? undefined : activeFilter;
+  const { data: monthStats } = useCurrentMonthStats(categoryId);
   const days = groupByDay(filteredTransactions);
 
   return (
@@ -162,8 +163,8 @@ export default function BillsScreen() {
         {/* Month summary strip */}
         <MonthStrip
           month={currentMonthLabel()}
-          count={monthStats.count}
-          total={monthStats.total}
+          count={monthStats?.count ?? 0}
+          total={fmt(monthStats?.expense ?? 0)}
         />
 
         {/* Transaction list */}

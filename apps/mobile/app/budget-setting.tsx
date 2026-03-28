@@ -69,7 +69,7 @@ export default function BudgetSettingScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>设置本月预算</Text>
@@ -129,13 +129,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.creamDark,
   },
-  backBtn: {
+  iconBtn: {
     width: 36,
     height: 36,
-    borderRadius: radii.sm,
-    backgroundColor: colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...shadows.md,
   },
   backArrow: {
     fontSize: 18,
