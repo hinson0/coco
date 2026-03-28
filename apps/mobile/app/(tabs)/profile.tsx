@@ -129,11 +129,12 @@ export default function ProfileScreen() {
           iconBg={colors.coralPale}
           title="升级Pro"
           badge={{ text: 'PRO', variant: 'pro' }}
+          onPress={() => router.push('/upgrade-pro')}
         />
         <View style={styles.separator} />
-        <MenuItem icon="💬" iconBg={colors.creamDark} title="意见反馈" />
+        <MenuItem icon="💬" iconBg={colors.creamDark} title="意见反馈" onPress={() => router.push('/feedback')} />
         <View style={styles.separator} />
-        <MenuItem icon="ℹ️" iconBg={colors.creamDark} title="关于棉花记" />
+        <MenuItem icon="ℹ️" iconBg={colors.creamDark} title="关于棉花记" onPress={() => router.push('/about')} />
       </Card>
 
       {/* 退出登录 */}
