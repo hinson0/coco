@@ -1,7 +1,7 @@
 // apps/mobile/app/upgrade-pro.tsx
 // 升级 Pro 页面：展示免费/广告/付费会员权益
 import { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +17,8 @@ export default function UpgradeProScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">升级 Pro</AppText>
         <View style={{ width: 36 }} />
@@ -171,10 +171,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
     backgroundColor: colors.cream, borderBottomWidth: 1, borderBottomColor: colors.creamDark,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+  iconBtn: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: 'center' as const, justifyContent: 'center' as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   scrollContent: {
     padding: 20, paddingBottom: 40,
   },

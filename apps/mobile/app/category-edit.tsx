@@ -1,6 +1,6 @@
 // 分类添加/编辑页面 — emoji 图标选择，名称输入，类型选择（仅新增时）
 import { useState, useEffect, useRef } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -87,8 +87,8 @@ export default function CategoryEditScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">{isEdit ? "编辑分类" : "添加分类"}</AppText>
         {isEdit ? (
@@ -177,10 +177,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
     borderBottomWidth: 1, borderBottomColor: colors.creamDark,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+  iconBtn: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: "center" as const, justifyContent: "center" as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   iconSection: { alignItems: "center", paddingVertical: 28 },
   iconPreview: {
     width: 80, height: 80, borderRadius: 24,

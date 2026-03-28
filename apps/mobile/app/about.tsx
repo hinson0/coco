@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, ScrollView, StyleSheet, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, Linking } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import Constants from 'expo-constants';
 import { AppText } from '../components/ui/AppText';
 import { Card } from '../components/ui/Card';
 import { MenuItem } from '../components/shared/MenuItem';
-import { colors } from '../constants/theme';
+import { colors, radii, shadows } from '../constants/theme';
 
 const version = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -52,11 +52,11 @@ export default function AboutScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">关于棉花记</AppText>
-        <View style={styles.backBtn} />
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -150,10 +150,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  backBtn: {
-    width: 40,
-    alignItems: 'flex-start',
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   scrollView: {
     flex: 1,
   },
