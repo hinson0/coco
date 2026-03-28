@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -102,15 +102,25 @@ export default function StreakDetailScreen() {
           近期记账天数
         </AppText>
         <Card padding={0}>
-          {recentDays.map((day, index) => (
-            <View key={day.day}>
-              {index > 0 && <View style={styles.daySeparator} />}
-              <View style={styles.dayRow}>
-                <AppText size="xl" weight="medium">{day.day}</AppText>
-                <AppText size="base" color={colors.textLight}>{day.count} 笔</AppText>
+          {recentDays.map((day, index) => {
+            const [y, m] = day.day.split('-');
+            return (
+              <View key={day.day}>
+                {index > 0 && <View style={styles.daySeparator} />}
+                <TouchableOpacity
+                  style={styles.dayRow}
+                  activeOpacity={0.6}
+                  onPress={() => router.push({ pathname: '/category-detail', params: { year: y, month: String(Number(m) - 1) } })}
+                >
+                  <AppText size="xl" weight="medium">{day.day}</AppText>
+                  <View style={styles.dayRight}>
+                    <AppText size="base" color={colors.textLight}>{day.count} 笔</AppText>
+                    <AppText size="xl" color={colors.textLighter}>›</AppText>
+                  </View>
+                </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            );
+          })}
           {recentDays.length === 0 && (
             <View style={styles.dayRow}>
               <AppText size="base" color={colors.textLighter}>暂无记账记录</AppText>
@@ -147,5 +157,8 @@ const styles = StyleSheet.create({
   dayRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 18,
+  },
+  dayRight: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
 });

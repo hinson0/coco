@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -88,15 +88,25 @@ export default function BudgetMonthsDetailScreen() {
           各月记账情况
         </AppText>
         <Card padding={0}>
-          {months.map((item, index) => (
-            <View key={item.month}>
-              {index > 0 && <View style={styles.monthSeparator} />}
-              <View style={styles.monthRow}>
-                <AppText size="xl" weight="medium">{item.month}</AppText>
-                <AppText size="base" color={colors.textLight}>{item.count} 笔</AppText>
+          {months.map((item, index) => {
+            const [y, m] = item.month.split('-');
+            return (
+              <View key={item.month}>
+                {index > 0 && <View style={styles.monthSeparator} />}
+                <TouchableOpacity
+                  style={styles.monthRow}
+                  activeOpacity={0.6}
+                  onPress={() => router.push({ pathname: '/category-detail', params: { year: y, month: String(Number(m) - 1) } })}
+                >
+                  <AppText size="xl" weight="medium">{item.month}</AppText>
+                  <View style={styles.monthRight}>
+                    <AppText size="base" color={colors.textLight}>{item.count} 笔</AppText>
+                    <AppText size="xl" color={colors.textLighter}>›</AppText>
+                  </View>
+                </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            );
+          })}
           {months.length === 0 && (
             <View style={styles.monthRow}>
               <AppText size="base" color={colors.textLighter}>暂无记账记录</AppText>
@@ -133,5 +143,8 @@ const styles = StyleSheet.create({
   monthRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 18,
+  },
+  monthRight: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
 });
