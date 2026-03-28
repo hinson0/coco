@@ -140,7 +140,7 @@ export default function CategoryDetailScreen() {
         >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <AppText size="5xl" weight="bold" color={colors.text}>账单</AppText>
+        <AppText size="5xl" weight="bold" color={colors.text}>分类账单</AppText>
         {/* 右侧占位，保持标题居中 */}
         <View style={styles.headerPlaceholder} />
       </View>
