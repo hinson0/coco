@@ -33,7 +33,7 @@ const TYPE_OPTIONS: readonly TypeConfig[] = [
   { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信" },
   { brandIcon: BRAND_ICONS.alipay, label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
   { emoji: "💰", label: "现金", dbType: "cash", autoName: "现金" },
-  { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "请输入账户名称，可调整icon" },
+  { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "请输入账户名称，可调整图标" },
 ];
 
 function TypeIcon({ config, size = 14 }: { config: TypeConfig; size?: number }) {
