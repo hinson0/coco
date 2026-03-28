@@ -53,7 +53,11 @@ export default function AccountEditScreen() {
   const { mutateAsync: updateAccount } = useUpdateAccount();
   const { mutateAsync: deleteAccount } = useDeleteAccount();
 
-  const initialTypeConfig = TYPE_OPTIONS.find((t) => t.dbType === params.type) ?? TYPE_OPTIONS[0];
+  // 编辑模式下用 autoName 精确匹配（区分微信/支付宝，二者都是 e_wallet）
+  const initialTypeConfig = (isEdit && params.type === 'e_wallet'
+    ? TYPE_OPTIONS.find((t) => t.autoName === params.name)
+    : TYPE_OPTIONS.find((t) => t.dbType === params.type)
+  ) ?? TYPE_OPTIONS[0];
 
   const [selectedType, setSelectedType] = useState<TypeConfig>(initialTypeConfig);
   const [name, setName] = useState(params.name ?? "");
@@ -179,15 +183,27 @@ export default function AccountEditScreen() {
         <View style={styles.formCard}>
           {/* 名称行：左侧图标 + 右侧名称输入 */}
           <View style={styles.formRow}>
-            <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
+            <TouchableOpacity
+              onPress={() => selectedType.dbType === 'custom' && setShowEmojiPicker(true)}
+              activeOpacity={selectedType.dbType === 'custom' ? 0.8 : 1}
+            >
               <LinearGradient
                 colors={[colors.sagePale, colors.coralPale]}
                 style={styles.inlineIcon}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+                {selectedType.brandIcon ? (
+                  <Image source={selectedType.brandIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                ) : (
+                  <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+                )}
               </LinearGradient>
+              {selectedType.dbType === 'custom' ? (
+                <View style={styles.editIconBadge}>
+                  <AppText style={{ fontSize: 8 }}>⚙️</AppText>
+                </View>
+              ) : null}
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <AppText size="xs" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>账户名称</AppText>
@@ -305,6 +321,20 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 14,
     alignItems: "center", justifyContent: "center",
     ...shadows.sm,
+  },
+
+  editIconBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.creamDark,
   },
 
   // Fields
