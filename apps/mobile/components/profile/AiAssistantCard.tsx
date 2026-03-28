@@ -15,7 +15,7 @@ export function AiAssistantCard() {
       >
         <View style={styles.row}>
           <View style={styles.avatar}>
-            <AppText size="2xl">🍃</AppText>
+            <AppText size="2xl">🌿</AppText>
           </View>
           <View style={styles.info}>
             <AppText size="xl" weight="bold" color={colors.sage}>棉花助手</AppText>
