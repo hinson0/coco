@@ -124,7 +124,7 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
 
       <View style={styles.dateRow}>
         <Pressable onPress={handlePrev} style={styles.arrow}>
-          <AppText size="xl" weight="bold" color={colors.textLight}>‹</AppText>
+          <AppText size="3xl" weight="bold" color={colors.textLight}>‹</AppText>
         </Pressable>
         <Pressable style={styles.dateBtn} onPress={() => setPickerVisible(true)}>
           <CalendarIcon day={day} />
@@ -136,7 +136,7 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
           ) : null}
         </Pressable>
         <Pressable onPress={handleNext} style={styles.arrow}>
-          <AppText size="xl" weight="bold" color={colors.textLight}>›</AppText>
+          <AppText size="3xl" weight="bold" color={colors.textLight}>›</AppText>
         </Pressable>
       </View>
 
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   arrow: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
