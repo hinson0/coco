@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Pressable, Modal, ScrollView, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { AppText } from '../ui/AppText';
 import { colors, shadows, radii } from '../../constants/theme';
 import type { Account } from '@coco/shared';
@@ -158,6 +159,14 @@ function AccountFilterSheet({
                 ) : null}
               </Pressable>
             ))}
+
+            {/* 新建账户入口 */}
+            <Pressable
+              style={styles.sheetAddBtn}
+              onPress={() => { onClose(); router.push('/accounts'); }}
+            >
+              <AppText size="lg" weight="semibold" color={colors.sage}>+ 管理账户</AppText>
+            </Pressable>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -380,5 +389,15 @@ const styles = StyleSheet.create({
   sheetItemInfo: {
     flex: 1,
     gap: 2,
+  },
+  sheetAddBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+    marginHorizontal: 8,
+    borderRadius: radii.sm,
+    borderWidth: 1.5,
+    borderColor: colors.sagePale,
+    borderStyle: 'dashed',
   },
 });
