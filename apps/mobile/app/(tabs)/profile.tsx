@@ -122,13 +122,6 @@ export default function ProfileScreen() {
         工具
       </AppText>
       <Card padding={0} style={styles.menuCard}>
-        <MenuItem
-          icon="📸"
-          iconBg={colors.lavenderPale}
-          title="小票识别"
-          badge={{ text: 'NEW', variant: 'new' }}
-        />
-        <View style={styles.separator} />
         <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" onPress={() => setExportVisible(true)} />
         <View style={styles.separator} />
         <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" onPress={() => setReminderVisible(true)} />
@@ -146,6 +139,8 @@ export default function ProfileScreen() {
           badge={{ text: 'PRO', variant: 'pro' }}
           onPress={() => router.push('/upgrade-pro')}
         />
+        <View style={styles.separator} />
+        <MenuItem icon="🎬" iconBg={colors.honeyPale} title="广告收益" onPress={() => router.push('/ad-rewards')} />
         <View style={styles.separator} />
         <MenuItem icon="💬" iconBg={colors.creamDark} title="意见反馈" onPress={() => router.push('/feedback')} />
         <View style={styles.separator} />
