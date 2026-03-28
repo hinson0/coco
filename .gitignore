@@ -30,6 +30,8 @@ apps/mobile/package-lock.json
 .claude/*local*
 .claude/hook-logs/
 .claude/session-logs/
+.claude/statusline-logs/
+.claude/statusline.log
 .remember/
 
 *.swp
