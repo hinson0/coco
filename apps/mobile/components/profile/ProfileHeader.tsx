@@ -16,9 +16,6 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ name, daysCount, avatarType = 'emoji', avatarValue = '🌿', onAvatarPress, onSettingsPress }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.settingsBtn} onPress={onSettingsPress} activeOpacity={0.7}>
-        <AppText size="2xl">⚙️</AppText>
-      </TouchableOpacity>
       <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.8}>
         <LinearGradient
           colors={[colors.sagePale, colors.coralPale]}
