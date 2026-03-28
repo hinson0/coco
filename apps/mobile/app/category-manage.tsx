@@ -1,6 +1,6 @@
 // 分类列表管理页面 — 支出/收入 Tab 切换，预设保护，软删除
 import { useState } from "react";
-import { View, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalCategories } from "../hooks/useLocalCategories";
@@ -20,8 +20,8 @@ export default function CategoryManageScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">分类管理</AppText>
         <View style={{ width: 36 }} />
@@ -103,12 +103,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
-    backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.creamDark,
+    backgroundColor: colors.cream,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+  iconBtn: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: "center" as const, justifyContent: "center" as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   tabRow: { flexDirection: "row", gap: 12, padding: spacing.xl },
   tab: {
     flex: 1, paddingVertical: 12, borderRadius: radii.md,
