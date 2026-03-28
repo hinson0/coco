@@ -37,7 +37,7 @@ export function SummaryOverviewCard({
       {/* Title row */}
       <View style={styles.titleRow}>
         <View style={styles.titleAccent} />
-        <AppText size="lg" weight="semibold" color={colors.text}>收支总览</AppText>
+        <AppText size="xl" weight="semibold" color={colors.text}>收支总览</AppText>
       </View>
 
       <View style={styles.divider} />
@@ -46,15 +46,15 @@ export function SummaryOverviewCard({
       <View style={styles.row}>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>支出</AppText>
-          <AppText size="xl" weight="bold" color={colors.coral}>{fmt(totalExpense)}</AppText>
+          <AppText size="2xl" weight="bold" color={colors.coral}>{fmt(totalExpense)}</AppText>
         </View>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>收入</AppText>
-          <AppText size="xl" weight="bold" color={colors.sage}>{fmt(totalIncome)}</AppText>
+          <AppText size="2xl" weight="bold" color={colors.sage}>{fmt(totalIncome)}</AppText>
         </View>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>结余</AppText>
-          <AppText size="xl" weight="bold" color={balanceColor(balance)}>{fmtSigned(balance)}</AppText>
+          <AppText size="2xl" weight="bold" color={balanceColor(balance)}>{fmtSigned(balance)}</AppText>
         </View>
       </View>
 
@@ -64,15 +64,15 @@ export function SummaryOverviewCard({
       <View style={styles.row}>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>日均支出</AppText>
-          <AppText size="md" weight="semibold" color={colors.textLight}>{fmt(avgExpense)}</AppText>
+          <AppText size="lg" weight="semibold" color={colors.textLight}>{fmt(avgExpense)}</AppText>
         </View>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>日均收入</AppText>
-          <AppText size="md" weight="semibold" color={colors.textLight}>{fmt(avgIncome)}</AppText>
+          <AppText size="lg" weight="semibold" color={colors.textLight}>{fmt(avgIncome)}</AppText>
         </View>
         <View style={styles.col}>
           <AppText size="sm" color={colors.textLighter}>日均结余</AppText>
-          <AppText size="md" weight="semibold" color={balanceColor(avgBalance)}>{fmtSigned(avgBalance)}</AppText>
+          <AppText size="lg" weight="semibold" color={balanceColor(avgBalance)}>{fmtSigned(avgBalance)}</AppText>
         </View>
       </View>
 
