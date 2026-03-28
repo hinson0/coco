@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
-import { useLocalTransactions } from '../../hooks/useLocalTransactions';
+import { useOfflineContext } from '../../lib/offline-context';
 import { useProfile, useEnsureProfile } from '../../hooks/useLocalProfile';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
@@ -11,51 +12,61 @@ import { MenuItem } from '../../components/shared/MenuItem';
 import { Card } from '../../components/ui/Card';
 import { AppText } from '../../components/ui/AppText';
 import { colors } from '../../constants/theme';
-import type { Transaction } from '@coco/shared'; // used in computeStats param type
 
-function computeStats(transactions: readonly Transaction[]) {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+function useProfileStats() {
+  const { db } = useOfflineContext();
 
-  const monthlyCount = transactions.filter((t) => {
-    const d = new Date(t.occurred_at);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).length;
+  return useQuery({
+    queryKey: ['transactions', 'stats'],
+    queryFn: async () => {
+      if (!db) return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
 
-  // compute consecutive days streak
-  const uniqueDays = new Set(
-    transactions.map((t) => new Date(t.occurred_at).toDateString())
-  );
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    if (uniqueDays.has(d.toDateString())) {
-      streak += 1;
-    } else {
-      break;
-    }
-  }
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-  // compute months with transactions (as budget-target proxy)
-  const months = new Set(
-    transactions.map((t) => {
-      const d = new Date(t.occurred_at);
-      return `${d.getFullYear()}-${d.getMonth()}`;
-    })
-  );
-  const budgetMonths = months.size;
+      const [monthlyRow, budgetRow, dayRows] = await Promise.all([
+        db.getFirstAsync<{ count: number }>(
+          'SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?',
+          monthStart, monthEnd
+        ),
+        db.getFirstAsync<{ count: number }>(
+          "SELECT COUNT(DISTINCT strftime('%Y-%m', occurred_at)) as count FROM transactions WHERE deleted_at IS NULL"
+        ),
+        db.getAllAsync<{ day: string }>(
+          "SELECT DISTINCT date(occurred_at) as day FROM transactions WHERE deleted_at IS NULL ORDER BY day DESC"
+        ),
+      ]);
 
-  return { monthlyCount, streak, budgetMonths };
+      // 计算连续记账天数
+      let streak = 0;
+      const today = new Date();
+      const daySet = new Set(dayRows.map((r) => r.day));
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (daySet.has(key)) {
+          streak += 1;
+        } else {
+          break;
+        }
+      }
+
+      return {
+        monthlyCount: monthlyRow?.count ?? 0,
+        streak,
+        budgetMonths: budgetRow?.count ?? 0,
+      };
+    },
+    enabled: !!db,
+  });
 }
 
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
-  const { data: txData } = useLocalTransactions();
-  const transactions = txData?.data ?? [];
-  const { monthlyCount, streak, budgetMonths } = computeStats(transactions);
+  const { data: stats } = useProfileStats();
+  const { monthlyCount = 0, streak = 0, budgetMonths = 0 } = stats ?? {};
   const { data: profile } = useProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
 
