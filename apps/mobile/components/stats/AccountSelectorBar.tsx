@@ -3,7 +3,6 @@ import { View, Pressable, Modal, StyleSheet } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, shadows, radii } from '../../constants/theme';
 
-const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'] as const;
 
 interface AccountSelectorBarProps {
@@ -11,17 +10,8 @@ interface AccountSelectorBarProps {
   readonly onDateChange: (date: Date) => void;
 }
 
-function isCurrentMonth(date: Date): boolean {
-  const now = new Date();
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-}
-
-function formatDateLabel(date: Date): string {
-  const m = date.getMonth() + 1;
-  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const day = isCurrentMonth(date) ? new Date().getDate() : lastDay;
-  const weekday = WEEKDAYS[new Date(date.getFullYear(), date.getMonth(), day).getDay()];
-  return `${m}月${day}日  ${weekday}`;
+function formatMonthLabel(date: Date): string {
+  return `${date.getMonth() + 1}月`;
 }
 
 function CalendarIcon({ day }: { day: number }) {
@@ -100,8 +90,7 @@ function MonthPicker({
 export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelectorBarProps) {
   const [pickerVisible, setPickerVisible] = useState(false);
 
-  const isCurrent = isCurrentMonth(currentDate);
-  const day = isCurrent ? new Date().getDate() : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const month = currentDate.getMonth() + 1;
 
   return (
     <View style={styles.container}>
@@ -111,13 +100,8 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
       </Pressable>
 
       <Pressable style={styles.dateBtn} onPress={() => setPickerVisible(true)}>
-        <CalendarIcon day={day} />
-        <AppText size="lg" weight="semibold" color={colors.text}>{formatDateLabel(currentDate)}</AppText>
-        {isCurrent ? (
-          <View style={styles.todayBadge}>
-            <AppText size="sm" weight="semibold" color={colors.sage}>今天</AppText>
-          </View>
-        ) : null}
+        <CalendarIcon day={month} />
+        <AppText size="lg" weight="semibold" color={colors.text}>{formatMonthLabel(currentDate)}</AppText>
       </Pressable>
 
       <MonthPicker
@@ -183,12 +167,6 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     backgroundColor: colors.white,
-  },
-  todayBadge: {
-    backgroundColor: colors.sagePale,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
   },
   // Month picker modal
   overlay: {
