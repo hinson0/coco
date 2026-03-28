@@ -55,6 +55,8 @@ Claude Code Plan Mode 的计划文件保存在**当前项目目录内**：
 
 - `useSafeAreaInsets()` 处理安全区
 - 统一 Header 布局：返回按钮(←) | 标题 | 右侧操作/占位
+- Header 背景统一用 `colors.cream`，不使用白色背景，不加底部分隔线
+- 返回按钮统一样式：36x36 圆角白底带阴影（`borderRadius: radii.md, backgroundColor: colors.white, ...shadows.md`），箭头用 `<Text style={{ fontSize: 18, color: colors.text, lineHeight: 22 }}>←</Text>`
 - 键盘处理：`Keyboard.addListener` 动态调整底部按钮位置
 - 提交状态：`submitting` state + `ActivityIndicator` + disabled
 - 导航用 `router.push()` / `router.back()`（expo-router）
