@@ -151,6 +151,7 @@ export default function StatsScreen() {
       <TransactionRankCard
         expenseTransactions={expenseRank}
         incomeTransactions={incomeRank}
+        dimension={dimension}
       />
       <TrendInsightRow items={AI_INSIGHTS} />
     </ScrollView>

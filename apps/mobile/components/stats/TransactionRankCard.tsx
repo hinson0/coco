@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Card } from '../ui/Card';
 import { AppText } from '../ui/AppText';
 import { colors } from '../../constants/theme';
 import type { RankedTransaction } from '../../utils/statsUtils';
+import type { Dimension } from './DailyTrendCard';
 
 interface TransactionRankCardProps {
   readonly expenseTransactions: RankedTransaction[];
   readonly incomeTransactions: RankedTransaction[];
+  readonly dimension: Dimension;
 }
 
 /**
@@ -25,9 +27,17 @@ const MAX_EXPANDED = 10;
 export function TransactionRankCard({
   expenseTransactions,
   incomeTransactions,
+  dimension,
 }: TransactionRankCardProps) {
   const [tab, setTab] = useState<'expense' | 'income'>('expense');
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (dimension === 'expense' || dimension === 'income') {
+      setTab(dimension);
+      setExpanded(false);
+    }
+  }, [dimension]);
 
   const data = tab === 'expense' ? expenseTransactions : incomeTransactions;
   const visible = expanded ? data.slice(0, MAX_EXPANDED) : data.slice(0, MAX_VISIBLE);
@@ -38,29 +48,9 @@ export function TransactionRankCard({
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleAccent} />
-          <AppText size="lg" weight="semibold" color={colors.text}>
+          <AppText size="xl" weight="semibold" color={colors.text}>
             明细排行榜
           </AppText>
-        </View>
-        <View style={styles.tabs}>
-          {(['expense', 'income'] as const).map((t) => (
-            <Pressable
-              key={t}
-              onPress={() => {
-                setTab(t);
-                setExpanded(false);
-              }}
-              style={[styles.tab, tab === t && styles.tabActive]}
-            >
-              <AppText
-                size="sm"
-                weight="semibold"
-                color={tab === t ? colors.white : colors.textLighter}
-              >
-                {t === 'expense' ? '支出' : '收入'}
-              </AppText>
-            </Pressable>
-          ))}
         </View>
       </View>
 
@@ -72,23 +62,23 @@ export function TransactionRankCard({
               {/* 主行 */}
               <View style={styles.rankRow}>
                 {/* 序号 */}
-                <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
+                <AppText size="md" color={colors.textLighter} style={styles.rankNum}>
                   {index + 1}
                 </AppText>
 
                 {/* 分类图标 */}
-                <AppText size="xl" style={styles.emoji}>
+                <AppText size="2xl" style={styles.emoji}>
                   {item.categoryEmoji}
                 </AppText>
 
                 {/* 分类名称 */}
-                <AppText size="md" weight="semibold" color={colors.text} style={styles.categoryName}>
+                <AppText size="lg" weight="semibold" color={colors.text} style={styles.categoryName}>
                   {item.categoryName}
                 </AppText>
 
                 {/* 金额（右对齐） */}
                 <AppText
-                  size="sm"
+                  size="md"
                   weight="semibold"
                   color={tab === 'expense' ? colors.coral : colors.sage}
                 >
@@ -100,7 +90,7 @@ export function TransactionRankCard({
               </View>
               {/* 日期/备注行 */}
               <View style={styles.detailRow}>
-                <AppText size="xs" color={colors.textLighter} numberOfLines={1}>
+                <AppText size="sm" color={colors.textLighter} numberOfLines={1}>
                   {formatDate(item.date)}
                   {item.note ? ` · ${item.note}` : ''}
                 </AppText>
@@ -143,20 +133,6 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 2,
     backgroundColor: colors.honey,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.creamDark,
-    borderRadius: 12,
-    padding: 2,
-  },
-  tab: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  tabActive: {
-    backgroundColor: colors.coral,
   },
   list: {
     gap: 4,
