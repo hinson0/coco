@@ -3,12 +3,15 @@ import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
+import { useAccounts } from '../../hooks/useLocalAccounts';
 import { AccountSelectorBar } from '../../components/stats/AccountSelectorBar';
 import { SummaryOverviewCard } from '../../components/stats/SummaryOverviewCard';
 import { DailyTrendCard, type Dimension } from '../../components/stats/DailyTrendCard';
 import { CategoryRankCard } from '../../components/stats/CategoryRankCard';
 import { TransactionRankCard } from '../../components/stats/TransactionRankCard';
 import { TrendInsightRow } from '../../components/stats/TrendInsightRow';
+import { runInsightRules } from '../../utils/insights/runInsightRules';
+import type { InsightContext } from '../../utils/insights/types';
 import { colors } from '../../constants/theme';
 import {
   buildDailyData,
@@ -16,7 +19,6 @@ import {
   buildTransactionRank,
   computeDaysElapsed,
   buildDateRangeLabel,
-  formatMonthLabelPadded,
 } from '../../utils/statsUtils';
 import type { Category } from '@coco/shared';
 
@@ -29,20 +31,21 @@ const CATEGORY_COLORS = [
   colors.sageLight,
 ] as const;
 
-const AI_INSIGHTS = [
-  { emoji: '🍜', title: '餐饮支出偏高', desc: '较上月增长 18%，建议控制外卖频次', badge: { text: '↑ 18%', direction: 'up' as const } },
-  { emoji: '🚌', title: '交通支出正常', desc: '较上月减少 5%，保持得不错', badge: { text: '↓ 5%', direction: 'down' as const } },
-  { emoji: '💡', title: '节省建议', desc: '本月如减少 3 次外卖，可省约 ¥120' },
-];
-
 export default function StatsScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dimension, setDimension] = useState<Dimension>('expense');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const { data: filtered = [] } = useMonthlyTransactions(year, month);
+  const { data: filtered = [] } = useMonthlyTransactions(year, month, selectedAccountId);
   const { data: categories = [] } = useLocalCategories();
+  const { data: accounts = [] } = useAccounts();
+
+  // 上月交易（用于环比对比）
+  const prevYear = month === 0 ? year - 1 : year;
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const { data: prevFiltered = [] } = useMonthlyTransactions(prevYear, prevMonth, selectedAccountId);
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};
@@ -68,6 +71,21 @@ export default function StatsScreen() {
   const avgExpense = totalExpense / daysElapsed;
   const avgIncome = totalIncome / daysElapsed;
   const avgBalance = balance / daysElapsed;
+
+  // AI 洞察
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const insights = useMemo(() => {
+    const ctx: InsightContext = {
+      currentMonth: filtered,
+      previousMonth: prevFiltered,
+      categories,
+      year,
+      month,
+      daysInMonth,
+      daysElapsed,
+    };
+    return runInsightRules(ctx);
+  }, [filtered, prevFiltered, categories, year, month, daysInMonth, daysElapsed]);
 
   // 日维度数据
   const dailyData = useMemo(
@@ -95,28 +113,15 @@ export default function StatsScreen() {
     [filtered, categoryMap],
   );
 
-  // 月份导航
-  const handlePrev = useCallback(() => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() - 1);
-      return d;
-    });
-  }, []);
-
-  const handleNext = useCallback(() => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() + 1);
-      return d;
-    });
+  // 月份选择
+  const handleDateChange = useCallback((date: Date) => {
+    setCurrentDate(date);
   }, []);
 
   const handleCategoryPress = useCallback((categoryId: string) => {
     router.push({ pathname: '/category-detail', params: { categoryId } });
   }, []);
 
-  const monthLabel = formatMonthLabelPadded(currentDate);
   const dateRangeLabel = buildDateRangeLabel(currentDate);
 
   return (
@@ -126,9 +131,11 @@ export default function StatsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <AccountSelectorBar
-        monthLabel={monthLabel}
-        onPrev={handlePrev}
-        onNext={handleNext}
+        currentDate={currentDate}
+        onDateChange={handleDateChange}
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+        onAccountChange={setSelectedAccountId}
       />
       <SummaryOverviewCard
         totalExpense={totalExpense}
@@ -153,7 +160,7 @@ export default function StatsScreen() {
         incomeTransactions={incomeRank}
         dimension={dimension}
       />
-      <TrendInsightRow items={AI_INSIGHTS} />
+      <TrendInsightRow items={insights} />
     </ScrollView>
   );
 }

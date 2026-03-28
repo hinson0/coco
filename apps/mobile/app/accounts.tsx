@@ -1,6 +1,6 @@
 // apps/mobile/app/accounts.tsx
 // 账户列表页面：总资产卡片 + 账户列表 + 余额显示
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, Image, type ImageSourcePropType } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,6 +11,11 @@ import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { Account } from "@coco/shared";
 import type * as SQLite from "expo-sqlite";
+
+const BRAND_ICON_MAP: Record<string, ImageSourcePropType> = {
+  wechat: require("../assets/images/wechat.png"),
+  alipay: require("../assets/images/alipay.png"),
+};
 
 function useAccountBalanceInline(db: SQLite.SQLiteDatabase | null, accountId: string) {
   return useQuery({
@@ -45,11 +50,14 @@ function AccountRow({ account, onLongPress }: { readonly account: Account; reado
       activeOpacity={0.7}
     >
       <View style={styles.rowIcon}>
-        <AppText style={{ fontSize: 24 }}>{account.icon}</AppText>
+        {BRAND_ICON_MAP[account.icon] ? (
+          <Image source={BRAND_ICON_MAP[account.icon]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+        ) : (
+          <AppText style={{ fontSize: 24 }}>{account.icon}</AppText>
+        )}
       </View>
       <View style={{ flex: 1 }}>
         <AppText size="xl" weight="medium">{account.name}</AppText>
-        <AppText size="sm" color={colors.textLighter}>{account.type}</AppText>
       </View>
       <AppText size="xl" weight="semibold">¥ {balance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</AppText>
       <AppText size="xl" color={colors.textLighter} style={{ marginLeft: 8 }}>›</AppText>
