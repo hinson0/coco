@@ -45,9 +45,7 @@ describe('categoryChangeRule', () => {
       currentMonth: [makeTx('c1', 1200)],
       previousMonth: [makeTx('c1', 1000)],
     });
-    const result = categoryChangeRule(ctx);
-    expect(result).not.toBeNull();
-    const items = Array.isArray(result) ? result : [result!];
+    const items = categoryChangeRule(ctx)!;
     const up = items.find(i => i.badge?.direction === 'up');
     expect(up).toBeDefined();
     expect(up!.type).toBe('category-change');
@@ -59,8 +57,7 @@ describe('categoryChangeRule', () => {
       currentMonth: [makeTx('c1', 2000), makeTx('c2', 200)],
       previousMonth: [makeTx('c1', 1000), makeTx('c2', 500)],
     });
-    const result = categoryChangeRule(ctx);
-    const items = Array.isArray(result) ? result : [result!];
+    const items = categoryChangeRule(ctx)!;
     expect(items.length).toBeLessThanOrEqual(2);
   });
 
@@ -69,8 +66,7 @@ describe('categoryChangeRule', () => {
       currentMonth: [makeTx('c1', 2000), makeTx('c2', 200)],
       previousMonth: [makeTx('c1', 1000), makeTx('c2', 500)],
     });
-    const result = categoryChangeRule(ctx);
-    const items = Array.isArray(result) ? result : [result!];
+    const items = categoryChangeRule(ctx)!;
     const up = items.find(i => i.badge?.direction === 'up');
     const down = items.find(i => i.badge?.direction === 'down');
     if (up) expect(up.priority).toBe(2);
@@ -82,8 +78,7 @@ describe('categoryChangeRule', () => {
       currentMonth: [makeTx('c1', 1200)],
       previousMonth: [makeTx('c1', 1000)],
     });
-    const result = categoryChangeRule(ctx);
-    const items = Array.isArray(result) ? result : [result!];
+    const items = categoryChangeRule(ctx)!;
     expect(items[0].navigation?.route).toBe('/category-detail');
     expect(items[0].navigation?.params.categoryId).toBe('c1');
   });
