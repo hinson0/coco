@@ -27,6 +27,7 @@ apps/mobile/package-lock.json
 
 # Claude Code local files (machine-specific)
 .claude/worktrees/
+.claude/statusline-logs/
 .claude/*local*
 .claude/hook-logs/
 .claude/session-logs/
