@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { useProfile, useEnsureProfile } from '../../hooks/useLocalProfile';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
+import { ExportSheet } from '../../components/profile/ExportSheet';
 import { MenuItem } from '../../components/shared/MenuItem';
 import { Card } from '../../components/ui/Card';
 import { AppText } from '../../components/ui/AppText';
@@ -66,6 +67,7 @@ function useProfileStats() {
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { data: stats } = useProfileStats();
+  const [exportVisible, setExportVisible] = useState(false);
   const { monthlyCount = 0, streak = 0, budgetMonths = 0 } = stats ?? {};
   const { data: profile } = useProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
@@ -125,7 +127,7 @@ export default function ProfileScreen() {
           badge={{ text: 'NEW', variant: 'new' }}
         />
         <View style={styles.separator} />
-        <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" />
+        <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" onPress={() => setExportVisible(true)} />
         <View style={styles.separator} />
         <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" />
       </Card>
@@ -160,6 +162,7 @@ export default function ProfileScreen() {
           退出登录
         </AppText>
       </Card>
+      <ExportSheet visible={exportVisible} onClose={() => setExportVisible(false)} />
     </ScrollView>
   );
 }
