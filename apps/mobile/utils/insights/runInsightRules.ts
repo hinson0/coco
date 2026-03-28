@@ -9,8 +9,10 @@ import { savingRule } from './savingRule';
 export function runInsightRules(ctx: InsightContext): InsightItem[] {
   const results: InsightItem[] = [];
 
-  // 健康度始终存在
-  results.push(healthScoreRule(ctx));
+  // 健康度：无交易时不显示
+  if (ctx.currentMonth.length > 0) {
+    results.push(healthScoreRule(ctx));
+  }
 
   // 执行独立规则
   const catChange = categoryChangeRule(ctx);
