@@ -28,16 +28,24 @@ export function useLocalTransactions(page = 1, limit = 20) {
   });
 }
 
-export function useMonthlyTransactions(year: number, month: number) {
+export function useMonthlyTransactions(year: number, month: number, accountId?: string | null) {
   const { db } = useOfflineContext();
 
   const startDate = new Date(year, month, 1).toISOString();
   const endDate = new Date(year, month + 1, 1).toISOString();
 
   return useQuery({
-    queryKey: ["transactions", "monthly", `${year}-${String(month + 1).padStart(2, "0")}`],
+    queryKey: ["transactions", "monthly", `${year}-${String(month + 1).padStart(2, "0")}`, accountId ?? "all"],
     queryFn: async (): Promise<readonly Transaction[]> => {
       if (!db) return [];
+      if (accountId) {
+        return db.getAllAsync<Transaction>(
+          "SELECT * FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? AND account_id = ? ORDER BY occurred_at DESC",
+          startDate,
+          endDate,
+          accountId
+        );
+      }
       return db.getAllAsync<Transaction>(
         "SELECT * FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC",
         startDate,

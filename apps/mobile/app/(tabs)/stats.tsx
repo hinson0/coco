@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useMonthlyTransactions } from '../../hooks/useLocalTransactions';
 import { useLocalCategories } from '../../hooks/useLocalCategories';
+import { useAccounts } from '../../hooks/useLocalAccounts';
 import { AccountSelectorBar } from '../../components/stats/AccountSelectorBar';
 import { SummaryOverviewCard } from '../../components/stats/SummaryOverviewCard';
 import { DailyTrendCard, type Dimension } from '../../components/stats/DailyTrendCard';
@@ -33,16 +34,18 @@ const CATEGORY_COLORS = [
 export default function StatsScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dimension, setDimension] = useState<Dimension>('expense');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const { data: filtered = [] } = useMonthlyTransactions(year, month);
+  const { data: filtered = [] } = useMonthlyTransactions(year, month, selectedAccountId);
   const { data: categories = [] } = useLocalCategories();
+  const { data: accounts = [] } = useAccounts();
 
   // 上月交易（用于环比对比）
   const prevYear = month === 0 ? year - 1 : year;
   const prevMonth = month === 0 ? 11 : month - 1;
-  const { data: prevFiltered = [] } = useMonthlyTransactions(prevYear, prevMonth);
+  const { data: prevFiltered = [] } = useMonthlyTransactions(prevYear, prevMonth, selectedAccountId);
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};
@@ -130,6 +133,9 @@ export default function StatsScreen() {
       <AccountSelectorBar
         currentDate={currentDate}
         onDateChange={handleDateChange}
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+        onAccountChange={setSelectedAccountId}
       />
       <SummaryOverviewCard
         totalExpense={totalExpense}
