@@ -82,7 +82,7 @@ export default function ProfileScreen() {
   };
 
   const statsItems = [
-    { value: String(monthlyCount), label: '本月笔数', onPress: () => router.push('/(tabs)/diary') },
+    { value: String(monthlyCount), label: '本月笔数', onPress: () => router.push('/category-detail') },
     { value: String(streak), label: '连续记账', onPress: () => router.push('/streak-detail') },
     { value: String(budgetMonths), label: '预算达标月', onPress: () => router.push('/budget-months-detail') },
   ];
