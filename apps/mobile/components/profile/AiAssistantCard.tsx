@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.sagePale,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.md,

@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Card } from '../ui/Card';
 import { AppText } from '../ui/AppText';
 import { colors } from '../../constants/theme';
@@ -6,6 +6,7 @@ import { colors } from '../../constants/theme';
 interface StatItem {
   readonly value: string;
   readonly label: string;
+  readonly onPress?: () => void;
 }
 
 interface StatsStripProps {
@@ -19,10 +20,10 @@ export function StatsStrip({ items }: StatsStripProps) {
         {items.map((item, index) => (
           <View key={index} style={styles.itemWrapper}>
             {index > 0 && <View style={styles.divider} />}
-            <View style={styles.item}>
+            <TouchableOpacity style={styles.item} onPress={item.onPress} activeOpacity={item.onPress ? 0.6 : 1}>
               <AppText size="4xl" weight="bold" style={styles.value}>{item.value}</AppText>
               <AppText size="sm" color={colors.textLighter} style={styles.label}>{item.label}</AppText>
-            </View>
+            </TouchableOpacity>
           </View>
         ))}
       </View>
