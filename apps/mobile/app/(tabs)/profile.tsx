@@ -9,6 +9,7 @@ import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
 import { ExportSheet } from '../../components/profile/ExportSheet';
+import { ReminderSheet } from '../../components/profile/ReminderSheet';
 import { MenuItem } from '../../components/shared/MenuItem';
 import { Card } from '../../components/ui/Card';
 import { AppText } from '../../components/ui/AppText';
@@ -68,6 +69,7 @@ export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { data: stats } = useProfileStats();
   const [exportVisible, setExportVisible] = useState(false);
+  const [reminderVisible, setReminderVisible] = useState(false);
   const { monthlyCount = 0, streak = 0, budgetMonths = 0 } = stats ?? {};
   const { data: profile } = useProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
@@ -129,7 +131,7 @@ export default function ProfileScreen() {
         <View style={styles.separator} />
         <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" onPress={() => setExportVisible(true)} />
         <View style={styles.separator} />
-        <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" />
+        <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" onPress={() => setReminderVisible(true)} />
       </Card>
 
       {/* 其他 */}
@@ -163,6 +165,7 @@ export default function ProfileScreen() {
         </AppText>
       </Card>
       <ExportSheet visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ReminderSheet visible={reminderVisible} onClose={() => setReminderVisible(false)} />
     </ScrollView>
   );
 }
