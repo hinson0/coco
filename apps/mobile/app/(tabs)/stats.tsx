@@ -18,7 +18,6 @@ import {
   buildTransactionRank,
   computeDaysElapsed,
   buildDateRangeLabel,
-  formatMonthLabelPadded,
 } from '../../utils/statsUtils';
 import type { Category } from '@coco/shared';
 
@@ -111,28 +110,15 @@ export default function StatsScreen() {
     [filtered, categoryMap],
   );
 
-  // 月份导航
-  const handlePrev = useCallback(() => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() - 1);
-      return d;
-    });
-  }, []);
-
-  const handleNext = useCallback(() => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() + 1);
-      return d;
-    });
+  // 月份选择
+  const handleDateChange = useCallback((date: Date) => {
+    setCurrentDate(date);
   }, []);
 
   const handleCategoryPress = useCallback((categoryId: string) => {
     router.push({ pathname: '/category-detail', params: { categoryId } });
   }, []);
 
-  const monthLabel = formatMonthLabelPadded(currentDate);
   const dateRangeLabel = buildDateRangeLabel(currentDate);
 
   return (
@@ -142,10 +128,8 @@ export default function StatsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <AccountSelectorBar
-        monthLabel={monthLabel}
         currentDate={currentDate}
-        onPrev={handlePrev}
-        onNext={handleNext}
+        onDateChange={handleDateChange}
       />
       <SummaryOverviewCard
         totalExpense={totalExpense}
