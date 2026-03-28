@@ -1,6 +1,6 @@
 // 账户添加/编辑页面 — 紧凑布局，键盘弹起时所有内容可见
 import { useState, useEffect, useRef } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard, Image, type ImageSourcePropType } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard, Image, type ImageSourcePropType } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -139,8 +139,8 @@ export default function AccountEditScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">{isEdit ? "编辑账户" : "添加账户"}</AppText>
         {isEdit ? (
@@ -279,10 +279,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.creamDark,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+  iconBtn: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: "center" as const, justifyContent: "center" as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   body: { flex: 1, paddingHorizontal: spacing.xxl },
 
   // Section

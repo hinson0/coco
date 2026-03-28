@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, Keyboard, Linking, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Keyboard, Linking, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../components/ui/AppText';
-import { colors } from '../constants/theme';
+import { colors, radii, shadows } from '../constants/theme';
 
 const FEEDBACK_TYPES = ['功能建议', 'Bug报告', '其他'] as const;
 const MAX_LENGTH = 500;
@@ -38,11 +38,11 @@ export default function FeedbackScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <AppText size="2xl" color={colors.text}>←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="bold" color={colors.text}>意见反馈</AppText>
-        <View style={styles.backButton} />
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
@@ -137,10 +137,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  backButton: {
-    width: 40,
-    alignItems: 'flex-start',
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   scrollView: {
     flex: 1,
   },

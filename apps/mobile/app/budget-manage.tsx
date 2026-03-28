@@ -1,6 +1,6 @@
 // apps/mobile/app/budget-manage.tsx
 // 预算管理列表页面：总预算卡片 + 分类预算列表 + 进度条
-import { View, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGlobalBudget, useCategoryBudgets, useDeleteBudget } from "../hooks/useLocalBudgets";
@@ -44,8 +44,8 @@ export default function BudgetManageScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <AppText size="2xl">←</AppText>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">预算设置</AppText>
         <View style={{ width: 36 }} />
@@ -128,12 +128,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
-    backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.creamDark,
+    backgroundColor: colors.cream,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+  iconBtn: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: colors.white, alignItems: "center" as const, justifyContent: "center" as const,
+    ...shadows.md,
   },
+  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
   listContent: { padding: spacing.xl, paddingBottom: 40 },
   globalCard: { marginBottom: spacing.xl },
   progressTrack: {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,8 @@ import { useProfile, useEnsureProfile } from '../../hooks/useLocalProfile';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { StatsStrip } from '../../components/profile/StatsStrip';
 import { AiAssistantCard } from '../../components/profile/AiAssistantCard';
+import { ExportSheet } from '../../components/profile/ExportSheet';
+import { ReminderSheet } from '../../components/profile/ReminderSheet';
 import { MenuItem } from '../../components/shared/MenuItem';
 import { Card } from '../../components/ui/Card';
 import { AppText } from '../../components/ui/AppText';
@@ -66,6 +68,8 @@ function useProfileStats() {
 export default function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { data: stats } = useProfileStats();
+  const [exportVisible, setExportVisible] = useState(false);
+  const [reminderVisible, setReminderVisible] = useState(false);
   const { monthlyCount = 0, streak = 0, budgetMonths = 0 } = stats ?? {};
   const { data: profile } = useProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
@@ -118,16 +122,9 @@ export default function ProfileScreen() {
         工具
       </AppText>
       <Card padding={0} style={styles.menuCard}>
-        <MenuItem
-          icon="📸"
-          iconBg={colors.lavenderPale}
-          title="小票识别"
-          badge={{ text: 'NEW', variant: 'new' }}
-        />
+        <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" onPress={() => setExportVisible(true)} />
         <View style={styles.separator} />
-        <MenuItem icon="📤" iconBg={colors.sagePale} title="导出报表" />
-        <View style={styles.separator} />
-        <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" />
+        <MenuItem icon="🔔" iconBg={colors.honeyPale} title="记账提醒" onPress={() => setReminderVisible(true)} />
       </Card>
 
       {/* 其他 */}
@@ -142,6 +139,8 @@ export default function ProfileScreen() {
           badge={{ text: 'PRO', variant: 'pro' }}
           onPress={() => router.push('/upgrade-pro')}
         />
+        <View style={styles.separator} />
+        <MenuItem icon="🎬" iconBg={colors.honeyPale} title="广告收益" onPress={() => router.push('/ad-rewards')} />
         <View style={styles.separator} />
         <MenuItem icon="💬" iconBg={colors.creamDark} title="意见反馈" onPress={() => router.push('/feedback')} />
         <View style={styles.separator} />
@@ -160,6 +159,8 @@ export default function ProfileScreen() {
           退出登录
         </AppText>
       </Card>
+      <ExportSheet visible={exportVisible} onClose={() => setExportVisible(false)} />
+      <ReminderSheet visible={reminderVisible} onClose={() => setReminderVisible(false)} />
     </ScrollView>
   );
 }
