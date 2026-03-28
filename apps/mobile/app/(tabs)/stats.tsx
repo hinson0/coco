@@ -9,6 +9,8 @@ import { DailyTrendCard, type Dimension } from '../../components/stats/DailyTren
 import { CategoryRankCard } from '../../components/stats/CategoryRankCard';
 import { TransactionRankCard } from '../../components/stats/TransactionRankCard';
 import { TrendInsightRow } from '../../components/stats/TrendInsightRow';
+import { runInsightRules } from '../../utils/insights/runInsightRules';
+import type { InsightContext } from '../../utils/insights/types';
 import { colors } from '../../constants/theme';
 import {
   buildDailyData,
@@ -29,12 +31,6 @@ const CATEGORY_COLORS = [
   colors.sageLight,
 ] as const;
 
-const AI_INSIGHTS = [
-  { emoji: '🍜', title: '餐饮支出偏高', desc: '较上月增长 18%，建议控制外卖频次', badge: { text: '↑ 18%', direction: 'up' as const } },
-  { emoji: '🚌', title: '交通支出正常', desc: '较上月减少 5%，保持得不错', badge: { text: '↓ 5%', direction: 'down' as const } },
-  { emoji: '💡', title: '节省建议', desc: '本月如减少 3 次外卖，可省约 ¥120' },
-];
-
 export default function StatsScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dimension, setDimension] = useState<Dimension>('expense');
@@ -43,6 +39,11 @@ export default function StatsScreen() {
   const month = currentDate.getMonth();
   const { data: filtered = [] } = useMonthlyTransactions(year, month);
   const { data: categories = [] } = useLocalCategories();
+
+  // 上月交易（用于环比对比）
+  const prevYear = month === 0 ? year - 1 : year;
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const { data: prevFiltered = [] } = useMonthlyTransactions(prevYear, prevMonth);
 
   const categoryMap = useMemo(() => {
     const map: Record<string, Category> = {};
@@ -68,6 +69,21 @@ export default function StatsScreen() {
   const avgExpense = totalExpense / daysElapsed;
   const avgIncome = totalIncome / daysElapsed;
   const avgBalance = balance / daysElapsed;
+
+  // AI 洞察
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const insights = useMemo(() => {
+    const ctx: InsightContext = {
+      currentMonth: filtered,
+      previousMonth: prevFiltered,
+      categories,
+      year,
+      month,
+      daysInMonth,
+      daysElapsed,
+    };
+    return runInsightRules(ctx);
+  }, [filtered, prevFiltered, categories, year, month, daysInMonth, daysElapsed]);
 
   // 日维度数据
   const dailyData = useMemo(
@@ -153,7 +169,7 @@ export default function StatsScreen() {
         incomeTransactions={incomeRank}
         dimension={dimension}
       />
-      <TrendInsightRow items={AI_INSIGHTS} />
+      <TrendInsightRow items={insights} />
     </ScrollView>
   );
 }
