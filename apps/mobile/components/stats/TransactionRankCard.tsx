@@ -48,7 +48,7 @@ export function TransactionRankCard({
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleAccent} />
-          <AppText size="lg" weight="semibold" color={colors.text}>
+          <AppText size="xl" weight="semibold" color={colors.text}>
             明细排行榜
           </AppText>
         </View>
@@ -62,23 +62,23 @@ export function TransactionRankCard({
               {/* 主行 */}
               <View style={styles.rankRow}>
                 {/* 序号 */}
-                <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
+                <AppText size="md" color={colors.textLighter} style={styles.rankNum}>
                   {index + 1}
                 </AppText>
 
                 {/* 分类图标 */}
-                <AppText size="xl" style={styles.emoji}>
+                <AppText size="2xl" style={styles.emoji}>
                   {item.categoryEmoji}
                 </AppText>
 
                 {/* 分类名称 */}
-                <AppText size="md" weight="semibold" color={colors.text} style={styles.categoryName}>
+                <AppText size="lg" weight="semibold" color={colors.text} style={styles.categoryName}>
                   {item.categoryName}
                 </AppText>
 
                 {/* 金额（右对齐） */}
                 <AppText
-                  size="sm"
+                  size="md"
                   weight="semibold"
                   color={tab === 'expense' ? colors.coral : colors.sage}
                 >
@@ -90,7 +90,7 @@ export function TransactionRankCard({
               </View>
               {/* 日期/备注行 */}
               <View style={styles.detailRow}>
-                <AppText size="xs" color={colors.textLighter} numberOfLines={1}>
+                <AppText size="sm" color={colors.textLighter} numberOfLines={1}>
                   {formatDate(item.date)}
                   {item.note ? ` · ${item.note}` : ''}
                 </AppText>

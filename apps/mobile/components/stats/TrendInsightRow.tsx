@@ -39,7 +39,7 @@ export function TrendInsightRow({ items }: TrendInsightRowProps) {
     <Card radius="lg" shadow="md" padding={16}>
       <View style={styles.titleRow}>
         <View style={styles.titleAccent} />
-        <AppText size="lg" weight="semibold" color={colors.text}>
+        <AppText size="xl" weight="semibold" color={colors.text}>
           AI 洞察
         </AppText>
       </View>

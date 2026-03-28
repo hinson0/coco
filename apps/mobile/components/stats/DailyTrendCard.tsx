@@ -50,7 +50,7 @@ function DimensionTab({
       ]}
     >
       <AppText
-        size="sm"
+        size="md"
         weight="semibold"
         color={isActive ? colors.white : colors.textLighter}
       >
@@ -160,7 +160,7 @@ export function DailyTrendCard({ dailyData, dimension, onDimensionChange }: Dail
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleAccent} />
-          <AppText size="lg" weight="semibold" color={colors.text}>
+          <AppText size="xl" weight="semibold" color={colors.text}>
             每日趋势
           </AppText>
         </View>

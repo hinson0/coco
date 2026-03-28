@@ -100,7 +100,7 @@ export function CategoryRankCard({
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleAccent} />
-          <AppText size="lg" weight="semibold" color={colors.text}>{title}</AppText>
+          <AppText size="xl" weight="semibold" color={colors.text}>{title}</AppText>
         </View>
         <View style={styles.tabs}>
           {(['expense', 'income', 'balance'] as const).map((d) => (
@@ -109,7 +109,7 @@ export function CategoryRankCard({
               onPress={() => handleTabPress(d)}
               style={[styles.tab, dimension === d && { backgroundColor: TAB_ACTIVE_COLORS[d] }]}
             >
-              <AppText size="sm" weight="semibold" color={dimension === d ? colors.white : colors.textLighter}>
+              <AppText size="md" weight="semibold" color={dimension === d ? colors.white : colors.textLighter}>
                 {DIMENSION_LABELS[d]}
               </AppText>
             </Pressable>
@@ -198,7 +198,7 @@ export function CategoryRankCard({
                   {rowItems.map((item) => (
                     <View key={`legend-${item.name}-${dimension}`} style={styles.legendItem}>
                       <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                      <AppText size="xs" color={colors.textLight}>
+                      <AppText size="sm" color={colors.textLight}>
                         {item.name} {item.percent}%
                       </AppText>
                     </View>
@@ -216,14 +216,14 @@ export function CategoryRankCard({
                 style={styles.rankRow}
                 onPress={() => item.categoryId && onCategoryPress?.(item.categoryId)}
               >
-                <AppText size="sm" color={colors.textLighter} style={styles.rankNum}>
+                <AppText size="md" color={colors.textLighter} style={styles.rankNum}>
                   {index + 1}
                 </AppText>
-                <AppText size="xl" style={styles.emoji}>
+                <AppText size="2xl" style={styles.emoji}>
                   {item.emoji}
                 </AppText>
                 <View style={styles.info}>
-                  <AppText size="md" weight="semibold" color={colors.text}>
+                  <AppText size="lg" weight="semibold" color={colors.text}>
                     {item.name}
                   </AppText>
                   <AppText size="sm" color={colors.textLighter}>
@@ -242,7 +242,7 @@ export function CategoryRankCard({
                   />
                 </View>
                 <AppText
-                  size="sm"
+                  size="md"
                   weight="semibold"
                   color={dimension === 'expense' ? colors.coral : colors.sage}
                 >
