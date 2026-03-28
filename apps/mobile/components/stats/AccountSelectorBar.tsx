@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { View, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Pressable, Modal, ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, shadows, radii } from '../../constants/theme';
+import type { Account } from '@coco/shared';
 
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'] as const;
 
 interface AccountSelectorBarProps {
   readonly currentDate: Date;
   readonly onDateChange: (date: Date) => void;
+  readonly accounts: readonly Account[];
+  readonly selectedAccountId: string | null;
+  readonly onAccountChange: (accountId: string | null) => void;
 }
 
 function isCurrentMonth(date: Date): boolean {
@@ -56,7 +60,6 @@ function MonthPicker({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.pickerCard} onPress={e => e.stopPropagation()}>
-          {/* 年份导航 */}
           <View style={styles.yearRow}>
             <Pressable onPress={() => setPickerYear(y => y - 1)} style={styles.yearArrow}>
               <AppText size="2xl" weight="bold" color={colors.text}>‹</AppText>
@@ -66,8 +69,6 @@ function MonthPicker({
               <AppText size="2xl" weight="bold" color={colors.text}>›</AppText>
             </Pressable>
           </View>
-
-          {/* 月份网格 */}
           <View style={styles.monthGrid}>
             {MONTHS.map((label, i) => {
               const isSelected = pickerYear === selectedYear && i === selectedMonth;
@@ -95,10 +96,83 @@ function MonthPicker({
   );
 }
 
-export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelectorBarProps) {
+function AccountFilterSheet({
+  visible,
+  accounts,
+  selectedAccountId,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  accounts: readonly Account[];
+  selectedAccountId: string | null;
+  onSelect: (accountId: string | null) => void;
+  onClose: () => void;
+}) {
+  const handleSelect = (id: string | null) => {
+    onSelect(id);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.sheetOverlay} onPress={onClose}>
+        <Pressable style={styles.sheetCard} onPress={e => e.stopPropagation()}>
+          <View style={styles.sheetHandle} />
+          <AppText size="xl" weight="semibold" color={colors.text} style={styles.sheetTitle}>
+            选择账户
+          </AppText>
+
+          <ScrollView style={styles.sheetList} bounces={false}>
+            {/* 全部账户 */}
+            <Pressable
+              style={[styles.sheetItem, selectedAccountId === null && styles.sheetItemSelected]}
+              onPress={() => handleSelect(null)}
+            >
+              <View style={styles.sheetItemIcon}>
+                <AppText size="2xl">📊</AppText>
+              </View>
+              <View style={styles.sheetItemInfo}>
+                <AppText size="lg" weight="semibold" color={colors.text}>全部账户</AppText>
+                <AppText size="base" color={colors.textLighter}>查看所有账户的汇总数据</AppText>
+              </View>
+              {selectedAccountId === null ? (
+                <AppText size="lg" color={colors.sage}>✓</AppText>
+              ) : null}
+            </Pressable>
+
+            {accounts.map(account => (
+              <Pressable
+                key={account.id}
+                style={[styles.sheetItem, selectedAccountId === account.id && styles.sheetItemSelected]}
+                onPress={() => handleSelect(account.id)}
+              >
+                <View style={styles.sheetItemIcon}>
+                  <AppText size="2xl">{account.icon}</AppText>
+                </View>
+                <View style={styles.sheetItemInfo}>
+                  <AppText size="lg" weight="semibold" color={colors.text}>{account.name}</AppText>
+                </View>
+                {selectedAccountId === account.id ? (
+                  <AppText size="lg" color={colors.sage}>✓</AppText>
+                ) : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+export function AccountSelectorBar({ currentDate, onDateChange, accounts, selectedAccountId, onAccountChange }: AccountSelectorBarProps) {
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
 
   const day = isCurrentMonth(currentDate) ? new Date().getDate() : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+
+  const selectedAccount = selectedAccountId ? accounts.find(a => a.id === selectedAccountId) : null;
+  const accountLabel = selectedAccount ? `${selectedAccount.icon} ${selectedAccount.name}` : '全部账户';
 
   const handlePrev = () => {
     const d = new Date(currentDate);
@@ -114,8 +188,8 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.accountBtn}>
-        <AppText size="xl" weight="semibold" color={colors.text}>我的账本</AppText>
+      <Pressable style={styles.accountBtn} onPress={() => setSheetVisible(true)}>
+        <AppText size="xl" weight="semibold" color={colors.text}>{accountLabel}</AppText>
         <AppText size="base" color={colors.textLight}> ▼</AppText>
       </Pressable>
 
@@ -138,6 +212,14 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
         selectedMonth={currentDate.getMonth()}
         onSelect={(year, month) => onDateChange(new Date(year, month, 1))}
         onClose={() => setPickerVisible(false)}
+      />
+
+      <AccountFilterSheet
+        visible={sheetVisible}
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+        onSelect={onAccountChange}
+        onClose={() => setSheetVisible(false)}
       />
     </View>
   );
@@ -246,5 +328,57 @@ const styles = StyleSheet.create({
   },
   monthCellSelected: {
     backgroundColor: colors.coral,
+  },
+  // Account filter bottom sheet
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  sheetCard: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    paddingBottom: 34,
+    maxHeight: '60%',
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.creamDark,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  sheetList: {
+    paddingHorizontal: 12,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: radii.sm,
+  },
+  sheetItemSelected: {
+    backgroundColor: colors.cream,
+  },
+  sheetItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetItemInfo: {
+    flex: 1,
+    gap: 2,
   },
 });
