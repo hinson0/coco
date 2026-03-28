@@ -143,6 +143,7 @@ export default function StatsScreen() {
     >
       <AccountSelectorBar
         monthLabel={monthLabel}
+        currentDate={currentDate}
         onPrev={handlePrev}
         onNext={handleNext}
       />
