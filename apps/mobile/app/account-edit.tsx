@@ -21,6 +21,7 @@ const BRAND_ICONS = {
 interface TypeConfig {
   readonly emoji?: string;
   readonly brandIcon?: ImageSourcePropType;
+  readonly brandKey?: string;
   readonly label: string;
   readonly dbType: AccountType;
   readonly autoName?: string;
@@ -30,10 +31,10 @@ interface TypeConfig {
 const TYPE_OPTIONS: readonly TypeConfig[] = [
   { emoji: "🏦", label: "储蓄卡", dbType: "bank", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行" },
   { emoji: "💳", label: "信用卡", dbType: "credit", placeholder: "建行 / 工行 / 招行 / 农行 / 交行 / 中行" },
-  { brandIcon: BRAND_ICONS.wechat, label: "微信", dbType: "e_wallet", autoName: "微信" },
-  { brandIcon: BRAND_ICONS.alipay, label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
+  { brandIcon: BRAND_ICONS.wechat, brandKey: "wechat", label: "微信", dbType: "e_wallet", autoName: "微信" },
+  { brandIcon: BRAND_ICONS.alipay, brandKey: "alipay", label: "支付宝", dbType: "e_wallet", autoName: "支付宝" },
   { emoji: "💰", label: "现金", dbType: "cash", autoName: "现金" },
-  { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "输入账户名称" },
+  { emoji: "⚙️", label: "自定义", dbType: "custom", placeholder: "请输入账户名称，可调整图标" },
 ];
 
 function TypeIcon({ config, size = 14 }: { config: TypeConfig; size?: number }) {
@@ -53,11 +54,15 @@ export default function AccountEditScreen() {
   const { mutateAsync: updateAccount } = useUpdateAccount();
   const { mutateAsync: deleteAccount } = useDeleteAccount();
 
-  const initialTypeConfig = TYPE_OPTIONS.find((t) => t.dbType === params.type) ?? TYPE_OPTIONS[0];
+  // 编辑模式下用 brandKey 精确匹配（区分微信/支付宝，二者都是 e_wallet）
+  const initialTypeConfig = (isEdit && params.type === 'e_wallet'
+    ? TYPE_OPTIONS.find((t) => t.brandKey === params.icon)
+    : TYPE_OPTIONS.find((t) => t.dbType === params.type)
+  ) ?? TYPE_OPTIONS[0];
 
   const [selectedType, setSelectedType] = useState<TypeConfig>(initialTypeConfig);
   const [name, setName] = useState(params.name ?? "");
-  const [icon, setIcon] = useState(params.icon ?? initialTypeConfig.emoji ?? "📦");
+  const [icon, setIcon] = useState(params.icon ?? initialTypeConfig.emoji ?? initialTypeConfig.brandKey ?? "📦");
   const [initialBalance, setInitialBalance] = useState(params.initialBalance ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -72,16 +77,14 @@ export default function AccountEditScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isEdit) {
-      const ref = selectedType.autoName ? balanceRef : nameRef;
-      const timer = setTimeout(() => ref.current?.focus(), 500);
-      return () => clearTimeout(timer);
-    }
+    const ref = selectedType.autoName ? balanceRef : nameRef;
+    const timer = setTimeout(() => ref.current?.focus(), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleTypeSelect = (config: TypeConfig) => {
     setSelectedType(config);
-    setIcon(config.emoji ?? "📦");
+    setIcon(config.emoji ?? config.brandKey ?? "📦");
     if (config.autoName) {
       setName(config.autoName);
       setTimeout(() => balanceRef.current?.focus(), 300);
@@ -179,15 +182,27 @@ export default function AccountEditScreen() {
         <View style={styles.formCard}>
           {/* 名称行：左侧图标 + 右侧名称输入 */}
           <View style={styles.formRow}>
-            <TouchableOpacity onPress={() => setShowEmojiPicker(true)} activeOpacity={0.8}>
+            <TouchableOpacity
+              onPress={() => selectedType.dbType === 'custom' && setShowEmojiPicker(true)}
+              activeOpacity={selectedType.dbType === 'custom' ? 0.8 : 1}
+            >
               <LinearGradient
                 colors={[colors.sagePale, colors.coralPale]}
                 style={styles.inlineIcon}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+                {selectedType.brandIcon ? (
+                  <Image source={selectedType.brandIcon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                ) : (
+                  <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+                )}
               </LinearGradient>
+              {selectedType.dbType === 'custom' ? (
+                <View style={styles.editIconBadge}>
+                  <AppText style={{ fontSize: 8 }}>⚙️</AppText>
+                </View>
+              ) : null}
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <AppText size="xs" weight="semibold" color={colors.textLighter} style={styles.fieldLabel}>账户名称</AppText>
@@ -206,7 +221,7 @@ export default function AccountEditScreen() {
                 placeholder={selectedType.placeholder ?? "输入账户名称"}
                 placeholderTextColor={colors.creamDeeper}
                 maxLength={20}
-                editable={!selectedType.autoName || isEdit}
+                editable={!selectedType.autoName || selectedType.dbType === 'e_wallet'}
                 multiline
                 numberOfLines={1}
               />
@@ -307,6 +322,20 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: 14,
     alignItems: "center", justifyContent: "center",
     ...shadows.sm,
+  },
+
+  editIconBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.creamDark,
   },
 
   // Fields
