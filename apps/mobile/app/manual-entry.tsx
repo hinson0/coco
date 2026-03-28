@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard, ActivityIndicator, Platform, Image, type ImageSourcePropType } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -12,6 +12,11 @@ import { useOfflineContext } from "../lib/offline-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, shadows, spacing } from "../constants/theme";
+
+const BRAND_ICON_MAP: Record<string, ImageSourcePropType> = {
+  wechat: require("../assets/images/wechat.png"),
+  alipay: require("../assets/images/alipay.png"),
+};
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -221,7 +226,11 @@ export default function ManualEntryScreen() {
                   onPress={() => setAccountId(a.id)}
                   activeOpacity={0.7}
                 >
-                  <AppText style={{ fontSize: 16 }}>{a.icon}</AppText>
+                  {BRAND_ICON_MAP[a.icon] ? (
+                    <Image source={BRAND_ICON_MAP[a.icon]} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                  ) : (
+                    <AppText style={{ fontSize: 16 }}>{a.icon}</AppText>
+                  )}
                   <AppText size="md" weight="medium" color={accountId === a.id ? colors.white : colors.text}>{a.name}</AppText>
                 </TouchableOpacity>
               ))}
