@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { View, Pressable, Modal, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, Modal, ScrollView, StyleSheet, Image, type ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
 import { AppText } from '../ui/AppText';
 import { colors, shadows, radii } from '../../constants/theme';
 import type { Account } from '@coco/shared';
+
+const BRAND_ICON_MAP: Record<string, ImageSourcePropType> = {
+  wechat: require('../../assets/images/wechat.png'),
+  alipay: require('../../assets/images/alipay.png'),
+};
 
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'] as const;
 
@@ -149,7 +154,11 @@ function AccountFilterSheet({
                 onPress={() => handleSelect(account.id)}
               >
                 <View style={styles.sheetItemIcon}>
-                  <AppText size="2xl">{account.icon}</AppText>
+                  {BRAND_ICON_MAP[account.icon] ? (
+                    <Image source={BRAND_ICON_MAP[account.icon]} style={{ width: 24, height: 24 }} resizeMode="contain" />
+                  ) : (
+                    <AppText size="2xl">{account.icon}</AppText>
+                  )}
                 </View>
                 <View style={styles.sheetItemInfo}>
                   <AppText size="lg" weight="semibold" color={colors.text}>{account.name}</AppText>
@@ -181,7 +190,9 @@ export function AccountSelectorBar({ currentDate, onDateChange, accounts, select
   const day = isCurrentMonth(currentDate) ? new Date().getDate() : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
 
   const selectedAccount = selectedAccountId ? accounts.find(a => a.id === selectedAccountId) : null;
-  const accountLabel = selectedAccount ? `${selectedAccount.icon} ${selectedAccount.name}` : '全部账户';
+  const accountLabel = selectedAccount
+    ? (BRAND_ICON_MAP[selectedAccount.icon] ? selectedAccount.name : `${selectedAccount.icon} ${selectedAccount.name}`)
+    : '全部账户';
 
   const handlePrev = () => {
     const d = new Date(currentDate);
