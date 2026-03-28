@@ -3,6 +3,7 @@ import { View, Pressable, Modal, StyleSheet } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, shadows, radii } from '../../constants/theme';
 
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
 const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'] as const;
 
 interface AccountSelectorBarProps {
@@ -10,8 +11,17 @@ interface AccountSelectorBarProps {
   readonly onDateChange: (date: Date) => void;
 }
 
-function formatMonthLabel(date: Date): string {
-  return `${date.getMonth() + 1}月`;
+function isCurrentMonth(date: Date): boolean {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function formatDateLabel(date: Date): string {
+  const m = date.getMonth() + 1;
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const day = isCurrentMonth(date) ? new Date().getDate() : lastDay;
+  const weekday = WEEKDAYS[new Date(date.getFullYear(), date.getMonth(), day).getDay()];
+  return `${m}月${day}日  ${weekday}`;
 }
 
 function CalendarIcon({ day }: { day: number }) {
@@ -90,7 +100,20 @@ function MonthPicker({
 export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelectorBarProps) {
   const [pickerVisible, setPickerVisible] = useState(false);
 
-  const month = currentDate.getMonth() + 1;
+  const isCurrent = isCurrentMonth(currentDate);
+  const day = isCurrent ? new Date().getDate() : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+
+  const handlePrev = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() - 1);
+    onDateChange(d);
+  };
+
+  const handleNext = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() + 1);
+    onDateChange(d);
+  };
 
   return (
     <View style={styles.container}>
@@ -99,10 +122,23 @@ export function AccountSelectorBar({ currentDate, onDateChange }: AccountSelecto
         <AppText size="base" color={colors.textLight}> ▼</AppText>
       </Pressable>
 
-      <Pressable style={styles.dateBtn} onPress={() => setPickerVisible(true)}>
-        <CalendarIcon day={month} />
-        <AppText size="lg" weight="semibold" color={colors.text}>{formatMonthLabel(currentDate)}</AppText>
-      </Pressable>
+      <View style={styles.dateRow}>
+        <Pressable onPress={handlePrev} style={styles.arrow}>
+          <AppText size="xl" weight="bold" color={colors.textLight}>‹</AppText>
+        </Pressable>
+        <Pressable style={styles.dateBtn} onPress={() => setPickerVisible(true)}>
+          <CalendarIcon day={day} />
+          <AppText size="lg" weight="semibold" color={colors.text}>{formatDateLabel(currentDate)}</AppText>
+          {isCurrent ? (
+            <View style={styles.todayBadge}>
+              <AppText size="sm" weight="semibold" color={colors.sage}>今天</AppText>
+            </View>
+          ) : null}
+        </Pressable>
+        <Pressable onPress={handleNext} style={styles.arrow}>
+          <AppText size="xl" weight="bold" color={colors.textLight}>›</AppText>
+        </Pressable>
+      </View>
 
       <MonthPicker
         visible={pickerVisible}
@@ -131,6 +167,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
     ...shadows.sm,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  arrow: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateBtn: {
     flexDirection: 'row',
@@ -167,6 +214,12 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     backgroundColor: colors.white,
+  },
+  todayBadge: {
+    backgroundColor: colors.sagePale,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   // Month picker modal
   overlay: {
