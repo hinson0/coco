@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Linking } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
@@ -11,16 +12,41 @@ import { colors } from '../constants/theme';
 const version = Constants.expoConfig?.version ?? '1.0.0';
 
 const features = [
-  { emoji: '🤖', label: 'AI 智能记账' },
-  { emoji: '🎤', label: '语音记账' },
-  { emoji: '📸', label: '小票识别' },
-  { emoji: '📊', label: '预算管理与统计' },
-  { emoji: '💰', label: '多账户管理' },
-  { emoji: '📤', label: '报表导出' },
+  {
+    emoji: '🤖',
+    label: 'AI 智能记账',
+    desc: '对话式记账，输入"咖啡40块"即可自动识别金额、分类和备注。内置离线规则引擎，覆盖餐饮、交通、购物等 8 大类 200+ 关键词，无网络也能秒速记账。复杂语句自动调用在线 AI 识别。',
+  },
+  {
+    emoji: '🎤',
+    label: '语音记账',
+    desc: '长按说话，松开即识别。支持最长 60 秒语音输入，自动转文字后走智能识别流程。上滑可取消录音，操作直觉无门槛。',
+  },
+  {
+    emoji: '📸',
+    label: '小票识别',
+    desc: '拍摄小票或选择相册照片，自动 OCR 识别金额和商家信息并生成记账记录。识别结果以小票缩略图展示，方便核对。',
+  },
+  {
+    emoji: '📊',
+    label: '预算管理与统计',
+    desc: '支持设置月度总预算和分类预算，实时显示消费进度。统计页提供收支汇总、日趋势折线图、分类排行饼图、单笔排行榜和 AI 趋势洞察，支持按月切换查看。',
+  },
+  {
+    emoji: '💰',
+    label: '多账户管理',
+    desc: '支持储蓄卡、信用卡、微信、支付宝、现金及自定义账户。每个账户独立追踪余额（初始余额 + 收入 - 支出），底部汇总显示总资产。记账时可指定资金账户。',
+  },
+  {
+    emoji: '📤',
+    label: '报表导出',
+    desc: '一键导出全部记账记录为 CSV 文件，包含日期、时间、分类、金额、备注、来源、账户等 12 个字段。UTF-8 编码兼容 Excel、WPS、Numbers，通过系统分享发送。',
+  },
 ];
 
 export default function AboutScreen() {
   const insets = useSafeAreaInsets();
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -51,15 +77,28 @@ export default function AboutScreen() {
             功能亮点
           </AppText>
           <Card padding={0}>
-            {features.map((item, index) => (
-              <View key={item.label}>
-                <View style={styles.featureRow}>
-                  <AppText size="2xl">{item.emoji}</AppText>
-                  <AppText size="xl" weight="medium" color={colors.text}>{item.label}</AppText>
+            {features.map((item, index) => {
+              const isExpanded = expandedIndex === index;
+              return (
+                <View key={item.label}>
+                  <TouchableOpacity
+                    style={styles.featureRow}
+                    activeOpacity={0.6}
+                    onPress={() => setExpandedIndex(isExpanded ? null : index)}
+                  >
+                    <AppText size="2xl">{item.emoji}</AppText>
+                    <AppText size="xl" weight="medium" color={colors.text} style={styles.featureLabel}>{item.label}</AppText>
+                    <AppText size="xl" color={colors.textLighter}>{isExpanded ? '∧' : '∨'}</AppText>
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View style={styles.featureDesc}>
+                      <AppText size="base" color={colors.textLight} style={styles.featureDescText}>{item.desc}</AppText>
+                    </View>
+                  )}
+                  {index < features.length - 1 && <View style={styles.divider} />}
                 </View>
-                {index < features.length - 1 && <View style={styles.divider} />}
-              </View>
-            ))}
+              );
+            })}
           </Card>
         </View>
 
@@ -140,6 +179,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
     gap: 12,
+  },
+  featureLabel: {
+    flex: 1,
+  },
+  featureDesc: {
+    backgroundColor: colors.cream,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  featureDescText: {
+    lineHeight: 22,
   },
   divider: {
     height: 1,
