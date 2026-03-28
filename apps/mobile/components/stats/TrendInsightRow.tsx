@@ -1,71 +1,54 @@
 import { View, StyleSheet } from 'react-native';
-import { Card } from '../ui/Card';
 import { AppText } from '../ui/AppText';
 import { colors } from '../../constants/theme';
-
-interface InsightBadge {
-  readonly text: string;
-  readonly direction: 'up' | 'down';
-}
-
-interface InsightItem {
-  readonly emoji: string;
-  readonly title: string;
-  readonly desc: string;
-  readonly badge?: InsightBadge;
-}
+import { HealthScoreCard } from './HealthScoreCard';
+import { InsightCard } from './InsightCard';
+import type { InsightItem } from '../../utils/insights/types';
 
 interface TrendInsightRowProps {
   readonly items: InsightItem[];
 }
 
-function Badge({ badge }: { badge: InsightBadge }) {
-  const isUp = badge.direction === 'up';
-  return (
-    <View style={[styles.badge, isUp ? styles.badgeUp : styles.badgeDown]}>
-      <AppText
-        size="base"
-        weight="semibold"
-        color={isUp ? colors.coral : colors.sage}
-      >
-        {badge.text}
-      </AppText>
-    </View>
-  );
-}
-
 export function TrendInsightRow({ items }: TrendInsightRowProps) {
+  if (items.length === 0) return null;
+
+  const healthItem = items.find(i => i.type === 'health');
+  const otherItems = items.filter(i => i.type !== 'health');
+  const onlyHealth = otherItems.length === 0;
+
   return (
-    <Card radius="lg" shadow="md" padding={16}>
+    <View style={styles.container}>
       <View style={styles.titleRow}>
         <View style={styles.titleAccent} />
         <AppText size="xl" weight="semibold" color={colors.text}>
           AI 洞察
         </AppText>
       </View>
-      {items.map((item, index) => (
-        <View key={item.title}>
-          {index > 0 && <View style={styles.divider} />}
-          <View style={styles.row}>
-            <AppText size="xl" style={styles.emoji}>{item.emoji}</AppText>
-            <View style={styles.info}>
-              <AppText size="lg" weight="semibold" color={colors.text}>{item.title}</AppText>
-              <AppText size="base" color={colors.textLighter}>{item.desc}</AppText>
-            </View>
-            {item.badge ? <Badge badge={item.badge} /> : null}
-          </View>
-        </View>
+
+      {healthItem ? <HealthScoreCard item={healthItem} /> : null}
+
+      {onlyHealth ? (
+        <AppText size="base" color={colors.textLighter} style={styles.emptyText}>
+          本月消费表现不错，暂无需要关注的问题 👍
+        </AppText>
+      ) : null}
+
+      {otherItems.map(item => (
+        <InsightCard key={`${item.type}-${item.priority}`} item={item} />
       ))}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    gap: 10,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 2,
   },
   titleAccent: {
     width: 3,
@@ -73,34 +56,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.honey,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  emoji: {
-    fontSize: 20,
-    width: 28,
+  emptyText: {
     textAlign: 'center',
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.creamDark,
-  },
-  badge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  badgeUp: {
-    backgroundColor: colors.coralPale,
-  },
-  badgeDown: {
-    backgroundColor: colors.sagePale,
+    paddingVertical: 12,
   },
 });
