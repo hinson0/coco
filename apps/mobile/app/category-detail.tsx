@@ -87,13 +87,15 @@ function computeStats(transactions: readonly Transaction[]): { count: number; to
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function CategoryDetailScreen() {
-  const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
+  const { categoryId, year, month } = useLocalSearchParams<{ categoryId: string; year: string; month: string }>();
   const [activeFilter, setActiveFilter] = useState(categoryId ?? ALL_EXPENSE);
 
   const now = new Date();
+  const displayYear = year ? Number(year) : now.getFullYear();
+  const displayMonth = month ? Number(month) : now.getMonth();
   const { data: allTransactions = [], isLoading: txLoading } = useMonthlyTransactions(
-    now.getFullYear(),
-    now.getMonth(),
+    displayYear,
+    displayMonth,
   );
   const { data: categories = [] } = useLocalCategories();
 
