@@ -21,6 +21,8 @@
 - 所有解释、提问、总结
 - 内部 thinking/reasoning 过程
 - 代码注释中的说明文字
+- git commit message 的标题和正文
+- PR 的标题和正文（Summary、Test Plan 等内容部分）
 
 # 工作路径
 
