@@ -10,7 +10,7 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
-const ENV_DIR = join(ROOT, ".env");
+const ENV_DIR = join(ROOT, ".envfiles");
 
 const WORKTREE_NAME = process.argv[2];
 
@@ -61,10 +61,16 @@ function sync() {
       continue;
     }
 
-    // 已存在普通文件则警告
-    if (existsSync(destFile)) {
-      console.log(`- ${dest} 是手动文件，跳过（删除后重新运行可创建 symlink）`);
-      continue;
+    // 清理断开的 symlink（existsSync 对 broken symlink 返回 false，但条目仍存在）
+    try {
+      if (lstatSync(destFile).isSymbolicLink()) {
+        rmSync(destFile);
+      } else {
+        console.log(`- ${dest} 是手动文件，跳过（删除后重新运行可创建 symlink）`);
+        continue;
+      }
+    } catch {
+      // lstatSync 抛 ENOENT 说明真的不存在，继续创建
     }
 
     symlinkSync(linkTarget, destFile);
