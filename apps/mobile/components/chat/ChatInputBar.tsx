@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet, PanResponder } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { QuickActions } from './QuickActions';
@@ -8,24 +8,30 @@ import { colors, radii, spacing, shadows } from '../../constants/theme';
 // ─── 滑动取消阈值（向上滑动 50pt 触发） ───
 const CANCEL_THRESHOLD = 50;
 
+// ─── 录音状态 ───
+type RecordingState = 'idle' | 'recording' | 'cancelling';
+
+export type { RecordingState };
+
 // ─── Props ───
 interface ChatInputBarProps {
   readonly onSendText: (text: string) => void;
   readonly onCamera: () => void;
-  readonly onVoice: (audioBase64: string) => void;
+  readonly onVoice: (base64: string, durationSeconds: number) => void;
   readonly onQuickAction: (text: string) => void;
+  readonly recordingState: RecordingState;
+  readonly recordingSeconds: number;
+  readonly onRecordingStateChange: (state: RecordingState) => void;
+  readonly onRecordingSecondsChange: (seconds: number) => void;
 }
 
-// ─── 录音状态 ───
-type RecordingState = 'idle' | 'recording' | 'cancelling';
-
-export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: ChatInputBarProps) {
+export function ChatInputBar({
+  onSendText, onCamera, onVoice, onQuickAction,
+  recordingState, recordingSeconds, onRecordingStateChange, onRecordingSecondsChange,
+}: ChatInputBarProps) {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'text' | 'voice'>('text');
   const [plusExpanded, setPlusExpanded] = useState(false);
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-
   const hasText = text.trim().length > 0;
   const { startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
 
@@ -33,39 +39,14 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: C
   const recordingStateRef = useRef<RecordingState>('idle');
   function setRecordingStateSync(s: RecordingState) {
     recordingStateRef.current = s;
-    setRecordingState(s);
+    onRecordingStateChange(s);
   }
 
   // useRef 镜像 onVoice 回调，避免 PanResponder 闭包捕获旧 prop
   const onVoiceRef = useRef(onVoice);
   onVoiceRef.current = onVoice;
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startYRef = useRef(0);
-
-  // ─── 录音计时器（仅在 idle <-> 非 idle 切换时启停，recording <-> cancelling 不重启） ───
-  const wasRecordingRef = useRef(false);
-  useEffect(() => {
-    const isActive = recordingState !== 'idle';
-    if (isActive && !wasRecordingRef.current) {
-      // 从 idle 进入录音：启动计时器
-      setRecordingSeconds(0);
-      timerRef.current = setInterval(() => {
-        setRecordingSeconds((s) => s + 1);
-      }, 1000);
-    } else if (!isActive && wasRecordingRef.current) {
-      // 从录音回到 idle：清除计时器
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      setRecordingSeconds(0);
-    }
-    wasRecordingRef.current = isActive;
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [recordingState]);
 
   // ─── 文字提交 ───
   function handleSubmit() {
@@ -117,10 +98,10 @@ export function ChatInputBar({ onSendText, onCamera, onVoice, onQuickAction }: C
           await cancelRecording();
           setRecordingStateSync('idle');
         } else if (current === 'recording') {
-          const base64 = await stopRecording();
+          const result = await stopRecording();
           setRecordingStateSync('idle');
-          if (base64) {
-            onVoiceRef.current(base64);
+          if (result) {
+            onVoiceRef.current(result.base64, result.durationSeconds);
           }
         }
       },
