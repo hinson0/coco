@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  withSpring,
   withDelay,
   interpolateColor,
 } from 'react-native-reanimated';
@@ -18,33 +17,46 @@ interface VoiceRecordingOverlayProps {
   readonly seconds: number;
 }
 
-const BAR_COUNT = 7;
-const BAR_PERIODS = [400, 550, 350, 600, 450, 500, 380];
-const BAR_BASE_HEIGHTS = [20, 35, 15, 45, 25, 40, 30];
+// 底部波形条数量和参数
+const BAR_COUNT = 40;
 
-function AnimatedBar({ index, isCancelling }: { index: number; isCancelling: boolean }) {
-  const height = useSharedValue(BAR_BASE_HEIGHTS[index]);
+function generateBarParams() {
+  const params = [];
+  for (let i = 0; i < BAR_COUNT; i++) {
+    // 中间高两边低的基础波形
+    const center = BAR_COUNT / 2;
+    const dist = Math.abs(i - center) / center;
+    const baseHeight = 6 + (1 - dist) * 18;
+    const period = 300 + Math.sin(i * 0.7) * 200;
+    const amplitude = 4 + (1 - dist) * 10;
+    params.push({ baseHeight, period, amplitude });
+  }
+  return params;
+}
+
+const BAR_PARAMS = generateBarParams();
+
+function WaveBar({ index, isCancelling }: { index: number; isCancelling: boolean }) {
+  const { baseHeight, period, amplitude } = BAR_PARAMS[index];
+  const height = useSharedValue(baseHeight);
   const colorProgress = useSharedValue(0);
 
   useEffect(() => {
     if (isCancelling) {
-      height.value = withTiming(8, { duration: 200 });
+      height.value = withTiming(4, { duration: 200 });
       colorProgress.value = withTiming(1, { duration: 200 });
     } else {
       colorProgress.value = withTiming(0, { duration: 200 });
       height.value = withDelay(
-        index * 60,
+        index * 30,
         withRepeat(
-          withTiming(
-            BAR_BASE_HEIGHTS[index] + 15,
-            { duration: BAR_PERIODS[index] },
-          ),
+          withTiming(baseHeight + amplitude, { duration: period }),
           -1,
           true,
         ),
       );
     }
-  }, [isCancelling, height, colorProgress, index]);
+  }, [isCancelling, height, colorProgress, index, baseHeight, period, amplitude]);
 
   const barStyle = useAnimatedStyle(() => ({
     height: height.value,
@@ -59,87 +71,72 @@ function AnimatedBar({ index, isCancelling }: { index: number; isCancelling: boo
 }
 
 export function VoiceRecordingOverlay({ visible, state, seconds }: VoiceRecordingOverlayProps) {
-  const translateY = useSharedValue(300);
+  const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
       opacity.value = withTiming(1, { duration: 150 });
-      translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
+      translateY.value = withTiming(0, { duration: 200 });
     } else {
       opacity.value = withTiming(0, { duration: 200 });
-      translateY.value = withTiming(300, { duration: 200 });
+      translateY.value = withTiming(80, { duration: 200 });
     }
   }, [visible, opacity, translateY]);
 
-  const overlayStyle = useAnimatedStyle(() => ({
+  const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    pointerEvents: opacity.value > 0 ? 'auto' as const : 'none' as const,
-  }));
-
-  const cardStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
+    pointerEvents: opacity.value > 0 ? 'auto' as const : 'none' as const,
   }));
 
   const isCancelling = state === 'cancelling';
 
   return (
-    <Animated.View style={[styles.overlay, overlayStyle]}>
-      <Animated.View style={[styles.card, cardStyle]}>
-        <Animated.View style={styles.barsContainer}>
-          {Array.from({ length: BAR_COUNT }, (_, i) => (
-            <AnimatedBar key={i} index={i} isCancelling={isCancelling} />
-          ))}
-        </Animated.View>
+    <Animated.View style={[styles.container, containerStyle]}>
+      <AppText
+        size="md"
+        weight="medium"
+        color={isCancelling ? colors.coral : colors.sage}
+        style={styles.hint}
+      >
+        {isCancelling ? '松开取消' : `松手发送 ${seconds}",  上移取消`}
+      </AppText>
 
-        <AppText size="2xl" weight="semibold" color={colors.sageLight} style={styles.timer}>
-          {seconds}"
-        </AppText>
-
-        <AppText
-          size="md"
-          weight="medium"
-          color={isCancelling ? colors.coral : 'rgba(255,255,255,0.5)'}
-        >
-          {isCancelling ? '松开取消' : '↑ 上滑取消'}
-        </AppText>
-      </Animated.View>
+      <View style={styles.waveContainer}>
+        {Array.from({ length: BAR_COUNT }, (_, i) => (
+          <WaveBar key={i} index={i} isCancelling={isCancelling} />
+        ))}
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(58,48,40,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingBottom: 12,
+    paddingTop: 10,
+    backgroundColor: colors.cream,
     zIndex: 100,
   },
-  card: {
-    width: 180,
-    height: 180,
-    backgroundColor: 'rgba(58,48,40,0.88)',
-    borderRadius: 18,
+  hint: {
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  waveContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-  },
-  barsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
-    height: 60,
+    gap: 2,
+    height: 36,
+    paddingHorizontal: 20,
   },
   bar: {
-    width: 4,
-    borderRadius: 2,
-  },
-  timer: {
-    marginTop: 4,
+    width: 2.5,
+    borderRadius: 1.5,
   },
 });
