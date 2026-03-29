@@ -18,11 +18,9 @@ export function useChat() {
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
-  const sendText = useCallback(async (text: string) => {
-    if (!db) return;
-
-    await addMessage({ role: "user", content_type: "text", content: text });
-
+  // ─── 核心处理逻辑：规则引擎 → GLM 兜底 ───
+  // sendText 和 sendAsr 共享此逻辑
+  const processText = useCallback(async (text: string) => {
     // 1. 先尝试规则引擎
     const ruleResult = parse(text);
 
@@ -111,7 +109,13 @@ export function useChat() {
     } finally {
       setLoading(false);
     }
-  }, [db, qc, addMessage, createTransaction]);
+  }, [qc, addMessage, createTransaction]);
+
+  const sendText = useCallback(async (text: string) => {
+    if (!db) return;
+    await addMessage({ role: "user", content_type: "text", content: text });
+    await processText(text);
+  }, [db, addMessage, processText]);
 
   const sendOcr = useCallback(async (imageBase64: string) => {
     if (!db) return;
@@ -183,52 +187,30 @@ export function useChat() {
       return;
     }
 
-    // 4. 调用 ASR API
-    setLoading(true);
+    // 4. 调用 ASR API（纯语音转文字）
     try {
       const resp = await apiFetch<any>("/record-asr", {
         method: "POST",
         body: JSON.stringify({ audioBase64 }),
       });
 
-      // 5. 更新语音消息的 transcription
-      if (resp.data?.asrText) {
-        await db.runAsync(
-          "UPDATE chat_messages SET content = ? WHERE id = ?",
-          resp.data.asrText,
-          msgId,
-        );
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      const asrText = resp.data?.asrText;
+      if (!asrText) {
+        await addMessage({ role: "assistant", content_type: "text", content: "没听清，要不再说一次？" });
+        return;
       }
 
-      // 6. 处理响应
-      if (resp.data?.type === "bill") {
-        const tx = resp.data.transaction;
-        await addMessage({
-          role: "assistant",
-          content_type: "bill_card",
-          content: JSON.stringify(tx),
-          transaction_id: tx.id,
-        });
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-      } else {
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: resp.data?.message ?? "没听清，要不再说一次？",
-        });
-      }
+      // 5. 更新语音消息的 transcription
+      await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", asrText, msgId);
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+
+      // 6. 复用文字处理逻辑：规则引擎 → GLM 兜底
+      await processText(asrText);
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      await addMessage({
-        role: "assistant",
-        content_type: "text",
-        content: `语音识别失败：${detail}`,
-      });
-    } finally {
-      setLoading(false);
+      await addMessage({ role: "assistant", content_type: "text", content: `语音识别失败：${detail}` });
     }
-  }, [db, qc, addMessage]);
+  }, [db, qc, addMessage, processText]);
 
   return { sendText, sendOcr, sendAsr, isLoading };
 }
