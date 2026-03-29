@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
-import { View, TextInput, Pressable, StyleSheet, PanResponder } from 'react-native';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { View, TextInput, Pressable, StyleSheet, PanResponder, Keyboard, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AppText } from '../ui/AppText';
 import { QuickActions } from './QuickActions';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
 import { colors, radii, spacing, shadows } from '../../constants/theme';
 
+// ─── 长按阈值（ms） ───
+const LONG_PRESS_DELAY = 300;
 // ─── 滑动取消阈值（向上滑动 50pt 触发） ───
 const CANCEL_THRESHOLD = 50;
 
@@ -21,20 +23,19 @@ interface ChatInputBarProps {
   readonly onVoice: (base64: string, durationSeconds: number) => void;
   readonly onQuickAction: (text: string) => void;
   readonly recordingState: RecordingState;
-  readonly recordingSeconds: number;
   readonly onRecordingStateChange: (state: RecordingState) => void;
-  readonly onRecordingSecondsChange: (seconds: number) => void;
   readonly onMeteringChange?: (level: number) => void;
 }
 
 export function ChatInputBar({
   onSendText, onCamera, onVoice, onQuickAction,
-  recordingState, recordingSeconds, onRecordingStateChange, onRecordingSecondsChange, onMeteringChange,
+  recordingState, onRecordingStateChange, onMeteringChange,
 }: ChatInputBarProps) {
   const [text, setText] = useState('');
-  const [mode, setMode] = useState<'text' | 'voice'>('text');
   const [plusExpanded, setPlusExpanded] = useState(false);
+  const [focused, setFocused] = useState(false);
   const hasText = text.trim().length > 0;
+  const inputRef = useRef<TextInput>(null);
   const { startRecording, stopRecording, cancelRecording, metering } = useVoiceRecorder();
 
   // 将 metering 值回传给父组件
@@ -53,24 +54,21 @@ export function ChatInputBar({
     onRecordingStateChange(s);
   }
 
-  // useRef 镜像 onVoice 回调，避免 PanResponder 闭包捕获旧 prop
+  // useRef 镜像 onVoice 回调
   const onVoiceRef = useRef(onVoice);
   onVoiceRef.current = onVoice;
 
   const startYRef = useRef(0);
 
+  // 长按计时器
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didTriggerVoiceRef = useRef(false);
   // ─── 文字提交 ───
   function handleSubmit() {
     const trimmed = text.trim();
     if (!trimmed) return;
     onSendText(trimmed);
     setText('');
-  }
-
-  // ─── 模式切换 ───
-  function toggleMode() {
-    setMode((prev) => (prev === 'text' ? 'voice' : 'text'));
-    setPlusExpanded(false);
   }
 
   // ─── + 按钮 ───
@@ -83,19 +81,38 @@ export function ChatInputBar({
     onQuickAction(actionText);
   }
 
-  // ─── PanResponder 长按录音手势（所有回调读 ref，不读 state） ───
+  // ─── 聚焦/失焦 ───
+  const handleFocus = useCallback(() => setFocused(true), []);
+  const handleBlur = useCallback(() => setFocused(false), []);
+
+  // 键盘隐藏时失焦，让手势层重新出现
+  useEffect(() => {
+    const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const sub = Keyboard.addListener(event, () => {
+      inputRef.current?.blur();
+    });
+    return () => sub.remove();
+  }, []);
+
+  // ─── PanResponder：长按录音手势 ───
+  // 仅在未聚焦 & 无文字时响应长按
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: async (_evt, gestureState) => {
+      onPanResponderGrant: (_evt, gestureState) => {
         startYRef.current = gestureState.y0;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        // 立即切录音态，浮层瞬间出现；启动失败则回退
-        setRecordingStateSync('recording');
-        const started = await startRecording();
-        if (!started) {
-          setRecordingStateSync('idle');
-        }
+        didTriggerVoiceRef.current = false;
+
+        // 设定长按计时器
+        longPressTimerRef.current = setTimeout(async () => {
+          didTriggerVoiceRef.current = true;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setRecordingStateSync('recording');
+          const started = await startRecording();
+          if (!started) {
+            setRecordingStateSync('idle');
+          }
+        }, LONG_PRESS_DELAY);
       },
       onPanResponderMove: (_evt, gestureState) => {
         if (recordingStateRef.current === 'idle') return;
@@ -107,8 +124,19 @@ export function ChatInputBar({
         }
       },
       onPanResponderRelease: async () => {
+        // 清除长按计时器
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+
+        // 如果没触发录音，当作普通点击 → 聚焦输入框
+        if (!didTriggerVoiceRef.current) {
+          inputRef.current?.focus();
+          return;
+        }
+
         const current = recordingStateRef.current;
-        // 立即切 idle，浮层瞬间消失；异步操作在后台完成
         setRecordingStateSync('idle');
         if (current === 'cancelling') {
           await cancelRecording();
@@ -120,105 +148,58 @@ export function ChatInputBar({
         }
       },
       onPanResponderTerminate: async () => {
-        setRecordingStateSync('idle');
-        await cancelRecording();
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        if (didTriggerVoiceRef.current) {
+          setRecordingStateSync('idle');
+          await cancelRecording();
+        }
       },
     }),
   ).current;
-
-  // ─── 录音按钮文字 ───
-  const voiceBtnText =
-    recordingState === 'cancelling'
-      ? '松开取消'
-      : recordingState === 'recording'
-        ? '松开发送'
-        : '按住说话';
-
-  const voiceBtnBg =
-    recordingState === 'cancelling'
-      ? colors.coralPale
-      : recordingState === 'recording'
-        ? colors.sagePale
-        : colors.cream;
-
-  const voiceBtnBorder =
-    recordingState === 'cancelling'
-      ? colors.coralLight
-      : recordingState === 'recording'
-        ? colors.sageLight
-        : colors.creamDeeper;
-
-  const voiceBtnGlow =
-    recordingState === 'cancelling'
-      ? { shadowColor: colors.coral, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }
-      : recordingState === 'recording'
-        ? { shadowColor: colors.sage, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }
-        : {};
 
   return (
     <View>
       <QuickActions visible={plusExpanded} onSelect={handleQuickAction} />
 
       <View style={styles.container}>
-        {/* 📷 相机按钮 — 两种模式都显示 */}
+        {/* 📷 相机按钮 */}
         <Pressable onPress={onCamera} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
           <AppText size="2xl">📷</AppText>
         </Pressable>
 
-        {mode === 'text' ? (
-          <>
-            {/* 文字模式：输入框 */}
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="记一笔..."
-              placeholderTextColor={colors.textLighter}
-              returnKeyType="default"
-              style={[styles.input, { maxHeight: 100 }]}
-              multiline
-            />
+        {/* 统一输入区：点击打字，长按录音 */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            ref={inputRef}
+            value={text}
+            onChangeText={setText}
+            placeholder="记一笔或按住说话"
+            placeholderTextColor={colors.textLighter}
+            returnKeyType="default"
+            style={[styles.input, { maxHeight: 100 }]}
+            multiline
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+          {/* 未聚焦且无文字时，盖一层手势层拦截点击/长按 */}
+          {!focused && !hasText && (
+            <View style={styles.gestureOverlay} {...panResponder.panHandlers} />
+          )}
+        </View>
 
-            {hasText ? (
-              /* 有文字 → 发送按钮 */
-              <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
-                <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
-              </Pressable>
-            ) : (
-              <>
-                {/* 无文字 → 🎤 + ➕ */}
-                <Pressable onPress={toggleMode} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
-                  <AppText size="2xl">🎤</AppText>
-                </Pressable>
-                <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
-                  <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
-                </Pressable>
-              </>
-            )}
-          </>
+        {hasText ? (
+          /* 有文字 → 发送按钮 */
+          <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
+            <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
+          </Pressable>
         ) : (
-          <>
-            {/* 语音模式：按住说话 */}
-            <View
-              style={[styles.voiceArea, { backgroundColor: voiceBtnBg, borderColor: voiceBtnBorder }, voiceBtnGlow]}
-              {...panResponder.panHandlers}
-            >
-              <AppText
-                size="lg"
-                weight="medium"
-                color={recordingState === 'cancelling' ? colors.coral : colors.text}
-              >
-                {voiceBtnText}
-              </AppText>
-            </View>
-
-            {/* ⌨️ 切回文字模式 */}
-            <Pressable onPress={toggleMode} style={({ pressed }) => [styles.iconBtn, styles.voiceBtn, pressed && styles.btnPressed]}>
-              <AppText size="2xl">⌨️</AppText>
-            </Pressable>
-            <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
-              <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
-            </Pressable>
-          </>
+          /* 无文字 → ➕ */
+          <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
+            <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
+          </Pressable>
         )}
       </View>
     </View>
@@ -250,11 +231,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  voiceBtn: {
-    backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.creamDeeper,
-  },
   plusBtn: {
     backgroundColor: colors.sage,
     ...shadows.sm,
@@ -262,8 +238,19 @@ const styles = StyleSheet.create({
   btnPressed: {
     opacity: 0.75,
   },
-  input: {
+  inputWrapper: {
     flex: 1,
+    position: 'relative',
+  },
+  gestureOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  input: {
     height: 44,
     backgroundColor: colors.cream,
     borderWidth: 1,
@@ -273,14 +260,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     fontSize: 14,
     color: colors.text,
-  },
-  voiceArea: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1,
-    borderColor: colors.creamDeeper,
-    borderRadius: radii.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
