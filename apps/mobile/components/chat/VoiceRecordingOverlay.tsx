@@ -121,8 +121,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   card: {
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 180,
     backgroundColor: 'rgba(58,48,40,0.88)',
     borderRadius: 18,
     alignItems: 'center',
