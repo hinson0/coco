@@ -1,228 +1,400 @@
 // apps/mobile/app/upgrade-pro.tsx
-// 升级 Pro 页面：展示免费/广告/付费会员权益
+// 升级 Pro 页面：Premium Botanical 设计风格
 import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppText } from '../components/ui/AppText';
-import { Card } from '../components/ui/Card';
-import { colors, radii, shadows, spacing } from '../constants/theme';
+import { colors, radii, shadows } from '../constants/theme';
+
+const PRO_FEATURES = [
+  { icon: '🚀', title: '全功能无限使用', desc: '语音记账、小票识别、多账户管理，无次数限制' },
+  { icon: '🚫', title: '去除所有广告', desc: '纯净记账体验，不再被广告打断' },
+  { icon: '📤', title: '报表导出', desc: '一键导出全部记录为 CSV，支持 Excel / WPS / Numbers' },
+  { icon: '✨', title: '优先体验新功能', desc: '新功能第一时间解锁，抢先使用' },
+];
+
+const FREE_FEATURES = [
+  { icon: '📝', title: '手动记账', desc: '快速输入金额、选择分类，秒级完成记账' },
+  { icon: '🤖', title: '文字 AI 记账', desc: '输入"咖啡40块"自动识别，内置 200+ 关键词' },
+  { icon: '📊', title: '收支统计', desc: '月度汇总、日趋势折线图、分类排行' },
+  { icon: '🎯', title: '预算管理', desc: '设置月度总预算和分类预算，实时进度' },
+  { icon: '🔔', title: '记账提醒', desc: '每日定时通知，帮你养成记账好习惯' },
+];
 
 export default function UpgradeProScreen() {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <AppText size="2xl" weight="semibold">升级 Pro</AppText>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Sage 渐变 Banner */}
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 48 }}
+      >
+        {/* ── Hero ── */}
         <LinearGradient
-          colors={['#5a9468', '#7ba68a']}
-          style={styles.banner}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#4a7a60', '#6a9878', '#7ba68a']}
+          style={[styles.hero, { paddingTop: insets.top + 20 }]}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
         >
-          <AppText style={{ fontSize: 40, marginBottom: 8 }}>🍃</AppText>
-          <AppText size="4xl" weight="bold" color={colors.white}>棉花记 Pro</AppText>
-          <AppText size="md" color="rgba(255,255,255,0.7)" style={{ marginTop: 4 }}>
-            解锁全部记账能力
-          </AppText>
+          {/* 返回按钮 */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backBtn, { top: insets.top + 10 }]}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.crownEmoji}>👑</Text>
+          <Text style={styles.heroTitle}>棉花记 Pro</Text>
+          <Text style={styles.heroSubtitle}>专业版 · 解锁全部记账能力</Text>
+
+          <View style={styles.trialBadge}>
+            <Text style={styles.trialText}>🎁 新用户享 21 天全功能免费体验</Text>
+          </View>
         </LinearGradient>
 
-        {/* 免费功能区 */}
-        <View style={styles.section}>
-          <AppText size="xl" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-            ✅ 免费功能（永久）
-          </AppText>
-          <Card padding={0}>
-            <View style={styles.freeRow}>
-              <AppText size="md" color={colors.text} weight="medium">📝 手动记账</AppText>
-              <AppText size="sm" color={colors.textLight}>快速输入金额、选择分类，秒级完成记账</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.freeRow}>
-              <AppText size="md" color={colors.text} weight="medium">🤖 文字 AI 记账</AppText>
-              <AppText size="sm" color={colors.textLight}>输入"咖啡40块"自动识别金额和分类，内置离线规则引擎覆盖 200+ 关键词</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.freeRow}>
-              <AppText size="md" color={colors.text} weight="medium">📊 收支统计与图表</AppText>
-              <AppText size="sm" color={colors.textLight}>月度收支汇总、日趋势折线图、分类排行饼图、单笔排行榜</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.freeRow}>
-              <AppText size="md" color={colors.text} weight="medium">🎯 预算管理</AppText>
-              <AppText size="sm" color={colors.textLight}>设置月度总预算和分类预算，实时查看消费进度</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.freeRow}>
-              <AppText size="md" color={colors.text} weight="medium">🔔 记账提醒</AppText>
-              <AppText size="sm" color={colors.textLight}>每日定时通知提醒，帮你养成记账好习惯</AppText>
-            </View>
-          </Card>
-        </View>
+        {/* ── 内容区上移覆盖 hero ── */}
+        <View style={styles.contentCard}>
 
-        {/* Pro 会员区 */}
-        <View style={styles.section}>
-          <AppText size="xl" weight="semibold" color={colors.text} style={styles.sectionTitle}>
-            👑 Pro 会员
-          </AppText>
-          <Card padding={0}>
-            <View style={styles.proRow}>
-              <AppText size="md" color={colors.text} weight="medium">🚀 全功能无限使用</AppText>
-              <AppText size="sm" color={colors.textLight}>语音记账、小票识别、多账户管理，无次数限制</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.proRow}>
-              <AppText size="md" color={colors.text} weight="medium">🚫 去除所有广告</AppText>
-              <AppText size="sm" color={colors.textLight}>纯净记账体验，不再被广告打断</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.proRow}>
-              <AppText size="md" color={colors.text} weight="medium">📤 报表导出</AppText>
-              <AppText size="sm" color={colors.textLight}>一键导出全部记录为 CSV，支持 Excel / WPS / Numbers</AppText>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.proRow}>
-              <AppText size="md" color={colors.text} weight="medium">✨ 优先体验新功能</AppText>
-              <AppText size="sm" color={colors.textLight}>新功能第一时间解锁，抢先使用</AppText>
-            </View>
-          </Card>
-          <View style={[styles.planRow, { marginTop: 14 }]}>
-            {/* 月会员卡 */}
-            <TouchableOpacity
-              style={[
-                styles.planCard,
-                {
-                  borderColor: plan === 'monthly' ? colors.sage : colors.creamDark,
-                  borderWidth: plan === 'monthly' ? 2 : 1,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setPlan('monthly')}
-            >
-              <AppText size="lg" weight="semibold" color={colors.text}>月会员</AppText>
-              <View style={styles.priceRow}>
-                <AppText size="3xl" weight="bold" color={colors.sage}>¥15</AppText>
-                <AppText size="sm" color={colors.textLight}>/月</AppText>
-              </View>
-              <AppText size="xs" color={colors.textLighter}>≈ 0.5元/天</AppText>
-            </TouchableOpacity>
-
-            {/* 年会员卡 */}
-            <TouchableOpacity
-              style={[
-                styles.planCard,
-                {
-                  borderColor: plan === 'yearly' ? colors.sage : colors.creamDark,
-                  borderWidth: plan === 'yearly' ? 2 : 1,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setPlan('yearly')}
-            >
-              {/* 推荐标签 */}
-              <View style={styles.recommendTag}>
-                <AppText size="xs" weight="semibold" color={colors.white}>推荐</AppText>
-              </View>
-              <AppText size="lg" weight="semibold" color={colors.text}>年会员</AppText>
-              <View style={styles.priceRow}>
-                <AppText size="3xl" weight="bold" color={colors.sage}>¥138</AppText>
-                <AppText size="sm" color={colors.textLight}>/年</AppText>
-              </View>
-              <AppText size="xs" color={colors.textLighter}>≈ 0.38元/天</AppText>
-            </TouchableOpacity>
+          {/* 选择套餐 */}
+          <View style={styles.sectionRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>选择套餐</Text>
           </View>
+
+          {/* 年会员卡 */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => setPlan('yearly')}
+            style={[styles.planCard, plan === 'yearly' && styles.planCardSelected]}
+          >
+            {plan === 'yearly' && (
+              <View style={styles.planSelectedBar} />
+            )}
+            <View style={styles.planTopRow}>
+              <Text style={[styles.planName, plan === 'yearly' && styles.planNameSelected]}>
+                年会员
+              </Text>
+              <View style={styles.badgeGroup}>
+                <View style={styles.badgeSave}>
+                  <Text style={styles.badgeSaveText}>省 46%</Text>
+                </View>
+                <View style={styles.badgeRec}>
+                  <Text style={styles.badgeRecText}>推荐</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceCurrency, plan === 'yearly' && styles.priceColorActive]}>¥</Text>
+              <Text style={[styles.priceNumber, plan === 'yearly' && styles.priceColorActive]}>138</Text>
+              <Text style={styles.priceUnit}>/年</Text>
+            </View>
+            <Text style={styles.priceNote}>≈ ¥0.38 / 天 · 月均仅 ¥11.5</Text>
+          </TouchableOpacity>
+
+          {/* 月会员卡 */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => setPlan('monthly')}
+            style={[styles.planCard, plan === 'monthly' && styles.planCardSelected]}
+          >
+            {plan === 'monthly' && (
+              <View style={styles.planSelectedBar} />
+            )}
+            <View style={styles.planTopRow}>
+              <Text style={[styles.planName, plan === 'monthly' && styles.planNameSelected]}>
+                月会员
+              </Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={[styles.priceCurrency, plan === 'monthly' && styles.priceColorActive]}>¥</Text>
+              <Text style={[styles.priceNumber, plan === 'monthly' && styles.priceColorActive]}>15</Text>
+              <Text style={styles.priceUnit}>/月</Text>
+            </View>
+            <Text style={styles.priceNote}>≈ ¥0.5 / 天</Text>
+          </TouchableOpacity>
+
+          {/* CTA 按钮 */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => Alert.alert('提示', '功能开发中，敬请期待')}
+            style={styles.ctaWrap}
+          >
+            <LinearGradient
+              colors={['#2d5a40', '#5a9468']}
+              style={styles.ctaBtn}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.ctaText}>立即开通 Pro</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.ctaNote}>随时可取消 · 到期不自动续费</Text>
+
+          {/* Pro 专属权益 */}
+          <View style={[styles.sectionRow, { marginTop: 28 }]}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Pro 专属权益</Text>
+          </View>
+
+          <View style={styles.featureCard}>
+            {PRO_FEATURES.map((f, i) => (
+              <View key={i} style={[styles.featureRow, i > 0 && styles.featureDivider]}>
+                <Text style={styles.featureIcon}>{f.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.featureTitle}>{f.title}</Text>
+                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* 免费功能 */}
+          <View style={[styles.sectionRow, { marginTop: 24 }]}>
+            <View style={[styles.sectionAccent, { backgroundColor: colors.textLighter }]} />
+            <Text style={[styles.sectionTitle, { color: colors.textLight }]}>
+              免费功能（永久包含）
+            </Text>
+          </View>
+
+          <View style={[styles.featureCard, { opacity: 0.8 }]}>
+            {FREE_FEATURES.map((f, i) => (
+              <View key={i} style={[styles.featureRow, i > 0 && styles.featureDivider]}>
+                <Text style={[styles.featureIcon, { fontSize: 20 }]}>{f.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.featureTitle, { fontSize: 15, fontWeight: '500' }]}>{f.title}</Text>
+                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
         </View>
-
-        {/* 底部开通按钮 */}
-        <TouchableOpacity
-          style={styles.ctaBtn}
-          activeOpacity={0.7}
-          onPress={() => Alert.alert('提示', '功能开发中，敬请期待')}
-        >
-          <AppText size="xl" weight="bold" color={colors.white}>立即开通</AppText>
-        </TouchableOpacity>
-
-        {/* 底部提示 */}
-        <AppText size="sm" color={colors.textLighter} style={styles.footerHint}>
-          🎁 新用户注册享 21 天全功能免费体验
-        </AppText>
       </ScrollView>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
-    backgroundColor: colors.cream, borderBottomWidth: 1, borderBottomColor: colors.creamDark,
+  // ── Hero ──────────────────────────────────────
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 60,
+    alignItems: 'center',
+    minHeight: 260,
+    position: 'relative',
   },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: radii.md,
-    backgroundColor: colors.white, alignItems: 'center' as const, justifyContent: 'center' as const,
-    ...shadows.md,
+  backBtn: {
+    position: 'absolute',
+    left: 16,
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
-  scrollContent: {
-    padding: 20, paddingBottom: 40,
+  backArrow: { fontSize: 18, color: '#fff', lineHeight: 22 },
+  crownEmoji: { fontSize: 52, marginTop: 4 },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#fff',
+    marginTop: 10,
+    letterSpacing: 1,
   },
-  banner: {
-    borderRadius: 18, padding: 24, alignItems: 'center',
-    marginBottom: 8,
+  heroSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 6,
+    letterSpacing: 0.3,
   },
-  section: {
+  trialBadge: {
     marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: radii.full,
+  },
+  trialText: { fontSize: 13, color: 'rgba(255,255,255,0.85)' },
+
+  // ── 内容区 ─────────────────────────────────────
+  contentCard: {
+    marginTop: -32,
+    backgroundColor: colors.cream,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+  },
+
+  // ── Section header ─────────────────────────────
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionAccent: {
+    width: 4,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: colors.sage,
   },
   sectionTitle: {
-    marginBottom: 10,
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
   },
-  divider: {
-    height: 1, backgroundColor: colors.creamDark, marginHorizontal: 18,
-  },
-  freeRow: {
-    paddingHorizontal: 18, paddingVertical: 12, gap: 4,
-  },
-  proRow: {
-    paddingHorizontal: 18, paddingVertical: 12, gap: 4,
-  },
-  priceRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 8,
-  },
-  planRow: {
-    flexDirection: 'row', gap: 12,
-  },
+
+  // ── 定价卡片 ───────────────────────────────────
   planCard: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.white, borderRadius: radii.lg,
-    paddingVertical: 20, paddingHorizontal: 12,
-    position: 'relative', overflow: 'hidden',
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: colors.creamDark,
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.sm,
   },
-  recommendTag: {
-    position: 'absolute', top: 0, right: 0,
-    backgroundColor: colors.coral, paddingHorizontal: 8, paddingVertical: 3,
-    borderBottomLeftRadius: radii.sm,
-  },
-  ctaBtn: {
-    marginTop: 28, height: 52, borderRadius: radii.md,
-    backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center',
+  planCardSelected: {
+    borderColor: colors.sage,
     ...shadows.md,
   },
-  footerHint: {
-    textAlign: 'center', marginTop: 16,
+  planSelectedBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.sage,
+    borderTopLeftRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
+  },
+  planTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  planName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textLight,
+  },
+  planNameSelected: {
+    color: colors.text,
+  },
+  badgeGroup: { flexDirection: 'row', gap: 6 },
+  badgeSave: {
+    backgroundColor: colors.honeyPale,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.sm,
+  },
+  badgeSaveText: { fontSize: 12, fontWeight: '600', color: colors.honey },
+  badgeRec: {
+    backgroundColor: colors.sagePale,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.sm,
+  },
+  badgeRecText: { fontSize: 12, fontWeight: '600', color: colors.sage },
+
+  // 价格数字（核心改动：52px bold）
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
+  priceCurrency: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textLighter,
+    marginBottom: 4,
+  },
+  priceNumber: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: colors.textLighter,
+    lineHeight: 52,
+  },
+  priceUnit: {
+    fontSize: 15,
+    color: colors.textLighter,
+    marginLeft: 4,
+    marginBottom: 6,
+  },
+  priceColorActive: {
+    color: colors.sage,
+  },
+  priceNote: {
+    fontSize: 13,
+    color: colors.textLighter,
+    marginTop: 4,
+  },
+
+  // ── CTA ───────────────────────────────────────
+  ctaWrap: {
+    marginTop: 20,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  ctaBtn: {
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.8,
+  },
+  ctaNote: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: colors.textLighter,
+    marginTop: 10,
+  },
+
+  // ── 权益列表 ───────────────────────────────────
+  featureCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  featureDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
+  },
+  featureIcon: { fontSize: 22, marginTop: 2 },
+  featureTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 3,
+  },
+  featureDesc: {
+    fontSize: 13,
+    color: colors.textLight,
+    lineHeight: 19,
   },
 });
