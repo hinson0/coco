@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -144,24 +144,7 @@ export default function ChatScreen() {
 
   // 录音状态（从 ChatInputBar 提升上来）
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [metering, setMetering] = useState(0);
-
-  // 录音计时器
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const wasRecordingRef = useRef(false);
-  useEffect(() => {
-    const isActive = recordingState !== 'idle';
-    if (isActive && !wasRecordingRef.current) {
-      setRecordingSeconds(0);
-      timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    } else if (!isActive && wasRecordingRef.current) {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      setRecordingSeconds(0);
-    }
-    wasRecordingRef.current = isActive;
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [recordingState]);
 
   // 语音播放
   const { playingId, play: playAudio } = useAudioPlayer();
@@ -289,9 +272,7 @@ export default function ChatScreen() {
           onVoice={(base64, durationSeconds) => sendAsr(base64, durationSeconds)}
           onQuickAction={(actionText) => sendText(actionText)}
           recordingState={recordingState}
-          recordingSeconds={recordingSeconds}
           onRecordingStateChange={setRecordingState}
-          onRecordingSecondsChange={setRecordingSeconds}
           onMeteringChange={setMetering}
         />
       </Animated.View>
