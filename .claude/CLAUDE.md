@@ -1,3 +1,18 @@
+# 项目结构
+
+Monorepo (pnpm workspace + turbo)：
+- `apps/mobile` — Expo React Native 移动端（主应用）
+- `packages/shared` — 共享类型、规则引擎（`parse()`）
+- `packages/ai` — GLM 解析器
+- `supabase/functions/` — Edge Functions（ASR、OCR、文本记账）
+
+# 常用命令
+
+- `pnpm dev` — 启动 Expo 开发服务器（等价于 `pnpm --filter mobile dev`）
+- `pnpm worktree` — worktree 开发模式
+- `npx supabase functions deploy <name>` — 部署 Edge Function
+- `npx supabase secrets set KEY=VALUE` — 设置 Edge Function 环境变量
+
 # 架构原则（最高优先级）
 
 ## 离线优先，零卡顿
@@ -29,6 +44,14 @@
 - 代码注释中的说明文字
 - git commit message 的标题和正文
 - PR 的标题和正文（Summary、Test Plan 等内容部分）
+
+# Git 工作流（必须遵守）
+
+## 禁止直接推送 main
+
+- **严禁** `git push origin xxx:main`，任何情况都不允许直接推送到 main
+- push 时只推到当前分支：`git push origin HEAD` 或 `git push -u origin <branch-name>`
+- 合并到 main 必须通过 PR：`gh pr create` → review → merge
 
 # 工作路径
 
@@ -82,4 +105,9 @@ Claude Code Plan Mode 的计划文件保存在**当前项目目录内**：
 
 - Expo 移动端用 `EXPO_PUBLIC_` 前缀，Next.js Web 用 `NEXT_PUBLIC_` 前缀
 - 两者不互通，需在 `.env` 中分别声明
+
+## 依赖安装
+
+- 移动端依赖装在 `apps/mobile`：`pnpm add <pkg> --filter mobile`
+- 共享包依赖装在对应 package 下，不要装在根目录
 
