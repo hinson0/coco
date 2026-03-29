@@ -1,7 +1,7 @@
 import * as Localization from "expo-localization";
 import { supabase } from "./supabase";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL!;
+const API_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL! + "/functions/v1";
 
 export async function apiFetch<T>(
   path: string,
