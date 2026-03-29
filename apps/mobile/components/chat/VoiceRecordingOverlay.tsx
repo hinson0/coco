@@ -12,7 +12,6 @@ import { colors } from '../../constants/theme';
 interface VoiceRecordingOverlayProps {
   readonly visible: boolean;
   readonly state: 'recording' | 'cancelling';
-  readonly seconds: number;
   readonly metering: number; // 0~1 归一化音量
 }
 
@@ -65,9 +64,14 @@ function WaveBar({ index, metering, isCancelling }: { index: number; metering: n
   return <Animated.View style={[styles.bar, barStyle]} />;
 }
 
-export function VoiceRecordingOverlay({ visible, state, seconds, metering }: VoiceRecordingOverlayProps) {
+
+export function VoiceRecordingOverlay({ visible, state, metering }: VoiceRecordingOverlayProps) {
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
+
+  // 取消指示器动画
+  const cancelScale = useSharedValue(1);
+  const cancelOpacity = useSharedValue(0.4);
 
   useEffect(() => {
     if (visible) {
@@ -79,25 +83,65 @@ export function VoiceRecordingOverlay({ visible, state, seconds, metering }: Voi
     }
   }, [visible, opacity, translateY]);
 
+  const isCancelling = state === 'cancelling';
+
+  useEffect(() => {
+    if (isCancelling) {
+      cancelScale.value = withTiming(1.15, { duration: 200 });
+      cancelOpacity.value = withTiming(1, { duration: 200 });
+    } else {
+      cancelScale.value = withTiming(1, { duration: 200 });
+      cancelOpacity.value = withTiming(0.4, { duration: 200 });
+    }
+  }, [isCancelling, cancelScale, cancelOpacity]);
+
   const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
     pointerEvents: opacity.value > 0 ? 'auto' as const : 'none' as const,
   }));
 
-  const isCancelling = state === 'cancelling';
+  const cancelIndicatorStyle = useAnimatedStyle(() => ({
+    opacity: cancelOpacity.value,
+    transform: [{ scale: cancelScale.value }],
+  }));
 
   return (
     <Animated.View style={[styles.container, containerStyle]}>
+      {/* ── 取消指示器 ── */}
+      <Animated.View style={[styles.cancelIndicator, cancelIndicatorStyle]}>
+        <View style={[
+          styles.cancelIcon,
+          isCancelling && styles.cancelIconActive,
+        ]}>
+          <AppText
+            size="xl"
+            weight="bold"
+            color={isCancelling ? colors.white : colors.coral}
+          >
+            ✕
+          </AppText>
+        </View>
+        <AppText
+          size="xs"
+          weight={isCancelling ? 'semibold' : 'medium'}
+          color={isCancelling ? colors.coral : colors.textLighter}
+        >
+          {isCancelling ? '松开取消' : '上滑取消'}
+        </AppText>
+      </Animated.View>
+
+      {/* ── 提示文字 ── */}
       <AppText
         size="md"
         weight="medium"
         color={isCancelling ? colors.coral : colors.sage}
         style={styles.hint}
       >
-        {isCancelling ? '松开取消' : `松手发送 ${seconds}",  上移取消`}
+        {isCancelling ? '松开取消' : '松手发送 · 上移取消'}
       </AppText>
 
+      {/* ── 声纹波形 ── */}
       <View style={styles.waveContainer}>
         {Array.from({ length: BAR_COUNT }, (_, i) => (
           <WaveBar key={i} index={i} metering={metering} isCancelling={isCancelling} />
@@ -117,6 +161,38 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     backgroundColor: colors.cream,
     zIndex: 100,
+  },
+  cancelIndicator: {
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  cancelIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.coralPale,
+    borderWidth: 2,
+    borderColor: colors.coralLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelIconActive: {
+    backgroundColor: colors.coral,
+    borderColor: colors.coral,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  recDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.coral,
   },
   hint: {
     textAlign: 'center',
