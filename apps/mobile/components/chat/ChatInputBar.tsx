@@ -122,20 +122,9 @@ export function ChatInputBar({
     }),
   ).current;
 
-  // ─── 录音按钮文字 ───
-  const voiceBtnText =
-    recordingState === 'cancelling'
-      ? '松开取消'
-      : recordingState === 'recording'
-        ? `松开发送 ${recordingSeconds}s`
-        : '按住说话';
-
-  const voiceBtnBg =
-    recordingState === 'cancelling'
-      ? '#fde8e2'
-      : recordingState === 'recording'
-        ? colors.sagePale
-        : colors.cream;
+  // ─── 录音中：按钮视觉状态 ───
+  const isRecordingActive = recordingState !== 'idle';
+  const isCancelling = recordingState === 'cancelling';
 
   return (
     <View>
@@ -181,16 +170,33 @@ export function ChatInputBar({
           <>
             {/* 语音模式：按住说话 */}
             <View
-              style={[styles.voiceArea, { backgroundColor: voiceBtnBg }]}
+              style={[
+                styles.voiceArea,
+                isRecordingActive && styles.voiceAreaActive,
+                isCancelling && styles.voiceAreaCancel,
+              ]}
               {...panResponder.panHandlers}
             >
-              <AppText
-                size="lg"
-                weight="medium"
-                color={recordingState === 'cancelling' ? colors.coral : colors.text}
-              >
-                {voiceBtnText}
-              </AppText>
+              {/* 麦克风图标 + 文字 */}
+              <View style={styles.voiceContent}>
+                <AppText
+                  size="lg"
+                  color={isCancelling ? colors.coral : isRecordingActive ? colors.sage : colors.textLight}
+                >
+                  {isCancelling ? '✕' : '🎙'}
+                </AppText>
+                <AppText
+                  size="lg"
+                  weight="medium"
+                  color={isCancelling ? colors.coral : isRecordingActive ? colors.sage : colors.text}
+                >
+                  {isCancelling
+                    ? '松开取消'
+                    : isRecordingActive
+                      ? `${recordingSeconds}"`
+                      : '按住说话'}
+                </AppText>
+              </View>
             </View>
 
             {/* ⌨️ 切回文字模式 */}
@@ -256,13 +262,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
+
+  // ─── 语音按钮区域 ───
   voiceArea: {
     flex: 1,
     height: 44,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.creamDeeper,
-    borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  voiceAreaActive: {
+    backgroundColor: colors.sagePale,
+    borderColor: colors.sageLight,
+  },
+  voiceAreaCancel: {
+    backgroundColor: colors.coralPale,
+    borderColor: colors.coralLight,
+  },
+  voiceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });
