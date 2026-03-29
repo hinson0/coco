@@ -15,6 +15,8 @@ interface ChatBubbleProps {
   readonly categories?: readonly Category[];
   readonly onEditRecord?: () => void;
   readonly onSuggestion?: (label: string) => void;
+  readonly isPlaying?: boolean;
+  readonly onPlay?: () => void;
 }
 
 function formatTime(isoString: string): string {
@@ -48,7 +50,7 @@ function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   );
 }
 
-export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord }: ChatBubbleProps) {
+export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
@@ -62,9 +64,9 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
         return (
           <VoiceBubble
             role="user"
-            duration={parseInt(content, 10) || 0}
-            isPlaying={false}
-            onPlay={() => {}}
+            duration={message.duration_seconds ?? 0}
+            isPlaying={isPlaying ?? false}
+            onPlay={onPlay ?? (() => {})}
           />
         );
       }
