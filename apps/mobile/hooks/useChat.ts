@@ -76,7 +76,7 @@ export function useChat() {
     // 3. 在线 → 走 BFF/GLM 流程
     setLoading(true);
     try {
-      const resp = await apiFetch<any>("/api/record/text", {
+      const resp = await apiFetch<any>("/record-text", {
         method: "POST",
         body: JSON.stringify({ text }),
       });
@@ -134,7 +134,7 @@ export function useChat() {
     await addMessage({ role: "user", content_type: "image", content: imageContent });
     setLoading(true);
     try {
-      const resp = await apiFetch<any>("/api/record/ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
+      const resp = await apiFetch<any>("/record-ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
         await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
@@ -149,26 +149,81 @@ export function useChat() {
     }
   }, [db, qc, addMessage]);
 
-  const sendAsr = useCallback(async (audioBase64: string) => {
+  const sendAsr = useCallback(async (audioBase64: string, durationSeconds: number) => {
     if (!db) return;
+
+    // 1. 保存音频文件到本地
+    let audioUri: string | null = null;
+    try {
+      const dir = `${FileSystem.documentDirectory}voice-messages/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      audioUri = `${dir}${Date.now()}-${Crypto.randomUUID()}.m4a`;
+      await FileSystem.writeAsStringAsync(audioUri, audioBase64, { encoding: FileSystem.EncodingType.Base64 });
+    } catch (err) {
+      console.error('[sendAsr] 音频保存失败:', err);
+    }
+
+    // 2. 乐观渲染：立即显示语音气泡
+    const msgId = await addMessage({
+      role: "user",
+      content_type: "audio",
+      content: "[语音]",
+      audio_uri: audioUri,
+      duration_seconds: durationSeconds,
+    });
+
+    // 3. 检查网络
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
-      await addMessage({ role: "assistant", content_type: "text", content: "语音记账需要联网才能使用，请连接网络后重试。" });
+      await addMessage({
+        role: "assistant",
+        content_type: "text",
+        content: "未联网，无法使用语音服务。",
+      });
       return;
     }
-    await addMessage({ role: "user", content_type: "audio", content: "[语音]" });
+
+    // 4. 调用 ASR API
     setLoading(true);
     try {
-      const resp = await apiFetch<any>("/api/record/asr", { method: "POST", body: JSON.stringify({ audioBase64 }) });
+      const resp = await apiFetch<any>("/record-asr", {
+        method: "POST",
+        body: JSON.stringify({ audioBase64 }),
+      });
+
+      // 5. 更新语音消息的 transcription
+      if (resp.data?.asrText) {
+        await db.runAsync(
+          "UPDATE chat_messages SET content = ? WHERE id = ?",
+          resp.data.asrText,
+          msgId,
+        );
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      }
+
+      // 6. 处理响应
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
-        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
+        await addMessage({
+          role: "assistant",
+          content_type: "bill_card",
+          content: JSON.stringify(tx),
+          transaction_id: tx.id,
+        });
         qc.invalidateQueries({ queryKey: ["transactions"] });
       } else {
-        await addMessage({ role: "assistant", content_type: "text", content: resp.data?.message ?? "没听清，要不再说一次？" });
+        await addMessage({
+          role: "assistant",
+          content_type: "text",
+          content: resp.data?.message ?? "没听清，要不再说一次？",
+        });
       }
     } catch {
-      await addMessage({ role: "assistant", content_type: "text", content: "网络错误，语音识别失败。" });
+      await addMessage({
+        role: "assistant",
+        content_type: "text",
+        content: "网络错误，语音识别失败。",
+      });
     } finally {
       setLoading(false);
     }
