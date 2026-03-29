@@ -15,7 +15,7 @@ async function recognizeSpeech(audioBase64: string): Promise<string> {
   const resp = await client.SentenceRecognition({
     EngSerViceType: "16k_zh",
     SourceType: 1,
-    VoiceFormat: "wav",
+    VoiceFormat: "m4a",
     Data: audioBase64,
     DataLen: new Uint8Array(atob(audioBase64).split("").map((c) => c.charCodeAt(0))).length,
   });
@@ -70,13 +70,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // 认证由 Supabase API 网关处理，function 无需再检查 Authorization header
 
     const { audioBase64 } = await req.json();
     if (!audioBase64) {
@@ -123,7 +117,8 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("record-asr error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
