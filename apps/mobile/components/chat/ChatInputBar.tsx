@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet, PanResponder } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { AppText } from '../ui/AppText';
 import { QuickActions } from './QuickActions';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
@@ -88,9 +89,12 @@ export function ChatInputBar({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: async (_evt, gestureState) => {
         startYRef.current = gestureState.y0;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // 立即切录音态，浮层瞬间出现；启动失败则回退
+        setRecordingStateSync('recording');
         const started = await startRecording();
-        if (started) {
-          setRecordingStateSync('recording');
+        if (!started) {
+          setRecordingStateSync('idle');
         }
       },
       onPanResponderMove: (_evt, gestureState) => {
@@ -104,27 +108,52 @@ export function ChatInputBar({
       },
       onPanResponderRelease: async () => {
         const current = recordingStateRef.current;
+        // 立即切 idle，浮层瞬间消失；异步操作在后台完成
+        setRecordingStateSync('idle');
         if (current === 'cancelling') {
           await cancelRecording();
-          setRecordingStateSync('idle');
         } else if (current === 'recording') {
           const result = await stopRecording();
-          setRecordingStateSync('idle');
           if (result) {
             onVoiceRef.current(result.base64, result.durationSeconds);
           }
         }
       },
       onPanResponderTerminate: async () => {
-        await cancelRecording();
         setRecordingStateSync('idle');
+        await cancelRecording();
       },
     }),
   ).current;
 
-  // ─── 录音中：按钮视觉状态 ───
-  const isRecordingActive = recordingState !== 'idle';
-  const isCancelling = recordingState === 'cancelling';
+  // ─── 录音按钮文字 ───
+  const voiceBtnText =
+    recordingState === 'cancelling'
+      ? '松开取消'
+      : recordingState === 'recording'
+        ? '松开发送'
+        : '按住说话';
+
+  const voiceBtnBg =
+    recordingState === 'cancelling'
+      ? colors.coralPale
+      : recordingState === 'recording'
+        ? colors.sagePale
+        : colors.cream;
+
+  const voiceBtnBorder =
+    recordingState === 'cancelling'
+      ? colors.coralLight
+      : recordingState === 'recording'
+        ? colors.sageLight
+        : colors.creamDeeper;
+
+  const voiceBtnGlow =
+    recordingState === 'cancelling'
+      ? { shadowColor: colors.coral, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }
+      : recordingState === 'recording'
+        ? { shadowColor: colors.sage, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }
+        : {};
 
   return (
     <View>
@@ -170,33 +199,16 @@ export function ChatInputBar({
           <>
             {/* 语音模式：按住说话 */}
             <View
-              style={[
-                styles.voiceArea,
-                isRecordingActive && styles.voiceAreaActive,
-                isCancelling && styles.voiceAreaCancel,
-              ]}
+              style={[styles.voiceArea, { backgroundColor: voiceBtnBg, borderColor: voiceBtnBorder }, voiceBtnGlow]}
               {...panResponder.panHandlers}
             >
-              {/* 麦克风图标 + 文字 */}
-              <View style={styles.voiceContent}>
-                <AppText
-                  size="lg"
-                  color={isCancelling ? colors.coral : isRecordingActive ? colors.sage : colors.textLight}
-                >
-                  {isCancelling ? '✕' : '🎙'}
-                </AppText>
-                <AppText
-                  size="lg"
-                  weight="medium"
-                  color={isCancelling ? colors.coral : isRecordingActive ? colors.sage : colors.text}
-                >
-                  {isCancelling
-                    ? '松开取消'
-                    : isRecordingActive
-                      ? `${recordingSeconds}"`
-                      : '按住说话'}
-                </AppText>
-              </View>
+              <AppText
+                size="lg"
+                weight="medium"
+                color={recordingState === 'cancelling' ? colors.coral : colors.text}
+              >
+                {voiceBtnText}
+              </AppText>
             </View>
 
             {/* ⌨️ 切回文字模式 */}
@@ -262,29 +274,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-
-  // ─── 语音按钮区域 ───
   voiceArea: {
     flex: 1,
     height: 44,
-    borderRadius: radii.xl,
-    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.creamDeeper,
+    borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  voiceAreaActive: {
-    backgroundColor: colors.sagePale,
-    borderColor: colors.sageLight,
-  },
-  voiceAreaCancel: {
-    backgroundColor: colors.coralPale,
-    borderColor: colors.coralLight,
-  },
-  voiceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
 });

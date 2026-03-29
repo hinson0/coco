@@ -301,7 +301,6 @@ export default function ChatScreen() {
         visible={recordingState !== 'idle'}
         state={recordingState === 'idle' ? 'recording' : recordingState}
         metering={metering}
-        seconds={recordingSeconds}
       />
 
     </View>
