@@ -5,7 +5,7 @@ import NetInfo from "@react-native-community/netinfo";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 import { apiFetch } from "../lib/api";
-import { parse } from "@/lib/rule-engine";
+import { parse } from "@coco/shared";
 import { useOfflineContext } from "@/lib/offline-context";
 import { useAddChatMessage } from "@/hooks/useLocalChatMessages";
 import { useCreateTransaction } from "@/hooks/useLocalTransactions";
