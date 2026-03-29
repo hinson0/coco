@@ -17,6 +17,7 @@ interface VoiceBubbleProps {
   readonly isPlaying: boolean;
   readonly onPlay: () => void;
   readonly transcription?: string;
+  readonly status?: 'sending' | 'transcribing' | 'done';
 }
 
 const BAR_HEIGHTS = [6, 12, 18] as const;
@@ -53,7 +54,7 @@ function AnimatedBar({ height, delay, isPlaying, barColor }: { height: number; d
   );
 }
 
-export function VoiceBubble({ role, duration, isPlaying, onPlay, transcription }: VoiceBubbleProps) {
+export function VoiceBubble({ role, duration, isPlaying, onPlay, transcription, status }: VoiceBubbleProps) {
   const isUser = role === 'user';
   const bubbleStyle = isUser ? styles.bubbleUser : styles.bubbleAssistant;
   const barColor = isUser ? colors.white : colors.sage;
@@ -79,6 +80,11 @@ export function VoiceBubble({ role, duration, isPlaying, onPlay, transcription }
       {transcription ? (
         <AppText size="md" color={colors.textLighter} style={styles.transcription}>
           {transcription}
+        </AppText>
+      ) : null}
+      {status === 'transcribing' ? (
+        <AppText size="md" color={colors.textLighter} style={styles.transcription}>
+          识别中...
         </AppText>
       ) : null}
     </View>
