@@ -110,7 +110,11 @@ export function VoiceRecordingOverlay({ visible, state, seconds }: VoiceRecordin
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(58,48,40,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
