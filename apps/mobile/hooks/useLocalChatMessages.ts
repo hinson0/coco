@@ -9,6 +9,8 @@ export interface AddMessageInput {
   readonly content_type: ChatContentType;
   readonly content: string;
   readonly transaction_id?: string | null;
+  readonly audio_uri?: string | null;
+  readonly duration_seconds?: number | null;
 }
 
 export function useLocalChatMessages() {
@@ -36,13 +38,15 @@ export function useAddChatMessage() {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, audio_uri, duration_seconds) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)",
         id,
         input.role,
         input.content_type,
         input.content,
         input.transaction_id ?? null,
-        now
+        now,
+        input.audio_uri ?? null,
+        input.duration_seconds ?? null
       );
       return id;
     },
