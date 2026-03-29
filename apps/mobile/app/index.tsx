@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -26,7 +26,10 @@ import { useLocalCategories } from '../hooks/useLocalCategories';
 import { ChatBubble } from '../components/chat/ChatBubble';
 import { ChatToolBar } from '../components/chat/ChatToolBar';
 import { ChatInputBar } from '../components/chat/ChatInputBar';
+import { VoiceRecordingOverlay } from '../components/chat/VoiceRecordingOverlay';
 import { TypingIndicator } from '../components/chat/TypingIndicator';
+import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import type { RecordingState } from '../components/chat/ChatInputBar';
 import { colors, spacing, radii, shadows } from '../constants/theme';
 import type { ChatMessage, Transaction } from '@coco/shared';
 
@@ -139,6 +142,13 @@ export default function ChatScreen() {
   // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
 
+  // 录音状态（从 ChatInputBar 提升上来）
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [metering, setMetering] = useState(0);
+
+  // 语音播放
+  const { playingId, play: playAudio } = useAudioPlayer();
+
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
   useEffect(() => {
@@ -197,6 +207,10 @@ export default function ChatScreen() {
               router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx), msgId: msg.id } });
             } catch { /* ignore parse errors */ }
           } : undefined}
+          isPlaying={playingId === msg.id}
+          onPlay={msg.content_type === 'audio' && msg.audio_uri
+            ? () => playAudio(msg.id, msg.audio_uri!)
+            : undefined}
         />
       </View>
     );
@@ -255,10 +269,20 @@ export default function ChatScreen() {
             const base64 = await pickImage();
             if (base64) sendOcr(base64);
           }}
-          onVoice={(base64) => sendAsr(base64)}
+          onVoice={(base64, durationSeconds) => sendAsr(base64, durationSeconds)}
           onQuickAction={(actionText) => sendText(actionText)}
+          recordingState={recordingState}
+          onRecordingStateChange={setRecordingState}
+          onMeteringChange={setMetering}
         />
       </Animated.View>
+
+      {/* ── Voice recording overlay ── */}
+      <VoiceRecordingOverlay
+        visible={recordingState !== 'idle'}
+        state={recordingState === 'idle' ? 'recording' : recordingState}
+        metering={metering}
+      />
 
     </View>
   );

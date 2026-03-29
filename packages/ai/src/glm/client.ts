@@ -9,7 +9,7 @@ export interface GlmResponse {
 }
 
 export async function callGlm(prompt: string, options: GlmOptions): Promise<GlmResponse> {
-  const { apiKey, model = "glm-4-flash", timeoutMs = 8000 } = options;
+  const { apiKey, model = "glm-4.7-flash", timeoutMs = 8000 } = options;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
