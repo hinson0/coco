@@ -3,9 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withRepeat,
   withTiming,
-  withDelay,
   interpolateColor,
 } from 'react-native-reanimated';
 import { AppText } from '../ui/AppText';
@@ -15,48 +13,45 @@ interface VoiceRecordingOverlayProps {
   readonly visible: boolean;
   readonly state: 'recording' | 'cancelling';
   readonly seconds: number;
+  readonly metering: number; // 0~1 归一化音量
 }
 
-// 底部波形条数量和参数
+// 底部波形条
 const BAR_COUNT = 40;
 
-function generateBarParams() {
-  const params = [];
-  for (let i = 0; i < BAR_COUNT; i++) {
-    // 中间高两边低的基础波形
-    const center = BAR_COUNT / 2;
-    const dist = Math.abs(i - center) / center;
-    const baseHeight = 6 + (1 - dist) * 18;
-    const period = 300 + Math.sin(i * 0.7) * 200;
-    const amplitude = 4 + (1 - dist) * 10;
-    params.push({ baseHeight, period, amplitude });
-  }
-  return params;
-}
+// 每根条的随机系数（固定种子，保证每次渲染一致）
+const BAR_RANDOM = Array.from({ length: BAR_COUNT }, (_, i) => {
+  const center = BAR_COUNT / 2;
+  const dist = Math.abs(i - center) / center;
+  return {
+    // 中间高两边低的权重
+    weight: 1 - dist * 0.6,
+    // 轻微随机偏移让波形不完全对称
+    jitter: Math.sin(i * 2.3) * 0.3 + Math.cos(i * 1.7) * 0.2,
+  };
+});
 
-const BAR_PARAMS = generateBarParams();
+const MIN_HEIGHT = 3;
+const MAX_HEIGHT = 30;
 
-function WaveBar({ index, isCancelling }: { index: number; isCancelling: boolean }) {
-  const { baseHeight, period, amplitude } = BAR_PARAMS[index];
-  const height = useSharedValue(baseHeight);
+function WaveBar({ index, metering, isCancelling }: { index: number; metering: number; isCancelling: boolean }) {
+  const height = useSharedValue(MIN_HEIGHT);
   const colorProgress = useSharedValue(0);
+
+  const { weight, jitter } = BAR_RANDOM[index];
 
   useEffect(() => {
     if (isCancelling) {
-      height.value = withTiming(4, { duration: 200 });
+      height.value = withTiming(MIN_HEIGHT, { duration: 200 });
       colorProgress.value = withTiming(1, { duration: 200 });
     } else {
       colorProgress.value = withTiming(0, { duration: 200 });
-      height.value = withDelay(
-        index * 30,
-        withRepeat(
-          withTiming(baseHeight + amplitude, { duration: period }),
-          -1,
-          true,
-        ),
-      );
+      // 音量驱动高度：metering(0~1) * weight * jitter
+      const level = Math.max(0, Math.min(1, metering + jitter * metering));
+      const targetHeight = MIN_HEIGHT + level * weight * (MAX_HEIGHT - MIN_HEIGHT);
+      height.value = withTiming(targetHeight, { duration: 80 });
     }
-  }, [isCancelling, height, colorProgress, index, baseHeight, period, amplitude]);
+  }, [isCancelling, metering, height, colorProgress, weight, jitter]);
 
   const barStyle = useAnimatedStyle(() => ({
     height: height.value,
@@ -70,7 +65,7 @@ function WaveBar({ index, isCancelling }: { index: number; isCancelling: boolean
   return <Animated.View style={[styles.bar, barStyle]} />;
 }
 
-export function VoiceRecordingOverlay({ visible, state, seconds }: VoiceRecordingOverlayProps) {
+export function VoiceRecordingOverlay({ visible, state, seconds, metering }: VoiceRecordingOverlayProps) {
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
 
@@ -105,7 +100,7 @@ export function VoiceRecordingOverlay({ visible, state, seconds }: VoiceRecordin
 
       <View style={styles.waveContainer}>
         {Array.from({ length: BAR_COUNT }, (_, i) => (
-          <WaveBar key={i} index={i} isCancelling={isCancelling} />
+          <WaveBar key={i} index={i} metering={metering} isCancelling={isCancelling} />
         ))}
       </View>
     </Animated.View>

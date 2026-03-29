@@ -23,17 +23,27 @@ interface ChatInputBarProps {
   readonly recordingSeconds: number;
   readonly onRecordingStateChange: (state: RecordingState) => void;
   readonly onRecordingSecondsChange: (seconds: number) => void;
+  readonly onMeteringChange?: (level: number) => void;
 }
 
 export function ChatInputBar({
   onSendText, onCamera, onVoice, onQuickAction,
-  recordingState, recordingSeconds, onRecordingStateChange, onRecordingSecondsChange,
+  recordingState, recordingSeconds, onRecordingStateChange, onRecordingSecondsChange, onMeteringChange,
 }: ChatInputBarProps) {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'text' | 'voice'>('text');
   const [plusExpanded, setPlusExpanded] = useState(false);
   const hasText = text.trim().length > 0;
-  const { startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+  const { startRecording, stopRecording, cancelRecording, metering } = useVoiceRecorder();
+
+  // 将 metering 值回传给父组件
+  const onMeteringRef = useRef(onMeteringChange);
+  onMeteringRef.current = onMeteringChange;
+  const prevMeteringRef = useRef(0);
+  if (metering !== prevMeteringRef.current) {
+    prevMeteringRef.current = metering;
+    onMeteringRef.current?.(metering);
+  }
 
   // useRef 镜像 recordingState，PanResponder 回调中读 ref 避免闭包陷阱
   const recordingStateRef = useRef<RecordingState>('idle');

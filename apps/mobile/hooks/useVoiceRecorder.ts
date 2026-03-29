@@ -12,9 +12,11 @@ const MAX_DURATION_MS = 60_000;
 export function useVoiceRecorder() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
+  const [metering, setMetering] = useState(0); // 0~1 归一化音量
   // useRef 镜像 isRecording，避免 useCallback/PanResponder 闭包捕获过期值
   const isRecordingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const meteringTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelledRef = useRef(false);
   const startTimeRef = useRef<number>(0);
 
@@ -22,6 +24,10 @@ export function useVoiceRecorder() {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+    if (meteringTimerRef.current) {
+      clearInterval(meteringTimerRef.current);
+      meteringTimerRef.current = null;
     }
   }, []);
 
@@ -59,6 +65,14 @@ export function useVoiceRecorder() {
     recorder.record();
     setRecordingFlag(true);
 
+    // 音量轮询（100ms 间隔，读取 currentMetering dB 值并归一化到 0~1）
+    meteringTimerRef.current = setInterval(() => {
+      const db = (recorder as any).currentMetering ?? -160;
+      // dB 范围大约 -160 ~ 0，归一化到 0 ~ 1
+      const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
+      setMetering(normalized);
+    }, 100);
+
     // 60 秒自动停止
     timerRef.current = setTimeout(async () => {
       await recorder.stop();
@@ -92,5 +106,5 @@ export function useVoiceRecorder() {
     }
   }, [recorder, clearTimer, setRecordingFlag]);
 
-  return { isRecording, startRecording, stopRecording, cancelRecording };
+  return { isRecording, metering, startRecording, stopRecording, cancelRecording };
 }
