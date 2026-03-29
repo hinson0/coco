@@ -75,7 +75,7 @@ importers:
         specifier: ~55.0.4
         version: 55.0.4(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       expo-haptics:
-        specifier: ~55.0.9
+        specifier: ^55.0.9
         version: 55.0.9(expo@55.0.8)
       expo-image-picker:
         specifier: ~55.0.12
