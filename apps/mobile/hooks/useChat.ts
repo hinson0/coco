@@ -218,11 +218,12 @@ export function useChat() {
           content: resp.data?.message ?? "没听清，要不再说一次？",
         });
       }
-    } catch {
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
       await addMessage({
         role: "assistant",
         content_type: "text",
-        content: "网络错误，语音识别失败。",
+        content: `语音识别失败：${detail}`,
       });
     } finally {
       setLoading(false);

@@ -16,6 +16,7 @@ export async function apiFetch<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
       Authorization: `Bearer ${session.access_token}`,
       "X-Timezone": Localization.getCalendars()[0]?.timeZone ?? "Asia/Shanghai",
       ...options?.headers,
