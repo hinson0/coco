@@ -145,6 +145,7 @@ export default function ChatScreen() {
   // 录音状态（从 ChatInputBar 提升上来）
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [metering, setMetering] = useState(0);
 
   // 录音计时器
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -291,6 +292,7 @@ export default function ChatScreen() {
           recordingSeconds={recordingSeconds}
           onRecordingStateChange={setRecordingState}
           onRecordingSecondsChange={setRecordingSeconds}
+          onMeteringChange={setMetering}
         />
       </Animated.View>
 
@@ -298,6 +300,7 @@ export default function ChatScreen() {
       <VoiceRecordingOverlay
         visible={recordingState !== 'idle'}
         state={recordingState === 'idle' ? 'recording' : recordingState}
+        metering={metering}
         seconds={recordingSeconds}
       />
 
