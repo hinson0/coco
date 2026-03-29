@@ -112,6 +112,9 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
   );
+  // 语音消息字段
+  await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
+  await addColumnIfNotExists(db, "chat_messages", "duration_seconds", "INTEGER");
 }
 
 async function addColumnIfNotExists(

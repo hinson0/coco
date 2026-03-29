@@ -9,6 +9,8 @@ export interface ChatMessage {
   readonly content: string;
   readonly transaction_id: string | null;
   readonly created_at: string;
+  readonly audio_uri?: string | null;
+  readonly duration_seconds?: number | null;
 }
 
 export interface PendingMessage extends ChatMessage {
