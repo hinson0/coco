@@ -16,6 +16,7 @@ export function useVoiceRecorder() {
   const isRecordingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelledRef = useRef(false);
+  const startTimeRef = useRef<number>(0);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -54,6 +55,7 @@ export function useVoiceRecorder() {
     clearTimer();
     cancelledRef.current = false;
     await recorder.prepareToRecordAsync();
+    startTimeRef.current = Date.now();
     recorder.record();
     setRecordingFlag(true);
 
@@ -66,16 +68,19 @@ export function useVoiceRecorder() {
     return true;
   }, [recorder, clearTimer, setRecordingFlag]);
 
-  const stopRecording = useCallback(async (): Promise<string | null> => {
+  const stopRecording = useCallback(async (): Promise<{ base64: string; durationSeconds: number } | null> => {
     clearTimer();
     // 读 ref 而非 state，避免闭包过期
     if (!isRecordingRef.current) return null;
 
+    const durationSeconds = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
     await recorder.stop();
     setRecordingFlag(false);
 
     if (cancelledRef.current) return null;
-    return readBase64();
+    const base64 = await readBase64();
+    if (!base64) return null;
+    return { base64, durationSeconds };
   }, [recorder, clearTimer, setRecordingFlag, readBase64]);
 
   const cancelRecording = useCallback(async (): Promise<void> => {
