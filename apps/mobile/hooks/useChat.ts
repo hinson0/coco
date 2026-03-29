@@ -5,7 +5,7 @@ import NetInfo from "@react-native-community/netinfo";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 import { apiFetch } from "../lib/api";
-import { parse } from "@/lib/rule-engine";
+import { parse } from "@coco/shared";
 import { useOfflineContext } from "@/lib/offline-context";
 import { useAddChatMessage } from "@/hooks/useLocalChatMessages";
 import { useCreateTransaction } from "@/hooks/useLocalTransactions";
@@ -18,11 +18,9 @@ export function useChat() {
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
-  const sendText = useCallback(async (text: string) => {
-    if (!db) return;
-
-    await addMessage({ role: "user", content_type: "text", content: text });
-
+  // ─── 核心处理逻辑：规则引擎 → GLM 兜底 ───
+  // sendText 和 sendAsr 共享此逻辑
+  const processText = useCallback(async (text: string) => {
     // 1. 先尝试规则引擎
     const ruleResult = parse(text);
 
@@ -76,7 +74,7 @@ export function useChat() {
     // 3. 在线 → 走 BFF/GLM 流程
     setLoading(true);
     try {
-      const resp = await apiFetch<any>("/api/record/text", {
+      const resp = await apiFetch<any>("/record-text", {
         method: "POST",
         body: JSON.stringify({ text }),
       });
@@ -111,7 +109,13 @@ export function useChat() {
     } finally {
       setLoading(false);
     }
-  }, [db, qc, addMessage, createTransaction]);
+  }, [qc, addMessage, createTransaction]);
+
+  const sendText = useCallback(async (text: string) => {
+    if (!db) return;
+    await addMessage({ role: "user", content_type: "text", content: text });
+    await processText(text);
+  }, [db, addMessage, processText]);
 
   const sendOcr = useCallback(async (imageBase64: string) => {
     if (!db) return;
@@ -134,7 +138,7 @@ export function useChat() {
     await addMessage({ role: "user", content_type: "image", content: imageContent });
     setLoading(true);
     try {
-      const resp = await apiFetch<any>("/api/record/ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
+      const resp = await apiFetch<any>("/record-ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
         await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
@@ -149,30 +153,64 @@ export function useChat() {
     }
   }, [db, qc, addMessage]);
 
-  const sendAsr = useCallback(async (audioBase64: string) => {
+  const sendAsr = useCallback(async (audioBase64: string, durationSeconds: number) => {
     if (!db) return;
+
+    // 1. 保存音频文件到本地
+    let audioUri: string | null = null;
+    try {
+      const dir = `${FileSystem.documentDirectory}voice-messages/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      audioUri = `${dir}${Date.now()}-${Crypto.randomUUID()}.m4a`;
+      await FileSystem.writeAsStringAsync(audioUri, audioBase64, { encoding: FileSystem.EncodingType.Base64 });
+    } catch (err) {
+      console.error('[sendAsr] 音频保存失败:', err);
+    }
+
+    // 2. 乐观渲染：立即显示语音气泡
+    const msgId = await addMessage({
+      role: "user",
+      content_type: "audio",
+      content: "[语音]",
+      audio_uri: audioUri,
+      duration_seconds: durationSeconds,
+    });
+
+    // 3. 检查网络
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
-      await addMessage({ role: "assistant", content_type: "text", content: "语音记账需要联网才能使用，请连接网络后重试。" });
+      await addMessage({
+        role: "assistant",
+        content_type: "text",
+        content: "未联网，无法使用语音服务。",
+      });
       return;
     }
-    await addMessage({ role: "user", content_type: "audio", content: "[语音]" });
-    setLoading(true);
+
+    // 4. 调用 ASR API（纯语音转文字）
     try {
-      const resp = await apiFetch<any>("/api/record/asr", { method: "POST", body: JSON.stringify({ audioBase64 }) });
-      if (resp.data?.type === "bill") {
-        const tx = resp.data.transaction;
-        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-      } else {
-        await addMessage({ role: "assistant", content_type: "text", content: resp.data?.message ?? "没听清，要不再说一次？" });
+      const resp = await apiFetch<any>("/record-asr", {
+        method: "POST",
+        body: JSON.stringify({ audioBase64 }),
+      });
+
+      const asrText = resp.data?.asrText;
+      if (!asrText) {
+        await addMessage({ role: "assistant", content_type: "text", content: "没听清，要不再说一次？" });
+        return;
       }
-    } catch {
-      await addMessage({ role: "assistant", content_type: "text", content: "网络错误，语音识别失败。" });
-    } finally {
-      setLoading(false);
+
+      // 5. 更新语音消息的 transcription
+      await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", asrText, msgId);
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+
+      // 6. 复用文字处理逻辑：规则引擎 → GLM 兜底
+      await processText(asrText);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      await addMessage({ role: "assistant", content_type: "text", content: `语音识别失败：${detail}` });
     }
-  }, [db, qc, addMessage]);
+  }, [db, qc, addMessage, processText]);
 
   return { sendText, sendOcr, sendAsr, isLoading };
 }

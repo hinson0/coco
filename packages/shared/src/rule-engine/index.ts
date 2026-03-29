@@ -20,9 +20,7 @@ export function parse(text: string): ParseResult | null {
   const isIncome = INCOME_KEYWORDS.some((kw) => stripped.includes(kw));
   const categoryName = matchCategory(text);
 
-  const note = text
-    .replace(/[¥￥]?\d+\.?\d{0,2}\s*(元|块)?/g, "")
-    .trim() || text.trim();
+  const note = text.trim();
 
   return {
     amount,

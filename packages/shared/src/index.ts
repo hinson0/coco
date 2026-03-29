@@ -7,3 +7,4 @@ export * from "./types/category";
 export * from "./types/chat";
 export * from "./types/profile";
 export * from "./types/transaction";
+export { parse, type ParseResult } from "./rule-engine/index";
