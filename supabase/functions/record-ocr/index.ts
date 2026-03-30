@@ -76,7 +76,12 @@ Deno.serve(async (req) => {
     }
 
     // 1. OCR
+    const ocrStart = Date.now();
+    console.log(`[OCR] 请求发送 ${new Date(ocrStart).toISOString()}`);
     const ocrText = await recognizeReceipt(imageBase64);
+    const ocrEnd = Date.now();
+    console.log(`[OCR] 返回 ${new Date(ocrEnd).toISOString()} 耗时 ${ocrEnd - ocrStart}ms`);
+    console.log(`[OCR] 内容:\n${ocrText}`);
     if (!ocrText.trim()) {
       return new Response(JSON.stringify({ data: { type: "text", message: "无法识别小票内容，请确保图片清晰后重试。" } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,7 +89,12 @@ Deno.serve(async (req) => {
     }
 
     // 2. GLM 提取
+    const glmStart = Date.now();
+    console.log(`[GLM] 请求发送 ${new Date(glmStart).toISOString()}`);
     const glmRaw = await callGlm(buildExtractPrompt(ocrText));
+    const glmEnd = Date.now();
+    console.log(`[GLM] 返回 ${new Date(glmEnd).toISOString()} 耗时 ${glmEnd - glmStart}ms`);
+    console.log(`[GLM] 内容: ${glmRaw}`);
     const parsed = extractJson(glmRaw);
 
     if (parsed && typeof parsed.amount === "number" && parsed.amount > 0) {
