@@ -8,6 +8,10 @@ export async function getUserFromRequest(req: Request): Promise<{ id: string } |
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-  const { data: { user } } = await supabase.auth.getUser(token);
-  return user;
+  try {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    return user;
+  } catch {
+    return null;
+  }
 }
