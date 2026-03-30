@@ -18,14 +18,21 @@ async function recognizeReceipt(imageBase64: string): Promise<string> {
 
 // ─── GLM 调用 ───
 async function callGlm(prompt: string): Promise<string> {
-  const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${GLM_API_KEY}` },
-    body: JSON.stringify({ model: "glm-4.7-flash", messages: [{ role: "user", content: prompt }] }),
-  });
-  if (!response.ok) throw new Error(`GLM API error: ${response.status}`);
-  const data = await response.json();
-  return data.choices[0].message.content;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${GLM_API_KEY}` },
+      body: JSON.stringify({ model: "glm-4.7-flash", messages: [{ role: "user", content: prompt }] }),
+    });
+    if (response.status === 429 && attempt === 0) {
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
+    }
+    if (!response.ok) throw new Error(`GLM API error: ${response.status}`);
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+  throw new Error("GLM API 限流，请稍后重试");
 }
 
 function buildExtractPrompt(ocrText: string): string {
@@ -104,7 +111,8 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("record-ocr error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
