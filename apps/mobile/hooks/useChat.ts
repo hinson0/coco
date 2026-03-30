@@ -21,8 +21,11 @@ export function useChat() {
   // ─── 核心处理逻辑：规则引擎 → GLM 兜底 ───
   // sendText 和 sendAsr 共享此逻辑
   const processText = useCallback(async (text: string) => {
+    console.log('[processText] 输入:', text);
+
     // 1. 先尝试规则引擎
     const ruleResult = parse(text);
+    console.log('[processText] 规则引擎结果:', ruleResult ? JSON.stringify(ruleResult) : '未命中');
 
     if (ruleResult) {
       const categoriesData = qc.getQueryData<readonly Category[]>(["categories"]);
@@ -35,6 +38,7 @@ export function useChat() {
       ) ?? categoriesData?.find((c) => c.name === otherName);
 
       if (category) {
+        console.log('[processText] ✅ 规则引擎命中 → 分类:', category.name, '| 金额:', ruleResult.amount, '| note:', ruleResult.note);
         const txId = await createTransaction({
           amount: ruleResult.amount,
           category_id: category.id,
@@ -58,11 +62,13 @@ export function useChat() {
         });
         return;
       }
+      console.log('[processText] 规则引擎有结果但未匹配分类，降级到 GLM');
     }
 
     // 2. 规则未命中 → 检查网络
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
+      console.log('[processText] ❌ 离线，无法调用 GLM');
       await addMessage({
         role: "assistant",
         content_type: "text",
@@ -71,15 +77,18 @@ export function useChat() {
       return;
     }
 
-    // 3. 在线 → 走 BFF/GLM 流程
+    // 3. 在线 → 走 BFF/GLM 流程（错误由调用方处理）
+    console.log('[processText] → 调用 GLM /record-text');
     setLoading(true);
     try {
       const resp = await apiFetch<any>("/record-text", {
         method: "POST",
         body: JSON.stringify({ text }),
       });
+      console.log('[processText] GLM 返回:', JSON.stringify(resp.data));
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
+        console.log('[processText] ✅ GLM 记账 → 分类:', tx.category, '| 金额:', tx.amount, '| note:', tx.note);
         await addMessage({
           role: "assistant",
           content_type: "bill_card",
@@ -88,24 +97,20 @@ export function useChat() {
         });
         qc.invalidateQueries({ queryKey: ["transactions"] });
       } else if (resp.data?.type === "nl_result") {
+        console.log('[processText] ✅ GLM 查询结果');
         await addMessage({
           role: "assistant",
           content_type: "nl_result",
           content: resp.data.message,
         });
       } else {
+        console.log('[processText] ⚠️ GLM 未识别:', resp.data?.message);
         await addMessage({
           role: "assistant",
           content_type: "text",
           content: resp.data?.message ?? "处理完成",
         });
       }
-    } catch {
-      await addMessage({
-        role: "assistant",
-        content_type: "text",
-        content: "网络错误，请重试。",
-      });
     } finally {
       setLoading(false);
     }
@@ -113,14 +118,22 @@ export function useChat() {
 
   const sendText = useCallback(async (text: string) => {
     if (!db) return;
+    console.log('[sendText] 文字输入:', text);
     await addMessage({ role: "user", content_type: "text", content: text });
-    await processText(text);
+    try {
+      await processText(text);
+    } catch (err) {
+      console.error('[sendText] ❌ processText 异常:', err);
+      await addMessage({ role: "assistant", content_type: "text", content: "网络错误，请重试。" });
+    }
   }, [db, addMessage, processText]);
 
   const sendOcr = useCallback(async (imageBase64: string) => {
     if (!db) return;
+    console.log('[sendOcr] 拍照记账');
     const netState = await NetInfo.fetch();
     if (!netState.isConnected) {
+      console.log('[sendOcr] ❌ 离线');
       await addMessage({ role: "assistant", content_type: "text", content: "拍照记账需要联网才能使用，请连接网络后重试。" });
       return;
     }
@@ -136,17 +149,22 @@ export function useChat() {
       console.error('[sendOcr] 图片保存失败:', err);
     }
     await addMessage({ role: "user", content_type: "image", content: imageContent });
+    console.log('[sendOcr] → 调用 /record-ocr');
     setLoading(true);
     try {
       const resp = await apiFetch<any>("/record-ocr", { method: "POST", body: JSON.stringify({ imageBase64 }) });
+      console.log('[sendOcr] OCR 返回:', JSON.stringify(resp.data));
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
+        console.log('[sendOcr] ✅ OCR 记账 → 分类:', tx.category, '| 金额:', tx.amount, '| note:', tx.note);
         await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
         qc.invalidateQueries({ queryKey: ["transactions"] });
       } else {
+        console.log('[sendOcr] ⚠️ OCR 未识别:', resp.data?.message);
         await addMessage({ role: "assistant", content_type: "text", content: resp.data?.message ?? "小票识别失败，请手动记账。" });
       }
-    } catch {
+    } catch (err) {
+      console.error('[sendOcr] ❌ OCR 异常:', err);
       await addMessage({ role: "assistant", content_type: "text", content: "网络错误，OCR 识别失败。" });
     } finally {
       setLoading(false);
@@ -188,6 +206,7 @@ export function useChat() {
     }
 
     // 4. 调用 ASR API（纯语音转文字）
+    console.log('[sendAsr] → 调用 /record-asr');
     try {
       const resp = await apiFetch<any>("/record-asr", {
         method: "POST",
@@ -195,7 +214,9 @@ export function useChat() {
       });
 
       const asrText = resp.data?.asrText;
+      console.log('[sendAsr] ASR 返回:', asrText || '(空)');
       if (!asrText) {
+        console.log('[sendAsr] ⚠️ ASR 无文字');
         await addMessage({ role: "assistant", content_type: "text", content: "没听清，要不再说一次？" });
         return;
       }
@@ -205,10 +226,11 @@ export function useChat() {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
 
       // 6. 复用文字处理逻辑：规则引擎 → GLM 兜底
+      console.log('[sendAsr] → 进入 processText:', asrText);
       await processText(asrText);
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      await addMessage({ role: "assistant", content_type: "text", content: `语音识别失败：${detail}` });
+      console.error('[sendAsr] ❌ 异常:', err);
+      await addMessage({ role: "assistant", content_type: "text", content: "没听清，要不再说一次？" });
     }
   }, [db, qc, addMessage, processText]);
 
