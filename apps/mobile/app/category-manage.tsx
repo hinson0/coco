@@ -1,7 +1,7 @@
 // 分类列表管理页面 — 支出/收入 Tab 切换，预设保护，软删除
 import { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 import { AppText } from "../components/ui/AppText";
@@ -10,8 +10,9 @@ import type { TransactionType } from "@coco/shared";
 
 export default function CategoryManageScreen() {
   const insets = useSafeAreaInsets();
+  const { type } = useLocalSearchParams<{ type?: string }>();
   const { data: categories = [] } = useLocalCategories();
-  const [activeTab, setActiveTab] = useState<TransactionType>("expense");
+  const [activeTab, setActiveTab] = useState<TransactionType>(type === "income" ? "income" : "expense");
 
   const filtered = categories.filter((c) => c.type === activeTab);
   const defaultCategories = filtered.filter((c) => c.is_default);
