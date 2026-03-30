@@ -156,8 +156,34 @@ export function useChat() {
       console.log('[sendOcr] OCR 返回:', JSON.stringify(resp.data));
       if (resp.data?.type === "bill") {
         const tx = resp.data.transaction;
-        console.log('[sendOcr] ✅ OCR 记账 → 分类:', tx.category, '| 金额:', tx.amount, '| note:', tx.note);
-        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify(tx), transaction_id: tx.id });
+        const categoriesData = qc.getQueryData<readonly Category[]>(["categories"]);
+        const otherName = tx.type === "income" ? "其他收入" : "其他支出";
+        const category = (tx.category
+          ? categoriesData?.find((c) => c.name === tx.category && c.type === tx.type)
+          : null
+        ) ?? categoriesData?.find((c) => c.name === otherName);
+        const txId = await createTransaction({
+          amount: tx.amount,
+          category_id: category?.id ?? "",
+          type: tx.type,
+          note: tx.note ?? "",
+          occurred_at: tx.occurred_at ?? new Date().toISOString(),
+          source: "ocr",
+        });
+        console.log('[sendOcr] ✅ OCR 记账 → 分类:', category?.name, '| 金额:', tx.amount, '| note:', tx.note);
+        await addMessage({
+          role: "assistant",
+          content_type: "bill_card",
+          content: JSON.stringify({
+            id: txId,
+            amount: tx.amount,
+            type: tx.type,
+            note: tx.note ?? "",
+            category_id: category?.id,
+            occurred_at: tx.occurred_at ?? new Date().toISOString(),
+          }),
+          transaction_id: txId,
+        });
         qc.invalidateQueries({ queryKey: ["transactions"] });
       } else {
         console.log('[sendOcr] ⚠️ OCR 未识别:', resp.data?.message);
@@ -169,7 +195,7 @@ export function useChat() {
     } finally {
       setLoading(false);
     }
-  }, [db, qc, addMessage]);
+  }, [db, qc, addMessage, createTransaction]);
 
   const sendAsr = useCallback(async (audioBase64: string, durationSeconds: number) => {
     if (!db) return;
