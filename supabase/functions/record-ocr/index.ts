@@ -60,14 +60,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { imageBase64 } = await req.json();
     if (!imageBase64) {
       return new Response(JSON.stringify({ error: "Missing imageBase64" }), {
