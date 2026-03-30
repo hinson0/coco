@@ -40,13 +40,9 @@ export function ChatInputBar({
   const { startRecording, stopRecording, cancelRecording, metering } = useVoiceRecorder();
 
   // 将 metering 值回传给父组件
-  const onMeteringRef = useRef(onMeteringChange);
-  onMeteringRef.current = onMeteringChange;
-  const prevMeteringRef = useRef(0);
-  if (metering !== prevMeteringRef.current) {
-    prevMeteringRef.current = metering;
-    onMeteringRef.current?.(metering);
-  }
+  useEffect(() => {
+    onMeteringChange?.(metering);
+  }, [metering, onMeteringChange]);
 
   // useRef 镜像 recordingState，PanResponder 回调中读 ref 避免闭包陷阱
   const recordingStateRef = useRef<RecordingState>('idle');

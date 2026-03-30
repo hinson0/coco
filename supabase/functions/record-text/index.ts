@@ -44,7 +44,7 @@ function buildRecordPrompt(text: string): string {
 规则：
 - amount: 金额数值
 - category: 从以下分类中选择最匹配的：餐饮、交通、购物、娱乐、居住、医疗、教育、通讯、工资、理财、其他收入、其他支出
-- note: 简短描述
+- note: 消费/收入的事项（如"咖啡""打车""工资"），不要包含金额和数字
 - type: "income" 如果是收入，否则 "expense"
 - occurred_at: ISO 8601 格式，相对日期请基于当前时间计算
 
