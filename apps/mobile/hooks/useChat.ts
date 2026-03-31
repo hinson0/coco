@@ -128,7 +128,7 @@ export function useChat() {
     }
   }, [db, addMessage, processText]);
 
-  const sendOcr = useCallback(async (imageBase64: string) => {
+  const sendOcr = useCallback(async (imageBase64: string, onFail?: (imageMessageId: string) => void) => {
     if (!db) return;
     console.log('[sendOcr] 拍照记账');
     const netState = await NetInfo.fetch();
@@ -148,7 +148,7 @@ export function useChat() {
     } catch (err) {
       console.error('[sendOcr] 图片保存失败:', err);
     }
-    await addMessage({ role: "user", content_type: "image", content: imageContent });
+    const imageMessageId = await addMessage({ role: "user", content_type: "image", content: imageContent });
     console.log('[sendOcr] → 调用 /record-ocr');
     setLoading(true);
     try {
@@ -188,10 +188,12 @@ export function useChat() {
       } else {
         console.log('[sendOcr] ⚠️ OCR 未识别:', resp.data?.message);
         await addMessage({ role: "assistant", content_type: "text", content: resp.data?.message ?? "小票识别失败，请手动记账。" });
+        onFail?.(imageMessageId);
       }
     } catch (err) {
       console.error('[sendOcr] ❌ OCR 异常:', err);
       await addMessage({ role: "assistant", content_type: "text", content: "网络错误，OCR 识别失败。" });
+      onFail?.(imageMessageId);
     } finally {
       setLoading(false);
     }

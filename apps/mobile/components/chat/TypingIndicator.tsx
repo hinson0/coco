@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radii.sm,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.sagePale,
     alignItems: 'center',
     justifyContent: 'center',
   },
