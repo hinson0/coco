@@ -18,7 +18,7 @@ export function useChat() {
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
-  // ─── 核心处理逻辑：规则引擎 → GLM 兜底 ───
+  // ─── 核心处理逻辑：规则引擎 → 提示手动记账 ───
   // sendText 和 sendAsr 共享此逻辑
   const processText = useCallback(async (text: string) => {
     console.log('[processText] 输入:', text);
@@ -62,58 +62,16 @@ export function useChat() {
         });
         return;
       }
-      console.log('[processText] 规则引擎有结果但未匹配分类，降级到 GLM');
+      console.log('[processText] 规则引擎有结果但未匹配分类，提示手动记账');
     }
 
-    // 2. 规则未命中 → 检查网络
-    const netState = await NetInfo.fetch();
-    if (!netState.isConnected) {
-      console.log('[processText] ❌ 离线，无法调用 GLM');
-      await addMessage({
-        role: "assistant",
-        content_type: "text",
-        content: "当前离线，无法识别这条记录。请使用手动记账填写金额和分类。",
-      });
-      return;
-    }
-
-    // 3. 在线 → 走 BFF/GLM 流程（错误由调用方处理）
-    console.log('[processText] → 调用 GLM /record-text');
-    setLoading(true);
-    try {
-      const resp = await apiFetch<any>("/record-text", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-      });
-      console.log('[processText] GLM 返回:', JSON.stringify(resp.data));
-      if (resp.data?.type === "bill") {
-        const tx = resp.data.transaction;
-        console.log('[processText] ✅ GLM 记账 → 分类:', tx.category, '| 金额:', tx.amount, '| note:', tx.note);
-        await addMessage({
-          role: "assistant",
-          content_type: "bill_card",
-          content: JSON.stringify(tx),
-          transaction_id: tx.id,
-        });
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-      } else if (resp.data?.type === "nl_result") {
-        console.log('[processText] ✅ GLM 查询结果');
-        await addMessage({
-          role: "assistant",
-          content_type: "nl_result",
-          content: resp.data.message,
-        });
-      } else {
-        console.log('[processText] ⚠️ GLM 未识别:', resp.data?.message);
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: resp.data?.message ?? "处理完成",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
+    // 2. 规则引擎未命中 → 提示手动记账
+    console.log('[processText] ⚠️ 规则引擎未命中，提示手动记账');
+    await addMessage({
+      role: "assistant",
+      content_type: "text",
+      content: "没识别到记账信息，可以试试「手动记账」。",
+    });
   }, [qc, addMessage, createTransaction]);
 
   const sendText = useCallback(async (text: string) => {
