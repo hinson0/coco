@@ -38,13 +38,14 @@ export function useChat() {
       ) ?? categoriesData?.find((c) => c.name === otherName);
 
       if (category) {
+        const occurredAt = new Date().toISOString();
         console.log('[processText] ✅ 规则引擎命中 → 分类:', category.name, '| 金额:', ruleResult.amount, '| note:', ruleResult.note);
         const txId = await createTransaction({
           amount: ruleResult.amount,
           category_id: category.id,
           type: ruleResult.type,
           note: ruleResult.note,
-          occurred_at: new Date().toISOString(),
+          occurred_at: occurredAt,
           source: "rule",
         });
         await addMessage({
@@ -56,7 +57,7 @@ export function useChat() {
             type: ruleResult.type,
             note: ruleResult.note,
             category_id: category.id,
-            occurred_at: new Date().toISOString(),
+            occurred_at: occurredAt,
           }),
           transaction_id: txId,
         });
