@@ -1,10 +1,12 @@
-# OCR 正则提取优化设计（去除 GLM）
+# OCR + ASR 全面去除 GLM 设计
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 将 OCR 小票识别从「腾讯 OCR + GLM（~92s）」优化为「腾讯 OCR + 服务端正则提取（~3s）」，彻底消除 GLM 带来的等待。
+**Goal:** 彻底去除 OCR 和 ASR 两条路径中的 GLM 调用，将整体响应速度从 ~92s 降至 ~3s（OCR）和 ~2s（ASR）。
 
-**Architecture:** 服务端 `record-ocr` 用正则从 OCR 文字中提取总金额/商户名/日期，成功则返回单条账单；失败则返回原始 OCR 文字 + 商户名，客户端自动跳转手动记账并预填商户名。
+**Architecture:**
+- **OCR**：服务端 `record-ocr` 用正则从 OCR 文字中提取总金额/商户名/日期，成功返回账单，失败返回原始文字让用户手动补充金额。
+- **ASR**：客户端 `processText()` 去掉 GLM 兜底，规则引擎未命中时直接提示用户手动记账。
 
 **Tech Stack:** Deno Edge Function（正则）、React Native（useChat + expo-router）
 
@@ -170,8 +172,64 @@ POST /record-ocr（imageBase64）
 
 ---
 
+## 客户端设计（ASR / 文字输入）
+
+### `useChat.ts`（processText）
+
+`processText()` 同时服务于 `sendText`（手动输入）和 `sendAsr`（语音输入）。去掉 GLM 兜底后：
+
+**修改前：**
+```
+规则引擎命中 → 本地记账
+规则引擎未命中 → 检查网络 → 调用 /record-text（GLM）→ 返回结果
+```
+
+**修改后：**
+```
+规则引擎命中 → 本地记账
+规则引擎未命中 → 提示用户手动记账
+```
+
+具体改法——删除 `processText` 中网络检查之后的全部 GLM 代码，替换为：
+
+```typescript
+// 规则引擎未命中 → 提示手动记账
+await addMessage({
+  role: "assistant",
+  content_type: "text",
+  content: "没识别到记账信息，可以试试「手动记账」。",
+});
+```
+
+**副作用说明：** `sendText` 也会走 `processText`，去掉 GLM 后，用户输入自然语言查询（如「这个月花了多少」）将不再返回查询结果，而是提示手动记账。这是已知的权衡，用速度换掉了 NL 查询功能。
+
+---
+
+## 数据流总览
+
+```
+── OCR 路径 ──────────────────────────────────────────
+用户拍照 → sendOcr → POST /record-ocr
+  ├─ 腾讯 OCR（~3s）→ extractReceiptInfo()
+  ├─ 找到金额 → bill_card（单条总金额账单）
+  └─ 找不到金额 → ocr_text → addMessage 提示 + 跳转 manual-entry
+
+── ASR 路径 ──────────────────────────────────────────
+用户说话 → sendAsr → POST /record-asr（~2s）
+  → 得到 asrText → processText(asrText)
+  ├─ 规则引擎命中 → 本地记账 → bill_card
+  └─ 规则引擎未命中 → 提示手动记账
+
+── 文字输入路径 ───────────────────────────────────────
+用户打字 → sendText → processText(text)
+  ├─ 规则引擎命中 → 本地记账 → bill_card
+  └─ 规则引擎未命中 → 提示手动记账
+```
+
+---
+
 ## 不在范围内
 
-- ASR 的 GLM 去除（独立任务，不在本 spec 内）
 - SSE 流式输出（3s 内不需要，未来有需要再做）
 - 多语言小票支持（超出当前需求）
+- `/record-text` Edge Function 的删除（可保留，暂不删除）
