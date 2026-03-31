@@ -12,7 +12,7 @@ async function recognizeReceipt(imageBase64: string): Promise<string> {
     region: "ap-guangzhou",
   });
   const resp = await client.GeneralBasicOCR({ ImageBase64: imageBase64 });
-  return (resp.TextDetections ?? []).map((det: any) => det.DetectedText ?? "").join("\n");
+  return (resp.TextDetections ?? []).map((det) => det.DetectedText ?? "").join("\n");
 }
 
 // ─── 正则提取收据信息 ───
@@ -50,7 +50,7 @@ function extractReceiptInfo(ocrText: string): ReceiptInfo {
   // 日期：YYYY.M.D 或 YYYY年M月D日
   const dateMatch = ocrText.match(/(\d{4})[.年](\d{1,2})[.月](\d{1,2})/);
   const date = dateMatch
-    ? `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}T00:00:00`
+    ? `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}T00:00:00Z`
     : null;
 
   return { amount, merchant, date };
