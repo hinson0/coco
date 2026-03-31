@@ -23,18 +23,22 @@ interface ReceiptInfo {
 }
 
 function extractReceiptInfo(ocrText: string): ReceiptInfo {
-  // 总金额：多模式依次尝试（兼容 OCR 错字，如"应女金额"="应付金额"）
+  // 总金额：多模式依次尝试，取最后一次匹配（避免子合计误命中）
   const amountPatterns = [
-    /应.{0,2}金额[：:]\s*([\d]+\.[\d]{2})/,
-    /实.{0,2}付[：:]\s*([\d]+\.[\d]{2})/,
-    /合计[：:]?\s*\d+[件个张]?\s*\n?([\d]+\.[\d]{2})/,
-    /总计[：:]\s*([\d]+\.[\d]{2})/,
-    /小计[：:]\s*([\d]+\.[\d]{2})/,
+    /应.{0,2}金额[：:]\s*([\d]+\.[\d]{2})/,          // 超市：应付金额（兼容 OCR 错字）
+    /实.{0,2}付[：:]\s*([\d]+\.[\d]{2})/,              // 超市：实付/实际付款
+    /个人账.{0,2}支付[：:]\s*([\d]+\.[\d]{2})/,        // 医院：个人账户支付（扣医保后自付）
+    /合计[：:]?\s*\d+[件个张]?\s*\n?([\d]+\.[\d]{2})/, // 超市：合计 N 件 + 金额
+    /总计[：:]\s*([\d]+\.[\d]{2})/,                    // 通用
+    /消费[：:]\s*([\d]+\.[\d]{2})/,                    // 餐厅预打单
+    /应收[：:]\s*([\d]+\.[\d]{2})/,                    // 餐厅预打单
+    /小计[：:]\s*([\d]+\.[\d]{2})/,                    // 单品小票
   ];
 
   let amount: number | null = null;
   for (const pattern of amountPatterns) {
-    const match = ocrText.match(pattern);
+    const matches = [...ocrText.matchAll(new RegExp(pattern.source, "g"))];
+    const match = matches.at(-1) ?? null;
     if (match) {
       const val = parseFloat(match[1]);
       if (val > 0) { amount = val; break; }
@@ -47,8 +51,10 @@ function extractReceiptInfo(ocrText: string): ReceiptInfo {
     .filter((l: string) => l.length > 1 && !/^[\d\s\-:.]+$/.test(l));
   const merchant = lines[0] ?? null;
 
-  // 日期：YYYY.M.D 或 YYYY年M月D日
-  const dateMatch = ocrText.match(/(\d{4})[.年](\d{1,2})[.月](\d{1,2})/);
+  // 日期：优先 YYYY-MM-DD（医院/餐厅），fallback YYYY.M.D 或 YYYY年M月D日
+  const isoMatch = ocrText.match(/(\d{4})-(\d{2})-(\d{2})/);
+  const dotMatch = ocrText.match(/(\d{4})[.年](\d{1,2})[.月](\d{1,2})/);
+  const dateMatch = isoMatch ?? dotMatch;
   const date = dateMatch
     ? `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}T00:00:00Z`
     : null;
