@@ -161,7 +161,12 @@ export default function ChatScreen() {
       const base64 = await FileSystem.readAsStringAsync(imagePath, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      sendOcr(base64, onOcrFail);
+      sendOcr(base64, onOcrFail, (merchant) => {
+        router.push({
+          pathname: "/manual-entry",
+          params: { ocrNote: merchant ?? "" },
+        });
+      });
     } catch {
       setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
     }
@@ -358,7 +363,12 @@ export default function ChatScreen() {
           onSendText={sendText}
           onCamera={async () => {
             const base64 = await pickImage();
-            if (base64) sendOcr(base64, onOcrFail);
+            if (base64) sendOcr(base64, onOcrFail, (merchant) => {
+              router.push({
+                pathname: "/manual-entry",
+                params: { ocrNote: merchant ?? "" },
+              });
+            });
           }}
           onVoice={(base64, durationSeconds) =>
             sendAsr(base64, durationSeconds)
