@@ -17,6 +17,7 @@ interface ChatBubbleProps {
   readonly onSuggestion?: (label: string) => void;
   readonly isPlaying?: boolean;
   readonly onPlay?: () => void;
+  readonly onResendOcr?: () => void;
 }
 
 function formatTime(isoString: string): string {
@@ -50,7 +51,7 @@ function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   );
 }
 
-export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay }: ChatBubbleProps) {
+export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay, onResendOcr }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
@@ -83,6 +84,11 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
     return (
       <View style={[styles.rowUser, isPending && styles.pendingOpacity]}>
         {isFailed && <FailedIndicator onRetry={onRetry} />}
+        {content_type === 'image' && onResendOcr && (
+          <TouchableOpacity onPress={onResendOcr} style={styles.resendOcrBtn}>
+            <AppText size="sm">↩</AppText>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.bubbleArea}
           activeOpacity={0.75}
@@ -233,6 +239,16 @@ const styles = StyleSheet.create({
   failedIcon: {
     marginRight: spacing.xs,
     justifyContent: 'center',
+  },
+  resendOcrBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.sm,
+    backgroundColor: colors.sagePale,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.xs,
+    alignSelf: 'center',
   },
   pendingOpacity: {
     opacity: 0.6,
