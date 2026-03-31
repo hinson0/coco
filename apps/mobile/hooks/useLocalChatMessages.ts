@@ -1,8 +1,13 @@
 // apps/mobile/hooks/useLocalChatMessages.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
-import type { ChatMessage, ChatRole, ChatContentType } from "@coco/shared";
+import type { ChatContentType, ChatMessage, ChatRole } from "@coco/shared";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import * as Crypto from "expo-crypto";
 
 export interface AddMessageInput {
   readonly role: ChatRole;
@@ -13,18 +18,23 @@ export interface AddMessageInput {
   readonly duration_seconds?: number | null;
 }
 
-export function useLocalChatMessages() {
+const CHAT_PAGE_SIZE = 30;
+
+export function useLocalChatMessages(limit: number = CHAT_PAGE_SIZE) {
   const { db } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["chat-messages"],
+    queryKey: ["chat-messages", limit],
     queryFn: async (): Promise<readonly ChatMessage[]> => {
       if (!db) return [];
-      return db.getAllAsync<ChatMessage>(
-        "SELECT * FROM chat_messages ORDER BY created_at ASC"
+      const rows = await db.getAllAsync<ChatMessage>(
+        "SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT ?",
+        limit,
       );
+      return [...rows].reverse();
     },
     enabled: !!db,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -46,7 +56,7 @@ export function useAddChatMessage() {
         input.transaction_id ?? null,
         now,
         input.audio_uri ?? null,
-        input.duration_seconds ?? null
+        input.duration_seconds ?? null,
       );
       return id;
     },
