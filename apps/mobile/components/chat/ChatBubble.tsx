@@ -84,19 +84,21 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
     return (
       <View style={[styles.rowUser, isPending && styles.pendingOpacity]}>
         {isFailed && <FailedIndicator onRetry={onRetry} />}
-        {content_type === 'image' && onResendOcr && (
-          <TouchableOpacity onPress={onResendOcr} style={styles.resendOcrBtn}>
-            <AppText size="sm">↩</AppText>
+        <View style={styles.userBubbleCol}>
+          <TouchableOpacity
+            style={styles.bubbleArea}
+            activeOpacity={0.75}
+            onLongPress={() => handleLongPress(onDelete)}
+          >
+            {bubbleContent}
+            <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.bubbleArea}
-          activeOpacity={0.75}
-          onLongPress={() => handleLongPress(onDelete)}
-        >
-          {bubbleContent}
-          <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
-        </TouchableOpacity>
+          {content_type === 'image' && onResendOcr && (
+            <TouchableOpacity onPress={onResendOcr} style={styles.resendOcrBtn} activeOpacity={0.7}>
+              <AppText size="sm" color={colors.white}>↩ 重新识别</AppText>
+            </TouchableOpacity>
+          )}
+        </View>
         <Avatar emoji="😊" style={styles.avatarUser} />
       </View>
     );
@@ -240,15 +242,17 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
     justifyContent: 'center',
   },
+  userBubbleCol: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
+  },
   resendOcrBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.sm,
-    backgroundColor: colors.sagePale,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.xs,
-    alignSelf: 'center',
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.sage,
+    alignSelf: 'flex-end',
   },
   pendingOpacity: {
     opacity: 0.6,
