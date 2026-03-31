@@ -87,7 +87,11 @@ export function useChat() {
     }
   }, [db, addMessage, processText]);
 
-  const sendOcr = useCallback(async (imageBase64: string, onFail?: (imageMessageId: string) => void) => {
+  const sendOcr = useCallback(async (
+    imageBase64: string,
+    onFail?: (imageMessageId: string) => void,
+    onOcrText?: (merchant: string | null) => void,
+  ) => {
     if (!db) return;
     console.log('[sendOcr] 拍照记账');
     const netState = await NetInfo.fetch();
@@ -144,6 +148,17 @@ export function useChat() {
           transaction_id: txId,
         });
         qc.invalidateQueries({ queryKey: ["transactions"] });
+      } else if (resp.data?.type === "ocr_text") {
+        // 识别到文字但正则提取不到金额 → 提示 + 触发导航回调
+        console.log('[sendOcr] ℹ️ OCR 有文字但无金额，merchant:', resp.data.merchant);
+        await addMessage({
+          role: "assistant",
+          content_type: "text",
+          content: resp.data.merchant
+            ? `已识别商户「${resp.data.merchant}」，请手动补充金额完成记账。`
+            : "已识别小票内容，请手动补充金额完成记账。",
+        });
+        onOcrText?.(resp.data.merchant ?? null);
       } else {
         console.log('[sendOcr] ⚠️ OCR 未识别:', resp.data?.message);
         await addMessage({ role: "assistant", content_type: "text", content: resp.data?.message ?? "小票识别失败，请手动记账。" });
