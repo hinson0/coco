@@ -38,7 +38,7 @@ function extractReceiptInfo(ocrText: string): ReceiptInfo {
   let amount: number | null = null;
   for (const pattern of amountPatterns) {
     const matches = [...ocrText.matchAll(new RegExp(pattern.source, "g"))];
-    const match = matches.at(-1) ?? null;
+    const match = matches[matches.length - 1] ?? null;
     if (match) {
       const val = parseFloat(match[1]);
       if (val > 0) { amount = val; break; }
