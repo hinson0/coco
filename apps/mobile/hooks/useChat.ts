@@ -227,7 +227,7 @@ export function useChat() {
       await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", asrText, msgId);
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
 
-      // 6. 复用文字处理逻辑：规则引擎 → GLM 兜底
+      // 6. 复用文字处理逻辑：规则引擎 → 提示手动记账
       console.log('[sendAsr] → 进入 processText:', asrText);
       await processText(asrText);
     } catch (err) {
