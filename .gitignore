@@ -16,8 +16,6 @@ dist/
 design-preview.*
 design-final.*
 
-# IDE
-.vscode/
 
 # Duplicate lockfile (using pnpm)
 apps/mobile/package-lock.json
