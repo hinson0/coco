@@ -18,5 +18,11 @@
       "Bash(git checkout -- *)",
       "Bash(git branch -D *)"
     ]
+  },
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": false,
+    "pyright-lsp@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": false,
+    "sentry@claude-plugins-official": false
   }
 }
