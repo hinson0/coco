@@ -44,7 +44,7 @@ function isToday(d: Date): boolean {
 
 export default function ManualEntryScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ txId?: string; txData?: string; msgId?: string }>();
+  const params = useLocalSearchParams<{ txId?: string; txData?: string; msgId?: string; ocrNote?: string }>();
   const { db } = useOfflineContext();
   const qc = useQueryClient();
   const { data: categories = [] } = useLocalCategories();
@@ -57,7 +57,7 @@ export default function ManualEntryScreen() {
   const isEdit = !!transaction;
 
   const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(() => params.ocrNote ?? "");
   const [type, setType] = useState<"expense" | "income">("expense");
   const [date, setDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);

@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { Alert, Linking } from 'react-native';
 import {
   useAudioRecorder,
@@ -9,14 +9,42 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 const MAX_DURATION_MS = 60_000;
 
+// 在 HIGH_QUALITY 基础上启用 metering
+const RECORDING_OPTIONS = {
+  ...RecordingPresets.HIGH_QUALITY,
+  isMeteringEnabled: true,
+};
+
 export function useVoiceRecorder() {
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(RECORDING_OPTIONS);
   const [isRecording, setIsRecording] = useState(false);
   const [metering, setMetering] = useState(0); // 0~1 归一化音量
+
+  // 录音期间轮询 metering（通过 useEffect 避免闭包问题）
+  const recorderRef = useRef(recorder);
+  recorderRef.current = recorder;
+  // 录音期间轮询 metering
+  useEffect(() => {
+    if (!isRecording) {
+      setMetering(0);
+      return;
+    }
+    const id = setInterval(() => {
+      try {
+        const status = recorderRef.current.getStatus();
+        const db = status.metering ?? -160;
+        const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
+        setMetering(normalized);
+      } catch {
+        // recorder 可能已释放
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [isRecording]);
+
   // useRef 镜像 isRecording，避免 useCallback/PanResponder 闭包捕获过期值
   const isRecordingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const meteringTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelledRef = useRef(false);
   const startTimeRef = useRef<number>(0);
 
@@ -24,10 +52,6 @@ export function useVoiceRecorder() {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
-    }
-    if (meteringTimerRef.current) {
-      clearInterval(meteringTimerRef.current);
-      meteringTimerRef.current = null;
     }
   }, []);
 
@@ -64,14 +88,6 @@ export function useVoiceRecorder() {
     startTimeRef.current = Date.now();
     recorder.record();
     setRecordingFlag(true);
-
-    // 音量轮询（100ms 间隔，读取 currentMetering dB 值并归一化到 0~1）
-    meteringTimerRef.current = setInterval(() => {
-      const db = (recorder as any).currentMetering ?? -160;
-      // dB 范围大约 -160 ~ 0，归一化到 0 ~ 1
-      const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
-      setMetering(normalized);
-    }, 100);
 
     // 60 秒自动停止
     timerRef.current = setTimeout(async () => {

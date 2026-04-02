@@ -1,44 +1,50 @@
-import { useState, useEffect } from 'react';
+import type { ChatMessage, Transaction } from "@coco/shared";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
   FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  Text,
   Keyboard,
   Platform,
-  Alert,
-} from 'react-native';
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
-  withTiming,
   withSequence,
-} from 'react-native-reanimated';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChat } from '../hooks/useChat';
-import { useCamera } from '../hooks/useCamera';
-import { useLocalChatMessages, useDeleteChatMessage, useClearChatMessages } from '../hooks/useLocalChatMessages';
-import { useLocalCategories } from '../hooks/useLocalCategories';
-import { ChatBubble } from '../components/chat/ChatBubble';
-import { ChatToolBar } from '../components/chat/ChatToolBar';
-import { ChatInputBar } from '../components/chat/ChatInputBar';
-import { VoiceRecordingOverlay } from '../components/chat/VoiceRecordingOverlay';
-import { TypingIndicator } from '../components/chat/TypingIndicator';
-import { useAudioPlayer } from '../hooks/useAudioPlayer';
-import type { RecordingState } from '../components/chat/ChatInputBar';
-import { colors, spacing, radii, shadows } from '../constants/theme';
-import type { ChatMessage, Transaction } from '@coco/shared';
+  withTiming,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ChatBubble } from "../components/chat/ChatBubble";
+import type { RecordingState } from "../components/chat/ChatInputBar";
+import { ChatInputBar } from "../components/chat/ChatInputBar";
+import { ChatToolBar } from "../components/chat/ChatToolBar";
+import { TypingIndicator } from "../components/chat/TypingIndicator";
+import { VoiceRecordingOverlay } from "../components/chat/VoiceRecordingOverlay";
+import { colors, radii, shadows, spacing } from "../constants/theme";
+import * as FileSystem from "expo-file-system/legacy";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
+import { useCamera } from "../hooks/useCamera";
+import { useChat } from "../hooks/useChat";
+import { useLocalCategories } from "../hooks/useLocalCategories";
+import {
+  useClearChatMessages,
+  useDeleteChatMessage,
+  useLocalChatMessages,
+} from "../hooks/useLocalChatMessages";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ListItem =
-  | { type: 'message'; data: ChatMessage }
-  | { type: 'separator'; id: string; label: string }
-  | { type: 'typing'; id: string };
+  | { type: "message"; data: ChatMessage }
+  | { type: "separator"; id: string; label: string }
+  | { type: "typing"; id: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,8 +55,8 @@ function toDateLabel(isoString: string): string {
   const yesterday = new Date(today.getTime() - 86_400_000);
   const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-  if (target.getTime() === today.getTime()) return '今天';
-  if (target.getTime() === yesterday.getTime()) return '昨天';
+  if (target.getTime() === today.getTime()) return "今天";
+  if (target.getTime() === yesterday.getTime()) return "昨天";
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
@@ -59,38 +65,38 @@ function buildListItems(
   isLoading: boolean,
 ): ListItem[] {
   const items: ListItem[] = [];
-  let lastDateLabel = '';
+  let lastDateLabel = "";
 
   for (const msg of messages) {
     const label = toDateLabel(msg.created_at);
     if (label !== lastDateLabel) {
-      items.push({ type: 'separator', id: `sep-${msg.id}`, label });
+      items.push({ type: "separator", id: `sep-${msg.id}`, label });
       lastDateLabel = label;
     }
-    items.push({ type: 'message', data: msg });
+    items.push({ type: "message", data: msg });
   }
 
   if (isLoading) {
-    items.push({ type: 'typing', id: 'typing-indicator' });
+    items.push({ type: "typing", id: "typing-indicator" });
   }
 
   return items.reverse();
 }
 
 function itemKey(item: ListItem): string {
-  if (item.type === 'message') return item.data.id;
-  if (item.type === 'separator') return item.id;
+  if (item.type === "message") return item.data.id;
+  if (item.type === "separator") return item.id;
   return item.id;
 }
 
 // ─── Welcome message ──────────────────────────────────────────────────────────
 
 const WELCOME_MESSAGE: ChatMessage = {
-  id: 'welcome',
-  user_id: '',
-  role: 'assistant',
-  content_type: 'text',
-  content: '早上好呀~ 支持文字、语音、拍小票三种方式记账，随时告诉我就好 😊',
+  id: "welcome",
+  user_id: "",
+  role: "assistant",
+  content_type: "text",
+  content: "早上好呀~ 支持文字、语音、拍小票三种方式记账，随时告诉我就好 😊",
   transaction_id: null,
   created_at: new Date().toISOString(),
 };
@@ -128,13 +134,46 @@ function DateSeparator({ label }: { label: string }) {
   );
 }
 
+// ─── Pagination constants ─────────────────────────────────────────────────────
+
+const INITIAL_LIMIT = 30;
+const LOAD_MORE_SIZE = 20;
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
   const { pickImage } = useCamera();
-  const { data: messages = [], refetch } = useLocalChatMessages();
+  const [failedOcrIds, setFailedOcrIds] = useState<Set<string>>(new Set());
+
+  function onOcrFail(imageMessageId: string) {
+    setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
+  }
+
+  async function handleResendOcr(imagePath: string, imageMessageId: string) {
+    setFailedOcrIds((prev) => {
+      const next = new Set(prev);
+      next.delete(imageMessageId);
+      return next;
+    });
+    try {
+      const base64 = await FileSystem.readAsStringAsync(imagePath, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      sendOcr(base64, onOcrFail, (merchant) => {
+        router.push({
+          pathname: "/manual-entry",
+          params: { ocrNote: merchant ?? "" },
+        });
+      });
+    } catch {
+      setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
+    }
+  }
+  const [loadedLimit, setLoadedLimit] = useState(INITIAL_LIMIT);
+  const { data: messages = [], isFetching: isFetchingMessages } =
+    useLocalChatMessages(loadedLimit);
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
   const { data: categories = [] } = useLocalCategories();
@@ -143,7 +182,7 @@ export default function ChatScreen() {
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
 
   // 录音状态（从 ChatInputBar 提升上来）
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [metering, setMetering] = useState(0);
 
   // 语音播放
@@ -152,41 +191,57 @@ export default function ChatScreen() {
   // Track keyboard height and visibility
   const keyboardHeight = useSharedValue(0);
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const showSub = Keyboard.addListener(showEvent, (e) => {
-      keyboardHeight.value = withTiming(e.endCoordinates.height, { duration: 250 });
+      keyboardHeight.value = withTiming(e.endCoordinates.height, {
+        duration: 250,
+      });
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       keyboardHeight.value = withTiming(0, { duration: 250 });
     });
-    return () => { showSub.remove(); hideSub.remove(); };
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, [keyboardHeight]);
 
   const bottomPanelAnimatedStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
+    paddingBottom:
+      keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
+
+  // 是否还有更多历史消息可加载
+  const hasMore = messages.length >= loadedLimit;
+
+  function loadMore() {
+    if (isFetchingMessages || !hasMore) return;
+    setLoadedLimit((prev) => prev + LOAD_MORE_SIZE);
+  }
 
   const listItems = buildListItems(messages, isSending);
 
   // Show welcome message only when no messages exist
   if (messages.length === 0) {
-    listItems.push({ type: 'message', data: WELCOME_MESSAGE });
+    listItems.push({ type: "message", data: WELCOME_MESSAGE });
   }
 
   function handleSelectTool(tool: string) {
-    if (tool === '手动记账') {
-      router.push('/manual-entry');
+    if (tool === "手动记账") {
+      router.push("/manual-entry");
       return;
     }
     sendText(tool);
   }
 
   function renderItem({ item }: { item: ListItem }) {
-    if (item.type === 'separator') {
+    if (item.type === "separator") {
       return <DateSeparator label={item.label} />;
     }
-    if (item.type === 'typing') {
+    if (item.type === "typing") {
       return (
         <View style={styles.typingWrapper}>
           <TypingIndicator />
@@ -201,16 +256,34 @@ export default function ChatScreen() {
           message={msg}
           categories={categories}
           onDelete={() => deleteMutation.mutate(msg.id)}
-          onEditRecord={msg.content_type === 'bill_card' ? () => {
-            try {
-              const tx = JSON.parse(msg.content) as Transaction;
-              router.push({ pathname: '/manual-entry', params: { txData: JSON.stringify(tx), msgId: msg.id } });
-            } catch { /* ignore parse errors */ }
-          } : undefined}
+          onEditRecord={
+            msg.content_type === "bill_card"
+              ? () => {
+                  try {
+                    const tx = JSON.parse(msg.content) as Transaction;
+                    router.push({
+                      pathname: "/manual-entry",
+                      params: { txData: JSON.stringify(tx), msgId: msg.id },
+                    });
+                  } catch {
+                    /* ignore parse errors */
+                  }
+                }
+              : undefined
+          }
           isPlaying={playingId === msg.id}
-          onPlay={msg.content_type === 'audio' && msg.audio_uri
-            ? () => playAudio(msg.id, msg.audio_uri!)
-            : undefined}
+          onPlay={
+            msg.content_type === "audio" && msg.audio_uri
+              ? () => playAudio(msg.id, msg.audio_uri!)
+              : undefined
+          }
+          onResendOcr={
+            msg.content_type === "image" &&
+            msg.content.startsWith("file://") &&
+            failedOcrIds.has(msg.id)
+              ? () => handleResendOcr(msg.content, msg.id)
+              : undefined
+          }
         />
       </View>
     );
@@ -223,7 +296,9 @@ export default function ChatScreen() {
       {/* ── Top bar ── */}
       <View style={styles.topBar}>
         <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/diary')}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.push("/(tabs)/diary")
+          }
           style={styles.iconBtn}
           activeOpacity={0.75}
         >
@@ -239,10 +314,18 @@ export default function ChatScreen() {
           style={styles.iconBtn}
           activeOpacity={0.75}
           onPress={() => {
-            Alert.alert("清空聊天记录", "确定要删除所有聊天记录吗？此操作不可恢复。", [
-              { text: "取消", style: "cancel" },
-              { text: "清空", style: "destructive", onPress: () => clearMutation.mutate() },
-            ]);
+            Alert.alert(
+              "清空聊天记录",
+              "确定要删除所有聊天记录吗？此操作不可恢复。",
+              [
+                { text: "取消", style: "cancel" },
+                {
+                  text: "清空",
+                  style: "destructive",
+                  onPress: () => clearMutation.mutate(),
+                },
+              ],
+            );
           }}
         >
           <Text style={styles.clearIcon}>🗑</Text>
@@ -258,6 +341,19 @@ export default function ChatScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingMessages && loadedLimit > INITIAL_LIMIT ? (
+            <View style={styles.loadingMoreContainer}>
+              <ActivityIndicator size="small" color={colors.textLighter} />
+            </View>
+          ) : !hasMore && messages.length > 0 ? (
+            <View style={styles.noMoreContainer}>
+              <Text style={styles.noMoreText}>— 没有更多了 —</Text>
+            </View>
+          ) : null
+        }
       />
 
       {/* ── Bottom panel ── */}
@@ -267,9 +363,16 @@ export default function ChatScreen() {
           onSendText={sendText}
           onCamera={async () => {
             const base64 = await pickImage();
-            if (base64) sendOcr(base64);
+            if (base64) sendOcr(base64, onOcrFail, (merchant) => {
+              router.push({
+                pathname: "/manual-entry",
+                params: { ocrNote: merchant ?? "" },
+              });
+            });
           }}
-          onVoice={(base64, durationSeconds) => sendAsr(base64, durationSeconds)}
+          onVoice={(base64, durationSeconds) =>
+            sendAsr(base64, durationSeconds)
+          }
           onQuickAction={(actionText) => sendText(actionText)}
           recordingState={recordingState}
           onRecordingStateChange={setRecordingState}
@@ -279,11 +382,10 @@ export default function ChatScreen() {
 
       {/* ── Voice recording overlay ── */}
       <VoiceRecordingOverlay
-        visible={recordingState !== 'idle'}
-        state={recordingState === 'idle' ? 'recording' : recordingState}
+        visible={recordingState !== "idle"}
+        state={recordingState === "idle" ? "recording" : recordingState}
         metering={metering}
       />
-
     </View>
   );
 }
@@ -298,9 +400,9 @@ const styles = StyleSheet.create({
 
   // Top bar
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     backgroundColor: colors.cream,
@@ -310,8 +412,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radii.md,
     backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.md,
   },
   backArrow: {
@@ -323,8 +425,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   titleArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   statusDot: {
@@ -335,7 +437,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
   },
 
@@ -354,10 +456,24 @@ const styles = StyleSheet.create({
 
   // Date separator
   separatorRow: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.md,
   },
   separatorText: {
+    fontSize: 11,
+    color: colors.textLighter,
+  },
+
+  // Load more / no more indicator (appears at top in inverted list)
+  loadingMoreContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+  },
+  noMoreContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+  },
+  noMoreText: {
     fontSize: 11,
     color: colors.textLighter,
   },
@@ -368,5 +484,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.creamDark,
   },
-
 });
