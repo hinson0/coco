@@ -18,11 +18,7 @@ if (!existsSync(dir)) {
   process.exit(1);
 }
 
-const run = (cmd, opts = {}) =>
-  execSync(cmd, { stdio: "inherit", ...opts });
-
-// 先同步 .env 文件到 worktree
-run(`node scripts/sync-env.mjs ${name}`);
+const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
 
 // 依赖不存在则自动安装
 if (!existsSync(resolve(dir, "node_modules"))) {
@@ -55,8 +51,14 @@ const restore = () => {
   writeFileSync(appJsonPath, originalAppJson);
   console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
 };
-process.on("SIGINT", () => { restore(); process.exit(0); });
-process.on("SIGTERM", () => { restore(); process.exit(0); });
+process.on("SIGINT", () => {
+  restore();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  restore();
+  process.exit(0);
+});
 
 try {
   const extra = process.argv.slice(3).join(" ");

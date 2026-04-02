@@ -1,7 +1,7 @@
 import * as Localization from "expo-localization";
 import { supabase } from "./supabase";
 
-const API_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL! + "/functions/v1";
+const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 export async function apiFetch<T>(
   path: string,
@@ -16,7 +16,6 @@ export async function apiFetch<T>(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
       Authorization: `Bearer ${session.access_token}`,
       "X-Timezone": Localization.getCalendars()[0]?.timeZone ?? "Asia/Shanghai",
       ...options?.headers,
