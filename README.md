@@ -36,8 +36,8 @@
 └─────────────────────────┼────────────────────────────┘
                           │ HTTPS (online only)
 ┌─────────────────────────▼──────────────────────────┐
-│                  apps/api (Next.js 14 BFF)          │
-│           API Routes · Request Logging              │
+│                apps/backend (FastAPI)               │
+│         /record-asr · /record-ocr · /record-text   │
 └─────────────────────────┬──────────────────────────┘
                           │
           ┌───────────────┼───────────────┐
@@ -57,15 +57,21 @@ coco/
 │   │   ├── components/  # UI 组件
 │   │   ├── lib/
 │   │   │   ├── queue/   # Operation Queue（离线写缓冲）
-│   │   │   └── api.ts   # BFF API 客户端
+│   │   │   └── api.ts   # HTTP 客户端（指向 FastAPI）
 │   │   ├── hooks/       # React Query hooks
 │   │   └── store/       # Zustand stores
-│   └── api/             # Next.js 14 BFF
-│       └── src/         # API Routes
+│   └── backend/         # Python FastAPI 后端
+│       ├── routers/     # HTTP 路由（asr / ocr / text）
+│       ├── services/    # AI 调用逻辑（腾讯云 / GLM）
+│       ├── schemas/     # Pydantic 请求/响应 schema
+│       ├── models/      # SQLAlchemy ORM 模型
+│       ├── config.py    # 环境变量配置
+│       └── main.py      # FastAPI 入口
 ├── packages/
-│   ├── shared/          # 共享 TypeScript 类型
-│   └── ai/              # AI 处理库（GLM、腾讯云 OCR/ASR）
-└── supabase/            # 数据库 schema / migrations
+│   └── shared/          # 共享 TypeScript 类型 + 规则引擎
+├── supabase/
+│   └── migrations/      # 数据库 schema
+└── docker-compose.yml   # 本地环境一键启动
 ```
 
 ## 技术栈
@@ -77,10 +83,10 @@ coco/
 | 状态管理 | Zustand 5 · React Query 5（Optimistic UI）|
 | 离线存储 | expo-sqlite（Operation Queue）|
 | 网络感知 | @react-native-community/netinfo |
-| BFF | Next.js 14 · TypeScript |
+| 后端 | Python · FastAPI · uv · Docker |
 | 数据库 | Supabase (PostgreSQL + Auth + RLS) |
 | AI | 智谱 GLM (NL理解 / text-to-SQL) · 腾讯云 OCR / ASR |
-| 工程化 | pnpm · Turborepo |
+| 工程化 | pnpm workspace |
 | 测试 | Jest · ts-jest · better-sqlite3 (SQLite mock) |
 
 ## 离线优先架构
@@ -100,22 +106,23 @@ git clone <repo-url>
 cd coco
 pnpm install
 
-# 配置环境变量
-cp .env.example .env.local
-# 编辑 .env.local 填入以下密钥：
-#   SUPABASE_URL / SUPABASE_ANON_KEY
-#   GLM_API_KEY（智谱 GLM）
-#   TENCENT_SECRET_ID / TENCENT_SECRET_KEY（腾讯云 OCR/ASR）
+# 配置移动端环境变量
+# 编辑 apps/mobile/.env：
+#   EXPO_PUBLIC_SUPABASE_URL
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY
+#   EXPO_PUBLIC_API_URL=http://<本机局域网IP>:8000
 
-# 启动所有服务
+# 配置后端环境变量
+# 编辑 apps/backend/.env：
+#   GLM_API_KEY
+#   TENCENT_SECRET_ID / TENCENT_SECRET_KEY
+
+# 启动后端（Docker）
+docker compose up
+
+# 启动移动端
 pnpm dev
-
-# 单独启动
-pnpm --filter @coco/mobile dev   # Expo 开发服务
-pnpm --filter @coco/api dev      # Next.js BFF
 ```
-
-详细的环境变量说明见 [.env.example](.env.example)。
 
 ## 测试
 

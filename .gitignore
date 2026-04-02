@@ -37,3 +37,8 @@ apps/mobile/package-lock.json
 
 *.swp
 
+
+# Python
+apps/backend/.venv/
+apps/backend/__pycache__/
+apps/backend/*.pyc
