@@ -113,17 +113,16 @@ curl http://localhost:8000/health
 - [ ] **Step 1：编写 `config.py`**
 
 ```python
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
+
     glm_api_key: str
     tencent_secret_id: str
     tencent_secret_key: str
     supabase_url: str
     supabase_service_role_key: str
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings()
 ```
@@ -427,9 +426,9 @@ from fastapi import APIRouter, HTTPException
 from schemas.asr import AsrRequest, AsrResponse, AsrData
 from services.tencent import recognize_speech
 
-router = APIRouter()
+router = APIRouter(prefix="/record-asr", tags=["asr"])
 
-@router.post("/record-asr", response_model=AsrResponse)
+@router.post("", response_model=AsrResponse)
 def record_asr(body: AsrRequest):
     if not body.audioBase64:
         raise HTTPException(status_code=400, detail="Missing audioBase64")
@@ -474,7 +473,7 @@ from fastapi import APIRouter, HTTPException
 from schemas.ocr import OcrRequest, OcrResponse, OcrBillData, OcrTextData, OcrErrorData, Transaction
 from services.tencent import recognize_receipt
 
-router = APIRouter()
+router = APIRouter(prefix="/record-ocr", tags=["ocr"])
 
 def extract_receipt_info(ocr_text: str) -> dict:
     """从 OCR 文本提取金额、商户、日期"""
@@ -516,7 +515,7 @@ def extract_receipt_info(ocr_text: str) -> dict:
 
     return {"amount": amount, "merchant": merchant, "date": date}
 
-@router.post("/record-ocr", response_model=OcrResponse)
+@router.post("", response_model=OcrResponse)
 def record_ocr(body: OcrRequest):
     if not body.imageBase64:
         raise HTTPException(status_code=400, detail="Missing imageBase64")
@@ -619,7 +618,7 @@ from schemas.ocr import Transaction
 from services.glm import call_glm, extract_json, extract_sql
 from config import settings
 
-router = APIRouter()
+router = APIRouter(prefix="/record-text", tags=["text"])
 
 def get_user_id(request: Request) -> str | None:
     """从 Authorization header 解码 user_id（不验证签名，只读取 payload）"""
@@ -633,7 +632,7 @@ def get_user_id(request: Request) -> str | None:
     except Exception:
         return None
 
-@router.post("/record-text", response_model=TextResponse)
+@router.post("", response_model=TextResponse)
 async def record_text(body: TextRequest, request: Request):
     if not body.text.strip():
         raise HTTPException(status_code=400, detail="Missing text")
