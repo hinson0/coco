@@ -153,13 +153,29 @@ git commit -m "feat(backend): 环境变量配置（pydantic-settings）"
 **Files:**
 - 编写：`apps/backend/main.py`
 
-- [ ] **Step 1：编写 `main.py`**
+- [ ] **Step 1：编写 `routers/__init__.py`（聚合 router）**
+
+```python
+from fastapi import APIRouter
+from .asr import router as asr_router
+from .ocr import router as ocr_router
+from .text import router as text_router
+
+router = APIRouter()
+router.include_router(asr_router)
+router.include_router(ocr_router)
+router.include_router(text_router)
+```
+
+新增 router 时只改这个文件，`main.py` 永远不需要动。
+
+- [ ] **Step 2：编写 `main.py`**
 
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import asr, ocr, text
+from routers import router
 
 app = FastAPI(title="CoCo Backend")
 
@@ -172,9 +188,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(asr.router)
-app.include_router(ocr.router)
-app.include_router(text.router)
+app.include_router(router)
 
 @app.get("/health")
 def health():
@@ -183,17 +197,17 @@ def health():
 
 **为什么需要 CORS？** 移动端发起的 HTTP 请求，浏览器（以及某些 React Native 实现）会检查服务端是否允许跨域。没有 `CORSMiddleware`，请求会被浏览器拦截，服务端永远收不到。
 
-- [ ] **Step 2：验证（先跑起来，router 可以先留空）**
+- [ ] **Step 3：验证（先跑起来，router 可以先留空）**
 
-先在每个 router 文件里写最简单的占位，让 `main.py` 能 import 成功：
+先在每个 router 文件里写最简单的占位，让 `__init__.py` 能 import 成功：
 
 `apps/backend/routers/asr.py`：
 ```python
 from fastapi import APIRouter
-router = APIRouter()
+router = APIRouter(prefix="/record-asr", tags=["asr"])
 ```
 
-`apps/backend/routers/ocr.py` 和 `routers/text.py` 同上。
+`apps/backend/routers/ocr.py` 和 `routers/text.py` 同上（前缀分别为 `/record-ocr`、`/record-text`）。
 
 然后运行：
 ```bash
