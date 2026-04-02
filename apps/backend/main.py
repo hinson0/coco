@@ -1,7 +1,6 @@
-# TODO(human): FastAPI 入口 —— 创建 app，配置 CORS，挂载 3 个 router，添加 /health 端点
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import all_routers
+from apps.backend.routers import all_routers
 
 app = FastAPI(title="CoCo backend")
 
