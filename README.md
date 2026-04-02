@@ -60,8 +60,8 @@ coco/
 │   │   │   └── api.ts   # HTTP 客户端（指向 FastAPI）
 │   │   ├── hooks/       # React Query hooks
 │   │   └── store/       # Zustand stores
-│   └── backend/         # Python FastAPI 后端
-│       ├── routers/     # HTTP 路由（asr / ocr / text）
+│   └── backend/         # Python FastAPI 后端 (详见 [backend README](apps/backend/README.md))
+        ├── routers/     # HTTP 路由（asr / ocr / text）
 │       ├── services/    # AI 调用逻辑（腾讯云 / GLM）
 │       ├── schemas/     # Pydantic 请求/响应 schema
 │       ├── models/      # SQLAlchemy ORM 模型
