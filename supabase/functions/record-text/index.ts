@@ -1,4 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { getUserFromRequest } from "../_shared/auth.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GLM_API_KEY = Deno.env.get("GLM_API_KEY")!;
@@ -44,7 +45,7 @@ function buildRecordPrompt(text: string): string {
 规则：
 - amount: 金额数值
 - category: 从以下分类中选择最匹配的：餐饮、交通、购物、娱乐、居住、医疗、教育、通讯、工资、理财、其他收入、其他支出
-- note: 简短描述
+- note: 消费/收入的事项（如"咖啡""打车""工资"），不要包含金额和数字
 - type: "income" 如果是收入，否则 "expense"
 - occurred_at: ISO 8601 格式，相对日期请基于当前时间计算
 
@@ -97,14 +98,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { text } = await req.json();
     if (!text?.trim()) {
       return new Response(JSON.stringify({ error: "Missing text" }), {
@@ -148,10 +141,7 @@ Deno.serve(async (req) => {
     }
 
     // 2b. 查询
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const user = await getUserFromRequest(req);
     if (!user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
@@ -167,6 +157,7 @@ Deno.serve(async (req) => {
       `WHERE transactions.user_id = '${user.id}' AND `,
     );
 
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: queryResult, error: queryError } = await supabase.rpc("exec_readonly_sql", { sql_text: sql });
 
     if (queryError) {

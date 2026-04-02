@@ -17,6 +17,7 @@ interface ChatBubbleProps {
   readonly onSuggestion?: (label: string) => void;
   readonly isPlaying?: boolean;
   readonly onPlay?: () => void;
+  readonly onResendOcr?: () => void;
 }
 
 function formatTime(isoString: string): string {
@@ -50,7 +51,7 @@ function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   );
 }
 
-export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay }: ChatBubbleProps) {
+export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay, onResendOcr }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
@@ -83,14 +84,21 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
     return (
       <View style={[styles.rowUser, isPending && styles.pendingOpacity]}>
         {isFailed && <FailedIndicator onRetry={onRetry} />}
-        <TouchableOpacity
-          style={styles.bubbleArea}
-          activeOpacity={0.75}
-          onLongPress={() => handleLongPress(onDelete)}
-        >
-          {bubbleContent}
-          <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
-        </TouchableOpacity>
+        <View style={styles.userBubbleCol}>
+          <TouchableOpacity
+            style={styles.bubbleArea}
+            activeOpacity={0.75}
+            onLongPress={() => handleLongPress(onDelete)}
+          >
+            {bubbleContent}
+            <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+          </TouchableOpacity>
+          {content_type === 'image' && onResendOcr && (
+            <TouchableOpacity onPress={onResendOcr} style={styles.resendOcrBtn} activeOpacity={0.7}>
+              <AppText size="sm" color={colors.white}>↩ 重新识别</AppText>
+            </TouchableOpacity>
+          )}
+        </View>
         <Avatar emoji="😊" style={styles.avatarUser} />
       </View>
     );
@@ -233,6 +241,18 @@ const styles = StyleSheet.create({
   failedIcon: {
     marginRight: spacing.xs,
     justifyContent: 'center',
+  },
+  userBubbleCol: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
+  },
+  resendOcrBtn: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.sage,
+    alignSelf: 'flex-end',
   },
   pendingOpacity: {
     opacity: 0.6,

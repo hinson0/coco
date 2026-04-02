@@ -55,7 +55,7 @@ export function TypingIndicator() {
     <View style={styles.row}>
       {/* AI Avatar */}
       <View style={styles.avatar}>
-        <AppText size="base">🤖</AppText>
+        <AppText size="base">🌿</AppText>
       </View>
 
       {/* Bubble with dots */}
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radii.sm,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.sagePale,
     alignItems: 'center',
     justifyContent: 'center',
   },
