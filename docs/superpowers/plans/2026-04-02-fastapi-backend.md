@@ -18,26 +18,27 @@
 
 ## 文件清单
 
-| 文件 | 操作 | 职责 |
-|------|------|------|
-| `apps/backend/pyproject.toml` | 创建 | uv 依赖管理 |
-| `apps/backend/Dockerfile` | 编写 | 容器构建 |
-| `apps/backend/config.py` | 编写 | 环境变量读取 |
-| `apps/backend/main.py` | 编写 | FastAPI 入口 + CORS |
-| `apps/backend/schemas/asr.py` | 创建 | ASR 请求/响应 schema |
-| `apps/backend/schemas/ocr.py` | 创建 | OCR 请求/响应 schema |
-| `apps/backend/schemas/text.py` | 创建 | Text 请求/响应 schema |
-| `apps/backend/services/tencent.py` | 编写 | 腾讯云 ASR / OCR 调用 |
-| `apps/backend/services/glm.py` | 编写 | GLM API 调用 + JSON 提取 |
-| `apps/backend/routers/asr.py` | 编写 | POST /record-asr |
-| `apps/backend/routers/ocr.py` | 编写 | POST /record-ocr |
-| `apps/backend/routers/text.py` | 编写 | POST /record-text |
+| 文件                               | 操作 | 职责                     |
+| ---------------------------------- | ---- | ------------------------ |
+| `apps/backend/pyproject.toml`      | 创建 | uv 依赖管理              |
+| `apps/backend/Dockerfile`          | 编写 | 容器构建                 |
+| `apps/backend/config.py`           | 编写 | 环境变量读取             |
+| `apps/backend/main.py`             | 编写 | FastAPI 入口 + CORS      |
+| `apps/backend/schemas/asr.py`      | 创建 | ASR 请求/响应 schema     |
+| `apps/backend/schemas/ocr.py`      | 创建 | OCR 请求/响应 schema     |
+| `apps/backend/schemas/text.py`     | 创建 | Text 请求/响应 schema    |
+| `apps/backend/services/tencent.py` | 编写 | 腾讯云 ASR / OCR 调用    |
+| `apps/backend/services/glm.py`     | 编写 | GLM API 调用 + JSON 提取 |
+| `apps/backend/routers/asr.py`      | 编写 | POST /record-asr         |
+| `apps/backend/routers/ocr.py`      | 编写 | POST /record-ocr         |
+| `apps/backend/routers/text.py`     | 编写 | POST /record-text        |
 
 ---
 
 ## Task 1：uv 初始化 + 依赖安装
 
 **Files:**
+
 - 创建：`apps/backend/pyproject.toml`（由 uv 生成）
 
 - [ ] **Step 1：在 `apps/backend/` 目录下初始化 uv 项目**
@@ -56,6 +57,7 @@ uv add fastapi uvicorn[standard] pydantic-settings supabase tencentcloud-sdk-pyt
 ```
 
 各依赖用途：
+
 - `fastapi` — Web 框架
 - `uvicorn[standard]` — ASGI 服务器（运行 FastAPI 的）
 - `pydantic-settings` — 从 `.env` 读取环境变量
@@ -108,6 +110,7 @@ curl http://localhost:8000/health
 ## Task 3：环境变量配置
 
 **Files:**
+
 - 编写：`apps/backend/config.py`
 
 - [ ] **Step 1：编写 `config.py`**
@@ -151,6 +154,7 @@ git commit -m "feat(backend): 环境变量配置（pydantic-settings）"
 ## Task 4：FastAPI 入口 + CORS
 
 **Files:**
+
 - 编写：`apps/backend/main.py`
 
 - [ ] **Step 1：编写 `routers/__init__.py`（聚合 router）**
@@ -202,6 +206,7 @@ def health():
 先在每个 router 文件里写最简单的占位，让 `__init__.py` 能 import 成功：
 
 `apps/backend/routers/asr.py`：
+
 ```python
 from fastapi import APIRouter
 router = APIRouter(prefix="/record-asr", tags=["asr"])
@@ -210,6 +215,7 @@ router = APIRouter(prefix="/record-asr", tags=["asr"])
 `apps/backend/routers/ocr.py` 和 `routers/text.py` 同上（前缀分别为 `/record-ocr`、`/record-text`）。
 
 然后运行：
+
 ```bash
 cd apps/backend
 uv run uvicorn main:app --reload
@@ -229,6 +235,7 @@ git commit -m "feat(backend): FastAPI 入口 + CORS 配置"
 ## Task 5：Pydantic Schemas
 
 **Files:**
+
 - 创建：`apps/backend/schemas/asr.py`
 - 创建：`apps/backend/schemas/ocr.py`
 - 创建：`apps/backend/schemas/text.py`
@@ -254,7 +261,6 @@ class AsrResponse(BaseModel):
 
 ```python
 from pydantic import BaseModel
-from typing import Optional
 
 class OcrRequest(BaseModel):
     imageBase64: str
@@ -271,9 +277,26 @@ class OcrBillData(BaseModel):
     transaction: Transaction
 
 class OcrTextData(BaseModel):
+    """
+    OCR 识别出了文字，但提取不到金额。
+
+    典型场景：
+    - 拍了一张菜单、名片、说明书——有文字但不是消费小票
+    - 小票格式太奇怪，正则没匹配到金额
+    - 金额为 0 或负数（被过滤掉了）
+
+    这时候后端逻辑是：
+
+    if info["amount"] and info["amount"] > 0:
+        return OcrBillData(...)      # type = "bill"
+
+    return OcrTextData(ocrText=ocr_text, ...)  # type = "ocr_text"，把原文扔回去
+
+    前端拿到 ocr_text 后可以把原文显示给用户，让用户自己确认或手动输入金额——这比直接报错体验好很多。
+    """
     type: str = "ocr_text"
     ocrText: str
-    merchant: Optional[str] = None
+    merchant: str | None = None
 
 class OcrErrorData(BaseModel):
     type: str = "text"
@@ -287,7 +310,6 @@ class OcrResponse(BaseModel):
 
 ```python
 from pydantic import BaseModel
-from typing import Optional
 from schemas.ocr import Transaction
 
 class TextRequest(BaseModel):
@@ -321,6 +343,7 @@ git commit -m "feat(backend): Pydantic schemas（ASR / OCR / Text）"
 ## Task 6：腾讯云服务层
 
 **Files:**
+
 - 编写：`apps/backend/services/tencent.py`
 
 - [ ] **Step 1：编写 `services/tencent.py`**
@@ -329,7 +352,7 @@ git commit -m "feat(backend): Pydantic schemas（ASR / OCR / Text）"
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.ocr.v20181119 import ocr_client, models as ocr_models
-from config import settings
+from apps.backend.config import settings
 
 def _get_cred():
     return credential.Credential(
@@ -352,9 +375,9 @@ def recognize_speech(audio_base64: str) -> str:
 def recognize_receipt(image_base64: str) -> str:
     """图片 OCR（腾讯云通用文字识别）"""
     client = ocr_client.OcrClient(_get_cred(), "ap-guangzhou")
-    req = ocr_models.GeneralBasicOCRRequest()
+    req = ocr_models.GeneralAccurateOCRRequest()
     req.ImageBase64 = image_base64
-    resp = client.GeneralBasicOCR(req)
+    resp = client.GeneralAccurateOCR(req)
     return "\n".join(
         det.DetectedText or ""
         for det in (resp.TextDetections or [])
@@ -373,15 +396,16 @@ git commit -m "feat(backend): 腾讯云 ASR / OCR 服务层"
 ## Task 7：GLM 服务层
 
 **Files:**
+
 - 编写：`apps/backend/services/glm.py`
 
 - [ ] **Step 1：编写 `services/glm.py`**
 
-```python
+````python
 import json
 import re
 import httpx
-from config import settings
+from apps.backend.config import settings
 
 async def call_glm(prompt: str) -> str:
     """调用 GLM API，返回原始文本"""
@@ -415,7 +439,7 @@ def extract_sql(raw: str) -> str:
     """从 GLM 返回文本中提取 SQL"""
     code_block = re.search(r"```(?:sql)?\s*\n?([\s\S]*?)\n?```", raw)
     return code_block.group(1).strip() if code_block else raw.strip()
-```
+````
 
 **为什么用 `httpx` 而不是 `requests`？** FastAPI 是异步框架（async/await），`requests` 是同步的，在 async 函数里用会阻塞整个服务器。`httpx` 支持 `async with`，不阻塞。
 
@@ -431,14 +455,15 @@ git commit -m "feat(backend): GLM 服务层（async httpx）"
 ## Task 8：ASR Router
 
 **Files:**
+
 - 编写：`apps/backend/routers/asr.py`
 
 - [ ] **Step 1：编写 `routers/asr.py`**
 
 ```python
 from fastapi import APIRouter, HTTPException
-from schemas.asr import AsrRequest, AsrResponse, AsrData
-from services.tencent import recognize_speech
+from apps.backend.schemas.asr import AsrRequest, AsrResponse, AsrData
+from apps.backend.services.tencent import recognize_speech
 
 router = APIRouter(prefix="/record-asr", tags=["asr"])
 
@@ -474,6 +499,7 @@ git commit -m "feat(backend): /record-asr 接口"
 ## Task 9：OCR Router
 
 **Files:**
+
 - 编写：`apps/backend/routers/ocr.py`
 
 OCR 路由包含正则提取逻辑（从原 TypeScript `record-ocr/index.ts` 移植）。
@@ -484,8 +510,8 @@ OCR 路由包含正则提取逻辑（从原 TypeScript `record-ocr/index.ts` 移
 import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
-from schemas.ocr import OcrRequest, OcrResponse, OcrBillData, OcrTextData, OcrErrorData, Transaction
-from services.tencent import recognize_receipt
+from apps.backend.schemas.ocr import OcrRequest, OcrResponse, OcrBillData, OcrTextData, OcrErrorData, Transaction
+from apps.backend.services.tencent import recognize_receipt
 
 router = APIRouter(prefix="/record-ocr", tags=["ocr"])
 
@@ -580,6 +606,7 @@ git commit -m "feat(backend): /record-ocr 接口 + 正则提取"
 ## Task 10：Text Router
 
 **Files:**
+
 - 编写：`apps/backend/routers/text.py`
 
 - [ ] **Step 1：编写 prompts（放在 `routers/text.py` 顶部）**
@@ -627,10 +654,10 @@ import re
 from fastapi import APIRouter, HTTPException, Request
 from supabase import create_client
 from jose import jwt
-from schemas.text import TextRequest, TextResponse, TextBillData, TextNlData, TextErrorData
-from schemas.ocr import Transaction
-from services.glm import call_glm, extract_json, extract_sql
-from config import settings
+from apps.backend.schemas.text import TextRequest, TextResponse, TextBillData, TextNlData, TextErrorData
+from apps.backend.schemas.ocr import Transaction
+from apps.backend.services.glm import call_glm, extract_json, extract_sql
+from apps.backend.config import settings
 
 router = APIRouter(prefix="/record-text", tags=["text"])
 

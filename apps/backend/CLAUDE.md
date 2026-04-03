@@ -8,6 +8,38 @@
 
 # Python 代码规范
 
+## 本地模块 Import 规范
+
+uvicorn 从 repo 根启动（`uvicorn apps.backend.main:app`），Python sys.path 根是 repo 根。
+
+**所有本地模块必须使用全路径**：
+```python
+from apps.backend.config import settings          # ✓
+from apps.backend.schemas.ocr import Transaction  # ✓
+from apps.backend.services.glm import call_glm    # ✓
+
+from config import settings                        # ❌
+from schemas.ocr import Transaction                # ❌
+```
+
+`routers/__init__.py` 内使用相对导入（`from .asr import router`）是例外，因为它在包内部。
+
+---
+
+## Python 3.10+ 类型注解语法
+
+本项目使用 Python 3.13，**禁止**从 `typing` 导入已被内置语法替代的类型：
+
+| 禁止（旧） | 正确（3.10+） |
+|-----------|--------------|
+| `Optional[str]` | `str \| None` |
+| `Union[X, Y]` | `X \| Y` |
+| `List[str]` | `list[str]` |
+| `Dict[str, int]` | `dict[str, int]` |
+| `Tuple[str, int]` | `tuple[str, int]` |
+
+`from typing import Optional/Union/List/Dict/Tuple` 这些导入在 3.13 项目里不应出现。
+
 ## Pydantic v2 语法
 
 本项目使用 pydantic-settings v2，**禁止**使用旧的 `class Config` 内嵌类写法。
