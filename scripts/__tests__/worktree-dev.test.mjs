@@ -42,6 +42,21 @@ describe("parseArgs", () => {
     assert.throws(() => parseArgs(["node", "script.mjs"]), /用法/);
   });
 
+  it("--port 在 name 前面时仍正确解析", () => {
+    const result = parseArgs([
+      "node",
+      "script.mjs",
+      "--port",
+      "8001",
+      "feat-infra",
+    ]);
+    assert.deepStrictEqual(result, {
+      name: "feat-infra",
+      backendPort: 8001,
+      frontendPort: 8081,
+    });
+  });
+
   it("--port 非数字时抛出错误", () => {
     assert.throws(
       () => parseArgs(["node", "script.mjs", "feat", "--port", "abc"]),
