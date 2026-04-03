@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timezone
 
+import structlog
 from config import settings
 from fastapi import APIRouter, HTTPException, Request
 from jose import jwt
@@ -15,6 +16,8 @@ from schemas.text import (
 from services.glm import call_glm, extract_json, extract_sql
 
 from supabase import create_client
+
+log = structlog.get_logger()
 
 router = APIRouter(prefix="/record-text", tags=["text"])
 
@@ -79,6 +82,8 @@ async def record_text(body: TextRequest, request: Request):
         else "record"
     )
 
+    log.info("text.intent", intent=intent)
+
     if intent == "record":
         # 2a. 记账
         glm_raw = await call_glm(build_record_prompt(body.text))
@@ -88,6 +93,11 @@ async def record_text(body: TextRequest, request: Request):
             and isinstance(parsed.get("amount"), (int, float))
             and parsed["amount"] > 0
         ):
+            log.info(
+                "text.record",
+                amount=float(parsed["amount"]),
+                category=str(parsed.get("category", "其他支出")),
+            )
             return TextResponse(
                 data=TextBillData(
                     transaction=Transaction(
@@ -122,8 +132,10 @@ async def record_text(body: TextRequest, request: Request):
     try:
         result = supabase.rpc("exec_readonly_sql", {"sql_text": sql}).execute()
         query_result = result.data
-    except Exception:
+    except Exception as e:
+        log.error("text.error", error=str(e))
         return TextResponse(data=TextErrorData(message="查询出错，请换个方式描述。"))
 
+    log.info("text.query", sql_len=len(sql))
     summary_raw = await call_glm(build_summarize_prompt(body.text, str(query_result)))
     return TextResponse(data=TextNlData(message=summary_raw))
