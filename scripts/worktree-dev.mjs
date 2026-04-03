@@ -2,7 +2,7 @@
 // scripts/worktree-dev.mjs — 启动 worktree 的 dev server（自动安装依赖）
 
 import { execSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, lstatSync, readFileSync, symlinkSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { fileURLToPath } from "url";
 
@@ -21,6 +21,31 @@ export function parseArgs(argv) {
   const frontendPort = backendPort + 80;
 
   return { name, backendPort, frontendPort };
+}
+
+export function ensureEnvSymlinks(cwd, wtDir) {
+  const envPairs = [
+    {
+      link: resolve(wtDir, "apps/backend/.env"),
+      target: resolve(cwd, "apps/backend/.env"),
+    },
+    {
+      link: resolve(wtDir, "apps/mobile/.env"),
+      target: resolve(cwd, "apps/mobile/.env"),
+    },
+  ];
+
+  for (const { link, target } of envPairs) {
+    // 已存在（文件或 symlink）→ 跳过
+    if (lstatSync(link, { throwIfNoEntry: false })) {
+      continue;
+    }
+    // target 不可读 → 报错
+    if (!existsSync(target)) {
+      throw new Error(`找不到 env 文件: ${target}`);
+    }
+    symlinkSync(target, link);
+  }
 }
 
 // ── 原有逻辑（暂时保留，Task 3 重写）──
