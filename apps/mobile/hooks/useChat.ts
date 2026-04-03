@@ -11,6 +11,26 @@ import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useState } from "react";
 import { apiFetch } from "../lib/api";
 
+type ChatBillData = {
+  type: "bill";
+  transaction: {
+    amount: number;
+    category: string;
+    note: string;
+    occurred_at: string;
+    type: "expense" | "income";
+  };
+};
+
+type ChatTextData = {
+  type: "text";
+  content: string;
+};
+
+type ChatResponse = {
+  data: ChatBillData | ChatTextData;
+};
+
 export function useChat() {
   const { db } = useOfflineContext();
   const qc = useQueryClient();
@@ -82,15 +102,80 @@ export function useChat() {
         console.log("[processText] 规则引擎有结果但未匹配分类，提示手动记账");
       }
 
-      // 2. 规则引擎未命中 → 提示手动记账
-      console.log("[processText] ⚠️ 规则引擎未命中，提示手动记账");
-      await addMessage({
+      // 2. 规则引擎未命中 → 调用 /chat（SiliconFlow fallback）
+      console.log("[processText] ⚠️ 规则引擎未命中，调用 /chat");
+
+      const thinkingMsgId = await addMessage({
         role: "assistant",
         content_type: "text",
-        content: "没识别到记账信息，可以试试「手动记账」。",
+        content: "思考中...",
       });
+
+      try {
+        const resp = await apiFetch<ChatResponse>("/chat", {
+          method: "POST",
+          body: JSON.stringify({ text }),
+        });
+
+        console.log("[processText] /chat 返回:", JSON.stringify(resp.data));
+
+        if (resp.data.type === "bill") {
+          const tx = resp.data.transaction;
+          const categoriesData = qc.getQueryData<readonly Category[]>([
+            "categories",
+          ]);
+          const otherName = tx.type === "income" ? "其他收入" : "其他支出";
+          const category =
+            (tx.category
+              ? categoriesData?.find(
+                  (c) => c.name === tx.category && c.type === tx.type,
+                )
+              : null) ?? categoriesData?.find((c) => c.name === otherName);
+
+          const occurredAt = tx.occurred_at || new Date().toISOString();
+          const txId = await createTransaction({
+            amount: tx.amount,
+            category_id: category?.id ?? "",
+            type: tx.type,
+            note: tx.note,
+            occurred_at: occurredAt,
+            source: "llm",
+          });
+
+          await db!.runAsync(
+            "UPDATE chat_messages SET content_type = ?, content = ?, transaction_id = ? WHERE id = ?",
+            "bill_card",
+            JSON.stringify({
+              id: txId,
+              amount: tx.amount,
+              type: tx.type,
+              note: tx.note,
+              category_id: category?.id ?? "",
+              occurred_at: occurredAt,
+            }),
+            txId,
+            thinkingMsgId,
+          );
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        } else {
+          await db!.runAsync(
+            "UPDATE chat_messages SET content = ? WHERE id = ?",
+            resp.data.content,
+            thinkingMsgId,
+          );
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        }
+      } catch (err) {
+        console.error("[processText] /chat 异常:", err);
+        await db!.runAsync(
+          "UPDATE chat_messages SET content = ? WHERE id = ?",
+          "处理失败，请稍后再试。",
+          thinkingMsgId,
+        );
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      }
     },
-    [qc, addMessage, createTransaction],
+    [qc, addMessage, createTransaction, db],
   );
 
   const sendText = useCallback(
