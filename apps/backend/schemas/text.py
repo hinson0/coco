@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from apps.backend.schemas.ocr import Transaction
+from schemas.ocr import Transaction
 
 
 class TextRequest(BaseModel):
