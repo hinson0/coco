@@ -82,4 +82,3 @@ pnpm worktree feat-infra --port 8001 # backend 8001, frontend 8081
 
 - docker-compose 支持
 - 多 worktree 同时启动的端口自动分配
-- `.env` 目录结构重组（保持现有 main repo env 文件位置不变）
