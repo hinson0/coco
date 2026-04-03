@@ -34,7 +34,7 @@ def get_user_id(request: Request) -> str | None:
 def is_safe_sql(sql: str) -> bool:
     stripped = sql.strip().upper()
     return stripped.startswith("SELECT") and not any(
-        kw in stripped
+        re.search(rf"\b{kw}\b", stripped)
         for kw in ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE"]
     )
 
@@ -71,6 +71,8 @@ async def chat(body: ChatRequest, request: Request):
                     data=ChatTextData(content="登录状态异常，请重新登录。")
                 )
             sql = await generate_sql(body.text)
+            print(f"[DEBUG] 生成的 SQL: {repr(sql)}")  # ← 加这行
+            print(f"[DEBUG] is_safe_sql: {is_safe_sql(sql)}")  # ← 加这行
             if not is_safe_sql(sql):
                 return ChatResponse(data=ChatTextData(content="查询失败，请换个说法。"))
 
@@ -88,9 +90,10 @@ async def chat(body: ChatRequest, request: Request):
             )
 
             try:
-                result = supabase.rpc("exec_readonly_sql", {"sql_text": sql}).execute()
+                result = supabase.rpc("exec_readonly_sql", {"sql_query": sql}).execute()
                 query_result = result.data
-            except Exception:
+            except Exception as e:
+                print(f"[DEBUG] supabase rpc 报错: {e}")
                 return ChatResponse(
                     data=ChatTextData(content="查询出错，请换个方式描述。")
                 )
