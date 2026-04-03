@@ -211,7 +211,7 @@ function main() {
         "--port",
         String(backendPort),
       ],
-      { cwd: backendDir },
+      { cwd: backendDir, env: { ...process.env, FORCE_COLOR: "1" } },
       "backend",
       CYAN,
       onChildExit
@@ -220,7 +220,7 @@ function main() {
     mobileProc = spawnWithPrefix(
       "pnpm",
       ["--filter", wtName, "dev", "--port", String(frontendPort)],
-      { cwd: wtDir, env: mobileEnv },
+      { cwd: wtDir, env: { ...mobileEnv, FORCE_COLOR: "1" } },
       "mobile",
       GREEN,
       onChildExit
