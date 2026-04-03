@@ -42,7 +42,7 @@ pnpm worktree feat-infra --port 8001 # backend 8001, frontend 8081
 规则：
 - symlink 已存在 → 跳过（幂等）
 - target 文件存在 → `fs.symlinkSync(target, linkPath)`
-- target 文件不存在 → 打印警告，不阻断启动
+- target 文件不存在 → 打印错误，`process.exit(1)`
 
 好处：main repo 修改 `.env` 后，所有 worktree 自动看到最新值。
 
