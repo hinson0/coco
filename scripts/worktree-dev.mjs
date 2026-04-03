@@ -168,16 +168,15 @@ function main() {
     const mobileEnvContent = readFileSync(mobileEnvPath, "utf-8");
     const apiUrlMatch = mobileEnvContent.match(/EXPO_PUBLIC_API_URL=(.+)/);
     const mobileEnv = { ...process.env };
+    let hostIp = "0.0.0.0";
     if (apiUrlMatch) {
-      const newUrl = apiUrlMatch[1].trim().replace(/:\d+$/, `:${backendPort}`);
+      const originalUrl = apiUrlMatch[1].trim();
+      const newUrl = originalUrl.replace(/:\d+$/, `:${backendPort}`);
       mobileEnv.EXPO_PUBLIC_API_URL = newUrl;
       console.log(`🔗 EXPO_PUBLIC_API_URL → ${newUrl}`);
+      const ipMatch = originalUrl.match(/\/\/([^:]+)/);
+      if (ipMatch) hostIp = ipMatch[1];
     }
-
-    // 5. 并发启动
-    console.log(
-      `\n🚀 backend → http://0.0.0.0:${backendPort}  |  mobile → port ${frontendPort}\n`
-    );
 
     const CYAN = "\x1b[36m";
     const GREEN = "\x1b[32m";
@@ -225,6 +224,10 @@ function main() {
       "mobile",
       GREEN,
       onChildExit
+    );
+
+    console.log(
+      `\n🚀 backend → http://${hostIp}:${backendPort}  |  mobile → http://${hostIp}:${frontendPort}\n`
     );
 
     process.on("SIGINT", () => {
