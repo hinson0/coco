@@ -6,6 +6,7 @@ from config import settings
 from tencentcloud.asr.v20190614 import asr_client
 from tencentcloud.asr.v20190614 import models as asr_models
 from tencentcloud.common import credential
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 from tencentcloud.ocr.v20181119 import models as ocr_models
 from tencentcloud.ocr.v20181119 import ocr_client
 
@@ -37,8 +38,13 @@ def recognize_speech(audio_base64: str) -> str:
         duration_ms = round((time.monotonic() - start) * 1000)
         log.info("asr.done", audio_len=audio_len, duration_ms=duration_ms, result=result)
         return result
+    except TencentCloudSDKException as e:
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.error("asr.error", audio_len=audio_len, duration_ms=duration_ms, error_code=e.get_code(), error=e.get_message())
+        raise
     except Exception as e:
-        log.error("asr.error", audio_len=audio_len, error=str(e))
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.error("asr.error", audio_len=audio_len, duration_ms=duration_ms, error=str(e))
         raise
 
 
@@ -56,6 +62,11 @@ def recognize_receipt(image_base64: str) -> str:
         duration_ms = round((time.monotonic() - start) * 1000)
         log.info("ocr.done", image_len=image_len, duration_ms=duration_ms, raw_len=len(raw_text.encode()))
         return raw_text
+    except TencentCloudSDKException as e:
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.error("ocr.error", image_len=image_len, duration_ms=duration_ms, error_code=e.get_code(), error=e.get_message())
+        raise
     except Exception as e:
-        log.error("ocr.error", image_len=image_len, error=str(e))
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.error("ocr.error", image_len=image_len, duration_ms=duration_ms, error=str(e))
         raise
