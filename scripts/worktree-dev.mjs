@@ -4,65 +4,86 @@
 import { execSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
+import { fileURLToPath } from "url";
 
-const name = process.argv[2];
-if (!name) {
-  console.error("用法: pnpm worktree <name>");
-  process.exit(1);
+export function parseArgs(argv) {
+  const args = argv.slice(2);
+  const name = args.find((a) => !a.startsWith("--"));
+  if (!name) {
+    throw new Error("用法: pnpm worktree <name> [--port <backendPort>]");
+  }
+
+  const portIdx = args.indexOf("--port");
+  const backendPort = portIdx !== -1 ? parseInt(args[portIdx + 1], 10) : 8000;
+  if (isNaN(backendPort)) {
+    throw new Error("--port 必须是数字");
+  }
+  const frontendPort = backendPort + 80;
+
+  return { name, backendPort, frontendPort };
 }
 
-const dir = resolve(".claude/worktrees", name);
+// ── 原有逻辑（暂时保留，Task 3 重写）──
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const name = process.argv[2];
+  if (!name) {
+    console.error("用法: pnpm worktree <name>");
+    process.exit(1);
+  }
 
-if (!existsSync(dir)) {
-  console.error(`❌ worktree 不存在: ${dir}`);
-  process.exit(1);
-}
+  const dir = resolve(".claude/worktrees", name);
 
-const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
+  if (!existsSync(dir)) {
+    console.error(`❌ worktree 不存在: ${dir}`);
+    process.exit(1);
+  }
 
-// 依赖不存在则自动安装
-if (!existsSync(resolve(dir, "node_modules"))) {
-  console.log("📦 首次启动，安装依赖...");
-  run("pnpm install", { cwd: dir });
-}
+  const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
 
-// 临时修改 package.json name + app.json name，方便多 worktree 调试时区分
-const wtName = `worktree-${name}`;
-const mobileDir = resolve(dir, "apps/mobile");
+  // 依赖不存在则自动安装
+  if (!existsSync(resolve(dir, "node_modules"))) {
+    console.log("📦 首次启动，安装依赖...");
+    run("pnpm install", { cwd: dir });
+  }
 
-const mobilePkgPath = resolve(mobileDir, "package.json");
-const originalPkg = readFileSync(mobilePkgPath, "utf-8");
-const pkg = JSON.parse(originalPkg);
-const originalPkgName = pkg.name;
-pkg.name = wtName;
-writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  // 临时修改 package.json name + app.json name，方便多 worktree 调试时区分
+  const wtName = `worktree-${name}`;
+  const mobileDir = resolve(dir, "apps/mobile");
 
-const appJsonPath = resolve(mobileDir, "app.json");
-const originalAppJson = readFileSync(appJsonPath, "utf-8");
-const appJson = JSON.parse(originalAppJson);
-appJson.expo.name = wtName;
-writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
+  const mobilePkgPath = resolve(mobileDir, "package.json");
+  const originalPkg = readFileSync(mobilePkgPath, "utf-8");
+  const pkg = JSON.parse(originalPkg);
+  const originalPkgName = pkg.name;
+  pkg.name = wtName;
+  writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
 
-console.log(`📛 mobile name: ${originalPkgName} → ${wtName}`);
+  const appJsonPath = resolve(mobileDir, "app.json");
+  const originalAppJson = readFileSync(appJsonPath, "utf-8");
+  const appJson = JSON.parse(originalAppJson);
+  appJson.expo.name = wtName;
+  writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
 
-// dev server 结束后恢复原始文件
-const restore = () => {
-  writeFileSync(mobilePkgPath, originalPkg);
-  writeFileSync(appJsonPath, originalAppJson);
-  console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
-};
-process.on("SIGINT", () => {
-  restore();
-  process.exit(0);
-});
-process.on("SIGTERM", () => {
-  restore();
-  process.exit(0);
-});
+  console.log(`📛 mobile name: ${originalPkgName} → ${wtName}`);
 
-try {
-  const extra = process.argv.slice(3).join(" ");
-  run(`pnpm --filter ${pkg.name} dev ${extra}`, { cwd: dir });
-} finally {
-  restore();
+  // dev server 结束后恢复原始文件
+  const restore = () => {
+    writeFileSync(mobilePkgPath, originalPkg);
+    writeFileSync(appJsonPath, originalAppJson);
+    console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
+  };
+  process.on("SIGINT", () => {
+    restore();
+    process.exit(0);
+  });
+  process.on("SIGTERM", () => {
+    restore();
+    process.exit(0);
+  });
+
+  try {
+    const extra = process.argv.slice(3).join(" ");
+    run(`pnpm --filter ${pkg.name} dev ${extra}`, { cwd: dir });
+  } finally {
+    restore();
+  }
 }
