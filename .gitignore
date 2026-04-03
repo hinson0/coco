@@ -38,5 +38,5 @@ apps/mobile/package-lock.json
 
 # Python
 apps/backend/.venv/
-apps/backend/__pycache__/
-apps/backend/*.pyc
+apps/backend/**/__pycache__/
+apps/backend/**/*.pyc
