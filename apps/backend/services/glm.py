@@ -1,23 +1,38 @@
 import json
 import re
+import time
 
 import httpx
+import structlog
 from config import settings
+
+log = structlog.get_logger()
 
 
 async def call_glm(prompt: str) -> str:
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-            headers={"Authorization": f"Bearer {settings.glm_api_key}"},
-            json={
-                "model": "glm-4.7-flash",
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+    prompt_len = len(prompt)
+    log.info("glm.start", prompt_len=prompt_len, model="glm-4.7-flash")
+    start = time.monotonic()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+                headers={"Authorization": f"Bearer {settings.glm_api_key}"},
+                json={
+                    "model": "glm-4.7-flash",
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            result = response.json()["choices"][0]["message"]["content"]
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.info("glm.done", prompt_len=prompt_len, duration_ms=duration_ms, response=result)
+        return result
+    except Exception as e:
+        duration_ms = round((time.monotonic() - start) * 1000)
+        log.error("glm.error", prompt_len=prompt_len, duration_ms=duration_ms, error=str(e))
+        raise
 
 
 def extract_json(raw: str) -> dict | None:
