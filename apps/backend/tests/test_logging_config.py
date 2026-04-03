@@ -1,11 +1,7 @@
 import json
-import sys
-import os
 
 import pytest
 import structlog
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from logging_config import setup_logging
 
