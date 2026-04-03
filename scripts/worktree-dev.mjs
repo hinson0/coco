@@ -16,7 +16,11 @@ import { fileURLToPath } from "url";
 
 export function parseArgs(argv) {
   const args = argv.slice(2);
-  const name = args.find((a) => !a.startsWith("--"));
+  const name = args.find((a, i) => {
+    if (a.startsWith("--")) return false;
+    if (i > 0 && args[i - 1] === "--port") return false;
+    return true;
+  });
   if (!name) {
     throw new Error("用法: pnpm worktree <name> [--port <backendPort>]");
   }
