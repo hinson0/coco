@@ -163,7 +163,18 @@ function main() {
       console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
     };
 
-    // 4. 并发启动
+    // 4. 读取 mobile .env 中的 API URL，替换端口
+    const mobileEnvPath = resolve(mobileDir, ".env");
+    const mobileEnvContent = readFileSync(mobileEnvPath, "utf-8");
+    const apiUrlMatch = mobileEnvContent.match(/EXPO_PUBLIC_API_URL=(.+)/);
+    const mobileEnv = { ...process.env };
+    if (apiUrlMatch) {
+      const newUrl = apiUrlMatch[1].trim().replace(/:\d+$/, `:${backendPort}`);
+      mobileEnv.EXPO_PUBLIC_API_URL = newUrl;
+      console.log(`🔗 EXPO_PUBLIC_API_URL → ${newUrl}`);
+    }
+
+    // 5. 并发启动
     console.log(
       `\n🚀 backend → http://0.0.0.0:${backendPort}  |  mobile → port ${frontendPort}\n`
     );
@@ -210,7 +221,7 @@ function main() {
     mobileProc = spawnWithPrefix(
       "pnpm",
       ["--filter", wtName, "dev", "--port", String(frontendPort)],
-      { cwd: wtDir },
+      { cwd: wtDir, env: mobileEnv },
       "mobile",
       GREEN,
       onChildExit
