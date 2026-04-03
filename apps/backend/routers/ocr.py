@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timezone
 
+import structlog
 from fastapi import APIRouter
 from schemas.ocr import (
     OcrBillData,
@@ -11,6 +12,8 @@ from schemas.ocr import (
     Transaction,
 )
 from services.tencent import recognize_receipt
+
+log = structlog.get_logger()
 
 router = APIRouter(prefix="/record-ocr", tags=["ocr"])
 
@@ -65,6 +68,7 @@ async def record_ocr(body: OcrRequest):
     ocr_text = recognize_receipt(body.imageBase64)
 
     if not ocr_text.strip():
+        log.warning("ocr.empty")
         return OcrResponse(
             data=OcrErrorData(message="无法识别小票内容，请确保图片清晰后重试。")
         )
@@ -80,7 +84,13 @@ async def record_ocr(body: OcrRequest):
             occurred_at=info["date"] or datetime.now(timezone.utc).isoformat(),
         )
         data = OcrBillData(transaction=transaction)
+        log.info("ocr.parsed",
+            amount=info["amount"],
+            merchant=info["merchant"],
+            date=info["date"],
+        )
         return OcrResponse(data=data)
 
     data = OcrTextData(ocrText=ocr_text, merchant=info["merchant"])
+    log.info("ocr.no_amount", ocr_text_len=len(ocr_text.encode()))
     return OcrResponse(data=data)

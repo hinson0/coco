@@ -1,8 +1,20 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from config import settings
+from logging_config import setup_logging
 from routers import all_routers
 
-app = FastAPI(title="CoCo backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    setup_logging(settings.app_env, settings.log_level)
+    yield
+
+
+app = FastAPI(title="CoCo backend", lifespan=lifespan)
 
 
 app.add_middleware(
