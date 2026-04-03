@@ -33,5 +33,6 @@ def setup_logging(env: str = "dev", level: str = "DEBUG") -> None:
     )
 
     logging.basicConfig(level=log_level)
-    # 腾讯云 SDK 内部会 log 完整请求/响应体（含 base64 Data 字段），屏蔽其 DEBUG/INFO
-    logging.getLogger("tencentcloud_sdk_common").setLevel(logging.WARNING)
+    # 屏蔽第三方库的 DEBUG 噪音日志
+    logging.getLogger("tencentcloud_sdk_common").propagate = False  # SDK 请求/响应体（含 base64）
+    logging.getLogger("urllib3").setLevel(logging.WARNING)          # HTTP 连接 DEBUG 日志
