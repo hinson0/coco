@@ -53,7 +53,7 @@ async def chat(body: ChatRequest, request: Request):
                 transaction = Transaction(
                     amount=float(bill["amount"]),
                     category=str(bill.get("category", "其他支出")),
-                    note=bill.get("note", ""),
+                    note=bill.get("note") or "",
                     type="income" if bill.get("type") == "income" else "expense",
                     occurred_at=bill.get("occurred_at", ""),
                 )
@@ -81,6 +81,7 @@ async def chat(body: ChatRequest, request: Request):
                 r"WHERE\s+",
                 f"WHERE transactions.user_id = '{user_id}' AND ",
                 sql,
+                count=1,
                 flags=re.IGNORECASE,
             )
 
