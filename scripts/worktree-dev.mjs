@@ -1,10 +1,18 @@
 #!/usr/bin/env node
-// scripts/worktree-dev.mjs — 启动 worktree 的 dev server（自动安装依赖）
+// scripts/worktree-dev.mjs — worktree 一键启动（env + 依赖 + 前后端并发）
 
-import { execSync } from "child_process";
-import { existsSync, lstatSync, readFileSync, symlinkSync, writeFileSync } from "fs";
+import { execSync, spawn } from "child_process";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "fs";
 import { resolve } from "path";
 import { fileURLToPath } from "url";
+
+// ── CLI 参数解析 ──────────────────────────────
 
 export function parseArgs(argv) {
   const args = argv.slice(2);
@@ -23,6 +31,8 @@ export function parseArgs(argv) {
   return { name, backendPort, frontendPort };
 }
 
+// ── Env 符号链接 ──────────────────────────────
+
 export function ensureEnvSymlinks(cwd, wtDir) {
   const envPairs = [
     {
@@ -36,11 +46,9 @@ export function ensureEnvSymlinks(cwd, wtDir) {
   ];
 
   for (const { link, target } of envPairs) {
-    // 已存在（文件或 symlink）→ 跳过
     if (lstatSync(link, { throwIfNoEntry: false })) {
       continue;
     }
-    // target 不可读 → 报错
     if (!existsSync(target)) {
       throw new Error(`找不到 env 文件: ${target}`);
     }
@@ -48,67 +56,168 @@ export function ensureEnvSymlinks(cwd, wtDir) {
   }
 }
 
-// ── 原有逻辑（暂时保留，Task 3 重写）──
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const name = process.argv[2];
-  if (!name) {
-    console.error("用法: pnpm worktree <name>");
-    process.exit(1);
+// ── 依赖安装 ──────────────────────────────────
+
+function ensureDeps(wtDir) {
+  const run = (cmd, opts = {}) =>
+    execSync(cmd, { stdio: "inherit", ...opts });
+
+  if (!existsSync(resolve(wtDir, "node_modules"))) {
+    console.log("📦 安装前端依赖...");
+    run("pnpm install", { cwd: wtDir });
   }
 
-  const dir = resolve(".claude/worktrees", name);
-
-  if (!existsSync(dir)) {
-    console.error(`❌ worktree 不存在: ${dir}`);
-    process.exit(1);
+  const backendDir = resolve(wtDir, "apps/backend");
+  if (!existsSync(resolve(backendDir, ".venv"))) {
+    console.log("📦 安装 Python 依赖...");
+    run("uv sync", { cwd: backendDir });
   }
+}
 
-  const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
+// ── 带前缀的进程输出 ──────────────────────────
 
-  // 依赖不存在则自动安装
-  if (!existsSync(resolve(dir, "node_modules"))) {
-    console.log("📦 首次启动，安装依赖...");
-    run("pnpm install", { cwd: dir });
-  }
+function spawnWithPrefix(cmd, args, opts, prefix, colorCode) {
+  const reset = "\x1b[0m";
+  const tag = `${colorCode}[${prefix}]${reset} `;
 
-  // 临时修改 package.json name + app.json name，方便多 worktree 调试时区分
-  const wtName = `worktree-${name}`;
-  const mobileDir = resolve(dir, "apps/mobile");
+  const proc = spawn(cmd, args, {
+    ...opts,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
-  const mobilePkgPath = resolve(mobileDir, "package.json");
-  const originalPkg = readFileSync(mobilePkgPath, "utf-8");
-  const pkg = JSON.parse(originalPkg);
-  const originalPkgName = pkg.name;
-  pkg.name = wtName;
-  writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
-
-  const appJsonPath = resolve(mobileDir, "app.json");
-  const originalAppJson = readFileSync(appJsonPath, "utf-8");
-  const appJson = JSON.parse(originalAppJson);
-  appJson.expo.name = wtName;
-  writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
-
-  console.log(`📛 mobile name: ${originalPkgName} → ${wtName}`);
-
-  // dev server 结束后恢复原始文件
-  const restore = () => {
-    writeFileSync(mobilePkgPath, originalPkg);
-    writeFileSync(appJsonPath, originalAppJson);
-    console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
+  const pipeLine = (stream, target) => {
+    let buffer = "";
+    stream.on("data", (data) => {
+      buffer += data.toString();
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        target.write(tag + line + "\n");
+      }
+    });
+    stream.on("end", () => {
+      if (buffer) target.write(tag + buffer + "\n");
+    });
   };
-  process.on("SIGINT", () => {
-    restore();
-    process.exit(0);
+
+  pipeLine(proc.stdout, process.stdout);
+  pipeLine(proc.stderr, process.stderr);
+
+  proc.on("exit", (code) => {
+    console.log(`${tag}进程退出 (code: ${code})`);
   });
-  process.on("SIGTERM", () => {
-    restore();
-    process.exit(0);
-  });
+
+  return proc;
+}
+
+// ── 主流程 ────────────────────────────────────
+
+function main() {
+  let restoreFn = null;
 
   try {
-    const extra = process.argv.slice(3).join(" ");
-    run(`pnpm --filter ${pkg.name} dev ${extra}`, { cwd: dir });
-  } finally {
-    restore();
+    const { name, backendPort, frontendPort } = parseArgs(process.argv);
+    const cwd = process.cwd();
+    const wtDir = resolve(cwd, ".claude/worktrees", name);
+
+    if (!existsSync(wtDir)) {
+      console.error(`❌ worktree 不存在: ${wtDir}`);
+      process.exit(1);
+    }
+
+    // 1. Env symlinks
+    ensureEnvSymlinks(cwd, wtDir);
+
+    // 2. 依赖安装
+    ensureDeps(wtDir);
+
+    // 3. 修改 mobile name（区分多 worktree）
+    const wtName = `worktree-${name}`;
+    const mobileDir = resolve(wtDir, "apps/mobile");
+    const backendDir = resolve(wtDir, "apps/backend");
+
+    const mobilePkgPath = resolve(mobileDir, "package.json");
+    const originalPkg = readFileSync(mobilePkgPath, "utf-8");
+    const pkg = JSON.parse(originalPkg);
+    const originalPkgName = pkg.name;
+    pkg.name = wtName;
+    writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
+
+    const appJsonPath = resolve(mobileDir, "app.json");
+    const originalAppJson = readFileSync(appJsonPath, "utf-8");
+    const appJson = JSON.parse(originalAppJson);
+    appJson.expo.name = wtName;
+    writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
+
+    console.log(`📛 mobile name: ${originalPkgName} → ${wtName}`);
+
+    // 恢复函数
+    restoreFn = () => {
+      writeFileSync(mobilePkgPath, originalPkg);
+      writeFileSync(appJsonPath, originalAppJson);
+      console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
+    };
+
+    // 4. 并发启动
+    console.log(
+      `\n🚀 backend → http://0.0.0.0:${backendPort}  |  mobile → port ${frontendPort}\n`
+    );
+
+    const CYAN = "\x1b[36m";
+    const GREEN = "\x1b[32m";
+
+    const backendProc = spawnWithPrefix(
+      "uv",
+      [
+        "run",
+        "uvicorn",
+        "main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        String(backendPort),
+      ],
+      { cwd: backendDir },
+      "backend",
+      CYAN
+    );
+
+    const mobileProc = spawnWithPrefix(
+      "pnpm",
+      ["--filter", wtName, "dev", "--port", String(frontendPort)],
+      { cwd: wtDir },
+      "mobile",
+      GREEN
+    );
+
+    // 5. 信号处理
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      try { backendProc.kill(); } catch {}
+      try { mobileProc.kill(); } catch {}
+      if (restoreFn) restoreFn();
+    };
+
+    process.on("SIGINT", () => {
+      cleanup();
+      process.exit(0);
+    });
+    process.on("SIGTERM", () => {
+      cleanup();
+      process.exit(0);
+    });
+  } catch (e) {
+    console.error(e.message);
+    if (restoreFn) restoreFn();
+    process.exit(1);
   }
+}
+
+// ── 入口 ──────────────────────────────────────
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
 }
