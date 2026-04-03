@@ -1,10 +1,9 @@
+from config import settings
 from tencentcloud.asr.v20190614 import asr_client
 from tencentcloud.asr.v20190614 import models as asr_models
 from tencentcloud.common import credential
 from tencentcloud.ocr.v20181119 import models as ocr_models
 from tencentcloud.ocr.v20181119 import ocr_client
-
-from apps.backend.config import settings
 
 
 def _get_cred():
