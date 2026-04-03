@@ -352,7 +352,7 @@ git commit -m "feat(backend): Pydantic schemas（ASR / OCR / Text）"
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.ocr.v20181119 import ocr_client, models as ocr_models
-from apps.backend.config import settings
+from config import settings
 
 def _get_cred():
     return credential.Credential(
@@ -405,7 +405,7 @@ git commit -m "feat(backend): 腾讯云 ASR / OCR 服务层"
 import json
 import re
 import httpx
-from apps.backend.config import settings
+from config import settings
 
 async def call_glm(prompt: str) -> str:
     """调用 GLM API，返回原始文本"""
@@ -462,8 +462,8 @@ git commit -m "feat(backend): GLM 服务层（async httpx）"
 
 ```python
 from fastapi import APIRouter, HTTPException
-from apps.backend.schemas.asr import AsrRequest, AsrResponse, AsrData
-from apps.backend.services.tencent import recognize_speech
+from schemas.asr import AsrRequest, AsrResponse, AsrData
+from services.tencent import recognize_speech
 
 router = APIRouter(prefix="/record-asr", tags=["asr"])
 
@@ -510,8 +510,8 @@ OCR 路由包含正则提取逻辑（从原 TypeScript `record-ocr/index.ts` 移
 import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
-from apps.backend.schemas.ocr import OcrRequest, OcrResponse, OcrBillData, OcrTextData, OcrErrorData, Transaction
-from apps.backend.services.tencent import recognize_receipt
+from schemas.ocr import OcrRequest, OcrResponse, OcrBillData, OcrTextData, OcrErrorData, Transaction
+from services.tencent import recognize_receipt
 
 router = APIRouter(prefix="/record-ocr", tags=["ocr"])
 
@@ -654,10 +654,10 @@ import re
 from fastapi import APIRouter, HTTPException, Request
 from supabase import create_client
 from jose import jwt
-from apps.backend.schemas.text import TextRequest, TextResponse, TextBillData, TextNlData, TextErrorData
-from apps.backend.schemas.ocr import Transaction
-from apps.backend.services.glm import call_glm, extract_json, extract_sql
-from apps.backend.config import settings
+from schemas.text import TextRequest, TextResponse, TextBillData, TextNlData, TextErrorData
+from schemas.ocr import Transaction
+from services.glm import call_glm, extract_json, extract_sql
+from config import settings
 
 router = APIRouter(prefix="/record-text", tags=["text"])
 
