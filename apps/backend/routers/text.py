@@ -132,8 +132,8 @@ async def record_text(body: TextRequest, request: Request):
     try:
         result = supabase.rpc("exec_readonly_sql", {"sql_text": sql}).execute()
         query_result = result.data
-    except Exception:
-        log.error("text.error", error="查询出错")
+    except Exception as e:
+        log.error("text.error", error=str(e))
         return TextResponse(data=TextErrorData(message="查询出错，请换个方式描述。"))
 
     log.info("text.query", sql_len=len(sql))
