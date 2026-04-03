@@ -17,6 +17,7 @@ dependencies = [
 [tool.pyright]
 include = ["."]
 exclude = ["**/__pycache__"]
+extraPaths =["apps/backend"]
 pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
