@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "pnpm --filter mobile dev",
-    "worktree": "node scripts/worktree-dev.mjs",
+    "w": "node scripts/worktree-dev.mjs",
     "test": "pnpm --filter mobile test"
   },
   "packageManager": "pnpm@10.30.3"
