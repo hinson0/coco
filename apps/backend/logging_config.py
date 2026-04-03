@@ -33,3 +33,5 @@ def setup_logging(env: str = "dev", level: str = "DEBUG") -> None:
     )
 
     logging.basicConfig(level=log_level)
+    # 腾讯云 SDK 内部会 log 完整请求体（含 base64 Data 字段），屏蔽其 INFO 及以下
+    logging.getLogger("tencentcloud").setLevel(logging.WARNING)
