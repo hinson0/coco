@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
     glm_api_key: str
+    silicon_api_key: str
     tencent_secret_id: str
     tencent_secret_key: str
     supabase_url: str
