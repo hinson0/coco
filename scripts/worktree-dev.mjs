@@ -80,7 +80,7 @@ function ensureDeps(wtDir) {
 
 // ── 带前缀的进程输出 ──────────────────────────
 
-function spawnWithPrefix(cmd, args, opts, prefix, colorCode) {
+function spawnWithPrefix(cmd, args, opts, prefix, colorCode, onExit) {
   const reset = "\x1b[0m";
   const tag = `${colorCode}[${prefix}]${reset} `;
 
@@ -109,6 +109,7 @@ function spawnWithPrefix(cmd, args, opts, prefix, colorCode) {
 
   proc.on("exit", (code) => {
     console.log(`${tag}进程退出 (code: ${code})`);
+    if (onExit) onExit(code);
   });
 
   return proc;
@@ -170,7 +171,25 @@ function main() {
     const CYAN = "\x1b[36m";
     const GREEN = "\x1b[32m";
 
-    const backendProc = spawnWithPrefix(
+    // 5. 信号处理（提前定义，供 onExit 回调使用）
+    let cleaned = false;
+    let backendProc, mobileProc;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      try { backendProc?.kill(); } catch {}
+      try { mobileProc?.kill(); } catch {}
+      if (restoreFn) restoreFn();
+    };
+
+    const onChildExit = (code) => {
+      if (code !== 0 && code !== null) {
+        cleanup();
+        process.exit(code);
+      }
+    };
+
+    backendProc = spawnWithPrefix(
       "uv",
       [
         "run",
@@ -184,26 +203,18 @@ function main() {
       ],
       { cwd: backendDir },
       "backend",
-      CYAN
+      CYAN,
+      onChildExit
     );
 
-    const mobileProc = spawnWithPrefix(
+    mobileProc = spawnWithPrefix(
       "pnpm",
       ["--filter", wtName, "dev", "--port", String(frontendPort)],
       { cwd: wtDir },
       "mobile",
-      GREEN
+      GREEN,
+      onChildExit
     );
-
-    // 5. 信号处理
-    let cleaned = false;
-    const cleanup = () => {
-      if (cleaned) return;
-      cleaned = true;
-      try { backendProc.kill(); } catch {}
-      try { mobileProc.kill(); } catch {}
-      if (restoreFn) restoreFn();
-    };
 
     process.on("SIGINT", () => {
       cleanup();
