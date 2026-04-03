@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic-settings>=2.13.1",
     "python-jose>=3.5.0",
+    "structlog>=25.5.0",
     "supabase>=2.28.3",
     "tencentcloud-sdk-python>=3.1.69",
     "uvicorn[standard]>=0.42.0",
@@ -21,3 +22,8 @@ pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "basic"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
