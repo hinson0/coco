@@ -5,10 +5,15 @@ from structlog.processors import CallsiteParameter, CallsiteParameterAdder
 
 
 def setup_logging(env: str = "dev", level: str = "DEBUG") -> None:
-    """配置全局 structlog。在 lifespan 启动时调用一次。"""
+    """配置全局 structlog。
+
+    仅应在应用启动时（lifespan）调用一次。
+    logging.basicConfig() 多次调用为 no-op，重复调用不会更新 stdlib 日志级别。
+    """
     log_level = getattr(logging, level.upper(), logging.DEBUG)
 
     shared_processors = [
+        structlog.contextvars.merge_contextvars,   # 合并请求级 contextvars
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f", utc=False),
         CallsiteParameterAdder([CallsiteParameter.MODULE]),
