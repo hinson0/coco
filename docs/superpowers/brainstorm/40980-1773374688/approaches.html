@@ -1,0 +1,72 @@
+<h2>架构方案选择</h2>
+<p class="subtitle">三种后端架构，核心差异在于 AI 编排逻辑放在哪里</p>
+
+<div class="options" style="flex-direction:column;gap:16px">
+
+  <div class="option" data-choice="supabase-edge" onclick="toggleSelect(this)" style="align-items:flex-start">
+    <div class="letter" style="margin-top:4px">A</div>
+    <div class="content" style="width:100%">
+      <h3>Expo + Supabase Edge Functions <span style="font-size:12px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:12px;margin-left:8px">极简</span></h3>
+      <p style="margin-bottom:8px">所有后端逻辑（AI 调用、OCR、ASR）写在 Supabase Edge Functions (Deno) 里，一个平台搞定</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>✅ 优</h4><ul>
+          <li>只需维护 Supabase 一个服务</li>
+          <li>冷启动约 100ms，够快</li>
+          <li>免费额度 500 万次/月</li>
+        </ul></div>
+        <div class="cons"><h4>❌ 劣</h4><ul>
+          <li>Deno 生态与 Node.js 有差异</li>
+          <li>腾讯云 SDK 需手动适配 Deno</li>
+          <li>复杂 AI 流不易调试</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="nextjs-bff" onclick="toggleSelect(this)" style="align-items:flex-start;border-color:#8b5cf6">
+    <div class="letter" style="margin-top:4px;background:#8b5cf6">B</div>
+    <div class="content" style="width:100%">
+      <h3>Expo + Next.js API Routes (BFF) <span style="font-size:12px;background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:12px;margin-left:8px">⭐ 推荐</span></h3>
+      <p style="margin-bottom:8px">Next.js 作为 BFF（后端聚合层）部署在 Vercel，负责所有 AI 编排；Supabase 专注数据库和认证</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>✅ 优</h4><ul>
+          <li>TypeScript 全栈，Node.js 生态完整</li>
+          <li>腾讯云/GLM SDK 直接 npm 安装</li>
+          <li>未来想加 Web 端，直接复用 API</li>
+          <li>Vercel 免费部署，自动 CI/CD</li>
+          <li>Supabase 只做存储，职责清晰</li>
+        </ul></div>
+        <div class="cons"><h4>❌ 劣</h4><ul>
+          <li>两个平台（Vercel + Supabase）</li>
+          <li>Vercel Serverless 有 10s 超时限制</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="hono-backend" onclick="toggleSelect(this)" style="align-items:flex-start">
+    <div class="letter" style="margin-top:4px">C</div>
+    <div class="content" style="width:100%">
+      <h3>Expo + Hono 独立后端 <span style="font-size:12px;background:#fef9c3;color:#a16207;padding:2px 8px;border-radius:12px;margin-left:8px">最灵活</span></h3>
+      <p style="margin-bottom:8px">Hono.js 轻量 Node.js 后端部署在 Railway/自建服务器，完全控制；Supabase 只做数据库</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>✅ 优</h4><ul>
+          <li>无超时限制，适合长流式 AI 输出</li>
+          <li>WebSocket 实时通信原生支持</li>
+          <li>可部署国内服务器，访问国内 API 更稳定</li>
+        </ul></div>
+        <div class="cons"><h4>❌ 劣</h4><ul>
+          <li>需要自己运维服务器</li>
+          <li>Railway 免费额度有限</li>
+          <li>初期开发成本最高</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;padding:14px;background:#eff6ff;border-radius:10px;font-size:13px">
+  <b>💡 我的推荐：方案 B</b><br>
+  Next.js BFF + Supabase 是目前最主流的独立开发者（Indie Hacker）组合。Node.js 生态让腾讯云和 GLM 的 SDK 直接 npm 安装，开发体验最顺滑。Vercel 免费部署、自动域名，验证阶段零运营成本。未来想加 Web 端直接在同一个 Next.js 项目里加页面即可，迁移成本极低。
+</div>
