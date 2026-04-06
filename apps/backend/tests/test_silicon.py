@@ -60,3 +60,33 @@ def test_is_safe_sql_rejects_drop():
 
 def test_is_safe_sql_rejects_update():
     assert is_safe_sql("UPDATE transactions SET amount = 0") is False
+
+
+from unittest.mock import AsyncMock, patch
+
+
+# ── extract_bill_from_receipt ────────────────────────
+@pytest.mark.asyncio
+@patch("services.silicon._call_silicon", new_callable=AsyncMock)
+async def test_extract_bill_from_receipt_success(mock_call):
+    mock_call.return_value = '{"amount": 99.5, "category": "餐饮", "note": "拿铁 28.00\\n美式 22.00\\n蛋糕 49.50", "type":"expense", "occurred_at": "2026-04-04T10:00:00"}'
+    from services.silicon import extract_bill_from_receipt
+
+    result = await extract_bill_from_receipt(
+        "拿铁 28.00\n美式 22.00\n蛋糕 49.50\n合计 99.50"
+    )
+    assert result is not None
+    assert result["amount"] == 99.5
+    assert result["category"] == "餐饮"
+    assert "拿铁" in result["note"]
+    assert "\n" in result["note"]
+
+
+@pytest.mark.asyncio
+@patch("services.silicon._call_silicon", new_callable=AsyncMock)
+async def test_extract_bill_from_receipt_no_amount(mock_call):
+    mock_call.return_value = '{"amount": 0, "category": "其他支出", "note": "", "type": "expense", "occurred_at": ""}'
+    from services.silicon import extract_bill_from_receipt
+
+    result = await extract_bill_from_receipt("一堆乱码文字")
+    assert result is None
