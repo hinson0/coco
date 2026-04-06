@@ -66,7 +66,6 @@ def extract_receipt_info(ocr_text: str) -> dict:
 @router.post("", response_model=OcrResponse)
 async def record_ocr(body: OcrRequest):
     ocr_text = recognize_receipt(body.imageBase64)
-
     if not ocr_text.strip():
         log.warning("ocr.empty")
         return OcrResponse(
@@ -84,7 +83,8 @@ async def record_ocr(body: OcrRequest):
             occurred_at=info["date"] or datetime.now(timezone.utc).isoformat(),
         )
         data = OcrBillData(transaction=transaction)
-        log.info("ocr.parsed",
+        log.info(
+            "ocr.parsed",
             amount=info["amount"],
             merchant=info["merchant"],
             date=info["date"],
