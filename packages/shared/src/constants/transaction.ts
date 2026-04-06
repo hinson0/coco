@@ -1,1 +1,0 @@
-export const MAJOR_AMOUNT_THRESHOLD = 5000;
