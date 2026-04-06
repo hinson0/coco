@@ -1,4 +1,5 @@
 import type { ChatMessage, Transaction } from "@coco/shared";
+import * as FileSystem from "expo-file-system/legacy";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -28,7 +29,6 @@ import { ChatToolBar } from "../components/chat/ChatToolBar";
 import { TypingIndicator } from "../components/chat/TypingIndicator";
 import { VoiceRecordingOverlay } from "../components/chat/VoiceRecordingOverlay";
 import { colors, radii, shadows, spacing } from "../constants/theme";
-import * as FileSystem from "expo-file-system/legacy";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import { useCamera } from "../hooks/useCamera";
 import { useChat } from "../hooks/useChat";
@@ -161,12 +161,7 @@ export default function ChatScreen() {
       const base64 = await FileSystem.readAsStringAsync(imagePath, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      sendOcr(base64, onOcrFail, (merchant) => {
-        router.push({
-          pathname: "/manual-entry",
-          params: { ocrNote: merchant ?? "" },
-        });
-      });
+      sendOcr(base64, onOcrFail);
     } catch {
       setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
     }
@@ -363,12 +358,7 @@ export default function ChatScreen() {
           onSendText={sendText}
           onCamera={async () => {
             const base64 = await pickImage();
-            if (base64) sendOcr(base64, onOcrFail, (merchant) => {
-              router.push({
-                pathname: "/manual-entry",
-                params: { ocrNote: merchant ?? "" },
-              });
-            });
+            if (base64) sendOcr(base64, onOcrFail);
           }}
           onVoice={(base64, durationSeconds) =>
             sendAsr(base64, durationSeconds)
