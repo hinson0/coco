@@ -1,0 +1,99 @@
+<h2>数据模型设计</h2>
+<p class="subtitle">Section 2 / 4 — Supabase PostgreSQL 核心表结构</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+
+  <!-- users -->
+  <div style="border:2px solid #6366f1;border-radius:10px;overflow:hidden">
+    <div style="background:#6366f1;color:white;padding:8px 14px;font-size:13px;font-weight:600">
+      👤 users <span style="opacity:.7;font-weight:400">(Supabase Auth 自动创建)</span>
+    </div>
+    <div style="padding:12px;font-size:12px;font-family:monospace">
+      <div style="color:#94a3b8;margin-bottom:4px">-- 由 Supabase Auth 管理</div>
+      <div><span style="color:#f59e0b">id</span> uuid PRIMARY KEY</div>
+      <div><span style="color:#f59e0b">email</span> text</div>
+      <div><span style="color:#f59e0b">created_at</span> timestamptz</div>
+    </div>
+  </div>
+
+  <!-- categories -->
+  <div style="border:2px solid #10b981;border-radius:10px;overflow:hidden">
+    <div style="background:#10b981;color:white;padding:8px 14px;font-size:13px;font-weight:600">
+      🏷️ categories <span style="opacity:.7;font-weight:400">(消费分类)</span>
+    </div>
+    <div style="padding:12px;font-size:12px;font-family:monospace">
+      <div><span style="color:#f59e0b">id</span> uuid PRIMARY KEY</div>
+      <div><span style="color:#f59e0b">user_id</span> uuid → users.id</div>
+      <div><span style="color:#f59e0b">name</span> text <span style="color:#94a3b8">-- 餐饮/交通...</span></div>
+      <div><span style="color:#f59e0b">icon</span> text <span style="color:#94a3b8">-- emoji</span></div>
+      <div><span style="color:#f59e0b">type</span> enum(income, expense)</div>
+      <div><span style="color:#f59e0b">is_default</span> boolean</div>
+    </div>
+  </div>
+
+  <!-- transactions (核心) -->
+  <div style="border:2px solid #8b5cf6;border-radius:10px;overflow:hidden;grid-column:1/-1">
+    <div style="background:#8b5cf6;color:white;padding:8px 14px;font-size:13px;font-weight:600">
+      💰 transactions <span style="opacity:.7;font-weight:400">(账单记录 — 核心表)</span>
+    </div>
+    <div style="padding:12px;font-size:12px;font-family:monospace;display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <div>
+        <div><span style="color:#f59e0b">id</span> uuid PRIMARY KEY</div>
+        <div><span style="color:#f59e0b">user_id</span> uuid → users.id</div>
+        <div><span style="color:#f59e0b">category_id</span> uuid → categories.id</div>
+        <div><span style="color:#f59e0b">amount</span> numeric(12,2)</div>
+        <div><span style="color:#f59e0b">type</span> enum(income, expense)</div>
+        <div><span style="color:#f59e0b">note</span> text</div>
+      </div>
+      <div>
+        <div><span style="color:#f59e0b">occurred_at</span> timestamptz <span style="color:#94a3b8">-- 消费时间</span></div>
+        <div><span style="color:#f59e0b">source</span> enum(manual, ocr, asr)</div>
+        <div><span style="color:#f59e0b">raw_input</span> text <span style="color:#94a3b8">-- 原始语音/OCR文本</span></div>
+        <div><span style="color:#f59e0b">receipt_url</span> text <span style="color:#94a3b8">-- Supabase Storage</span></div>
+        <div><span style="color:#f59e0b">ai_confidence</span> float <span style="color:#94a3b8">-- AI 识别置信度</span></div>
+        <div><span style="color:#f59e0b">created_at</span> timestamptz</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- budgets -->
+  <div style="border:2px solid #f59e0b;border-radius:10px;overflow:hidden">
+    <div style="background:#f59e0b;color:white;padding:8px 14px;font-size:13px;font-weight:600">
+      🎯 budgets <span style="opacity:.7;font-weight:400">(预算)</span>
+    </div>
+    <div style="padding:12px;font-size:12px;font-family:monospace">
+      <div><span style="color:#f59e0b">id</span> uuid PRIMARY KEY</div>
+      <div><span style="color:#f59e0b">user_id</span> uuid → users.id</div>
+      <div><span style="color:#f59e0b">category_id</span> uuid <span style="color:#94a3b8">-- null=总预算</span></div>
+      <div><span style="color:#f59e0b">amount</span> numeric(12,2)</div>
+      <div><span style="color:#f59e0b">period</span> enum(monthly, yearly)</div>
+      <div><span style="color:#f59e0b">start_date</span> date</div>
+    </div>
+  </div>
+
+  <!-- nl_query_logs -->
+  <div style="border:2px solid #64748b;border-radius:10px;overflow:hidden">
+    <div style="background:#64748b;color:white;padding:8px 14px;font-size:13px;font-weight:600">
+      🔍 nl_query_logs <span style="opacity:.7;font-weight:400">(NL 查询日志)</span>
+    </div>
+    <div style="padding:12px;font-size:12px;font-family:monospace">
+      <div><span style="color:#f59e0b">id</span> uuid PRIMARY KEY</div>
+      <div><span style="color:#f59e0b">user_id</span> uuid → users.id</div>
+      <div><span style="color:#f59e0b">question</span> text</div>
+      <div><span style="color:#f59e0b">generated_sql</span> text</div>
+      <div><span style="color:#f59e0b">result_summary</span> text</div>
+      <div><span style="color:#f59e0b">created_at</span> timestamptz</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px;font-size:13px">
+  <b>📌 设计说明：</b>
+  <ul style="margin:6px 0 0;padding-left:18px">
+    <li><b>source 字段</b>记录每笔账单的录入方式，便于后续分析 AI 功能使用率</li>
+    <li><b>raw_input</b> 保留原始语音文字 / OCR 文本，供用户对照核查</li>
+    <li><b>ai_confidence</b> 低于阈值（如 0.7）时前端展示警告提示用户核对</li>
+    <li><b>RLS (Row Level Security)</b> 全表启用，用户只能查询自己的数据</li>
+  </ul>
+</div>
