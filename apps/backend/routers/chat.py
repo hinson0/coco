@@ -52,8 +52,6 @@ def is_safe_sql(sql: str) -> bool:
 @router.post("", response_model=ChatResponse)
 async def chat(body: ChatRequest, request: Request):
     try:
-        asr_text: str | None = None
-
         # 语音输入：先做 ASR 转文字
         if body.audioBase64:
             asr_text = recognize_speech(body.audioBase64)
