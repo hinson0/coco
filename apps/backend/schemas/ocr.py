@@ -32,10 +32,10 @@ class OcrRequest(BaseModel):
 
 
 class Transaction(BaseModel):
-    amount: float  # 多少钱
-    category: str  # 分类
-    note: str  # 备注
-    occurred_at: str  # 日期
+    amount: float
+    category: str
+    note: str
+    occurred_at: str
     type: str  # expense | income
 
 
@@ -44,16 +44,10 @@ class OcrBillData(BaseModel):
     transaction: Transaction
 
 
-class OcrTextData(BaseModel):
-    type: str = "ocr_text"
-    ocrText: str
-    merchant: str | None = None
-
-
 class OcrErrorData(BaseModel):
     type: str = "error"
     message: str
 
 
 class OcrResponse(BaseModel):
-    data: OcrBillData | OcrTextData | OcrErrorData
+    data: OcrBillData | OcrErrorData
