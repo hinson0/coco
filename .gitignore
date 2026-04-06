@@ -1,0 +1,42 @@
+node_modules/
+.next/
+dist/
+.env
+.env/
+.env.local
+.expo/
+*.tsbuildinfo
+.superpowers/
+.turbo/
+
+# Local tooling
+.playwright-mcp/
+
+# Design previews
+design-preview.*
+design-final.*
+
+
+# Duplicate lockfile (using pnpm)
+apps/mobile/package-lock.json
+
+.DS_Store
+.claire/
+
+# Claude Code local files (machine-specific)
+.claude/worktrees/
+.claude/statusline-logs/
+.claude/*local*
+.claude/hook-logs/
+.claude/session-logs/
+.claude/statusline-logs/
+.claude/statusline.log
+.remember/
+
+*.swp
+
+
+# Python
+apps/backend/.venv/
+apps/backend/**/__pycache__/
+apps/backend/**/*.pyc

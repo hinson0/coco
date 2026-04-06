@@ -1,0 +1,13 @@
+{"type":"server-started","port":54534,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:54534","screen_dir":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/platform.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      📱 移动端优先（iOS / Android）\n      原生或跨平台 App，随手拍照识别、语音记账体验最佳","choice":"mobile","id":null,"timestamp":1773374768019}
+{"source":"user-event","type":"click","text":"A\n    \n      📱 移动端优先（iOS / Android）\n      原生或跨平台 App，随手拍照识别、语音记账体验最佳","choice":"mobile","id":null,"timestamp":1773374775676}
+{"source":"user-event","type":"click","text":"A\n    \n      📱 移动端优先（iOS / Android）\n      原生或跨平台 App，随手拍照识别、语音记账体验最佳","choice":"mobile","id":null,"timestamp":1773374776124}
+{"source":"user-event","type":"click","text":"A\n    \n      📱 移动端优先（iOS / Android）\n      原生或跨平台 App，随手拍照识别、语音记账体验最佳","choice":"mobile","id":null,"timestamp":1773374776279}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/waiting-1.html"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/framework-compare.html"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/waiting-2.html"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/approaches.html"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/architecture.html"}
+{"type":"screen-added","file":"/Users/a114514/coco/.superpowers/brainstorm/40980-1773374688/data-model.html"}
+{"type":"server-stopped","reason":"idle timeout"}
