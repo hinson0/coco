@@ -11,7 +11,6 @@ Monorepo (pnpm workspace)：
 
 - `pnpm dev` — 启动 Expo 开发服务器（等价于 `pnpm --filter mobile dev`）
 - `pnpm worktree` — worktree 开发模式
-- `docker compose up` — 启动本地 FastAPI 后端
 - `uv add <pkg>` — 后端添加 Python 依赖（在 `apps/backend/` 下执行）
 
 # Git 工作流（必须遵守）
