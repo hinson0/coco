@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨迹账簿 - AI记账 · 方案A</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&display=swap');
+
+  :root {
+    --ink: #1a1714;
+    --ink-light: #3d3730;
+    --vermillion: #c4403a;
+    --vermillion-glow: #e8574f;
+    --gold: #c4973a;
+    --gold-light: #d4b06a;
+    --paper: #f4ece0;
+    --paper-dark: #e8dcc8;
+    --paper-darker: #d4c8b0;
+    --jade: #4a7c6f;
+    --jade-light: #6b9e8f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #2a2420;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Noto Serif SC', serif;
+    padding: 20px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--paper);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 0 2px var(--ink-light),
+      0 20px 60px rgba(0,0,0,0.5),
+      inset 0 0 80px rgba(196,151,58,0.05);
+  }
+
+  /* Paper texture overlay */
+  .phone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .screen {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    scrollbar-width: none;
+  }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 8px;
+    font-size: 13px;
+    color: var(--ink-light);
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    z-index: 10;
+  }
+
+  /* Header section */
+  .header {
+    padding: 8px 28px 20px;
+    position: relative;
+  }
+
+  .greeting {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 15px;
+    color: var(--ink-light);
+    opacity: 0.7;
+    margin-bottom: 4px;
+    animation: brushIn 0.8s ease-out both;
+  }
+
+  .header-title {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 32px;
+    color: var(--ink);
+    letter-spacing: 4px;
+    animation: brushIn 0.8s 0.1s ease-out both;
+  }
+
+  /* Seal stamp */
+  .seal {
+    position: absolute;
+    right: 24px;
+    top: 4px;
+    width: 52px;
+    height: 52px;
+    border: 2.5px solid var(--vermillion);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 16px;
+    color: var(--vermillion);
+    transform: rotate(-15deg);
+    opacity: 0.8;
+    animation: sealStamp 0.6s 0.5s ease-out both;
+  }
+
+  /* Brush stroke divider */
+  .brush-divider {
+    height: 3px;
+    margin: 0 28px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      var(--ink) 15%,
+      var(--ink) 50%,
+      var(--ink-light) 75%,
+      transparent 100%
+    );
+    opacity: 0.15;
+    border-radius: 2px;
+  }
+
+  /* AI Chat Entry */
+  .ai-entry {
+    margin: 20px 24px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, var(--paper-dark) 0%, var(--paper) 100%);
+    border: 1px solid var(--paper-darker);
+    border-radius: 16px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: fadeUp 0.6s 0.3s ease-out both;
+  }
+
+  .ai-entry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(26,23,20,0.1);
+  }
+
+  .ai-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .ai-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ai-icon::after {
+    content: '智';
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 14px;
+    color: var(--gold);
+  }
+
+  .ai-icon-ring {
+    position: absolute;
+    inset: -3px;
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    opacity: 0.5;
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+
+  .ai-entry-title {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .ai-entry-subtitle {
+    font-size: 11px;
+    color: var(--ink-light);
+    opacity: 0.6;
+  }
+
+  .ai-input-mock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--paper);
+    border: 1px dashed var(--paper-darker);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--ink-light);
+    opacity: 0.6;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .ai-input-mock .brush-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 16px;
+    background: var(--ink);
+    animation: blink 1s step-end infinite;
+    opacity: 0.4;
+  }
+
+  /* Monthly Overview */
+  .overview {
+    margin: 20px 24px;
+    animation: fadeUp 0.6s 0.4s ease-out both;
+  }
+
+  .section-title {
+    font-family: 'ZCOOL XiaoWei', serif;
+    font-size: 13px;
+    color: var(--ink-light);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: var(--vermillion);
+    border-radius: 50%;
+  }
+
+  .overview-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .overview-card {
+    padding: 18px 16px;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .overview-card.expense {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .overview-card.income {
+    background: linear-gradient(135deg, var(--jade) 0%, var(--jade-light) 100%);
+    color: var(--paper);
+  }
+
+  .overview-card .label {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .overview-card .amount {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .overview-card .amount .currency {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-right: 2px;
+  }
+
+  .overview-card .trend {
+    font-size: 11px;
+    margin-top: 6px;
+    opacity: 0.6;
+  }
+
+  /* Ink splash decoration */
+  .overview-card::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    opacity: 0.06;
+    right: -10px;
+    bottom: -10px;
+  }
+
+  .overview-card.expense::after {
+    background: var(--vermillion);
+    box-shadow: -20px -10px 0 10px var(--vermillion);
+  }
+
+  .overview-card.income::after {
+    background: var(--paper);
+    box-shadow: -20px -10px 0 10px var(--paper);
+  }
+
+  /* Budget bar */
+  .budget-section {
+    margin: 20px 24px;
+    animation: fadeUp 0.6s 0.5s ease-out both;
+  }
+
+  .budget-bar-wrap {
+    background: var(--paper-dark);
+    border-radius: 8px;
+    height: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .budget-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--vermillion) 100%);
+    width: 0%;
+    animation: fillBudget 1.2s 0.8s ease-out forwards;
+  }
+
+  .budget-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-light);
+  }
+
+  .budget-info .used {
+    font-weight: 600;
+    color: var(--vermillion);
+  }
+
+  /* Ink Chart (simplified bar chart) */
+  .chart-section {
+    margin: 24px 24px 16px;
+    animation: fadeUp 0.6s 0.6s ease-out both;
+  }
+
+  .ink-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 100px;
+    padding: 0 4px;
+  }
+
+  .ink-bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ink-bar {
+    width: 100%;
+    max-width: 28px;
+    border-radius: 4px 4px 2px 2px;
+    background: var(--ink);
+    position: relative;
+    transition: height 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: pointer;
+  }
+
+  .ink-bar:hover {
+    opacity: 0.8;
+  }
+
+  .ink-bar.highlight {
+    background: linear-gradient(to top, var(--vermillion), var(--vermillion-glow));
+  }
+
+  .ink-bar-label {
+    font-size: 10px;
+    color: var(--ink-light);
+    opacity: 0.6;
+  }
+
+  /* Transaction list */
+  .transactions {
+    margin: 16px 24px 32px;
+    animation: fadeUp 0.6s 0.7s ease-out both;
+  }
+
+  .transaction-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--paper-darker);
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .transaction-item:hover {
+    padding-left: 6px;
+  }
+
+  .transaction-item:last-child {
+    border-bottom: none;
+  }
+
+  .tx-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .tx-icon.food { background: #fdf2e9; }
+  .tx-icon.transport { background: #eaf4f0; }
+  .tx-icon.shopping { background: #fce4e4; }
+  .tx-icon.coffee { background: #f5efe6; }
+  .tx-icon.salary { background: #e8f0e6; }
+
+  .tx-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tx-name {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .tx-detail {
+    font-size: 11px;
+    color: var(--ink-light);
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tx-ai-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    background: var(--gold);
+    color: var(--paper);
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .tx-amount {
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .tx-amount.negative { color: var(--ink); }
+  .tx-amount.positive { color: var(--jade); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 12px 16px 28px;
+    background: linear-gradient(to top, var(--paper) 70%, transparent);
+    z-index: 10;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    opacity: 0.4;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .nav-item.active {
+    opacity: 1;
+  }
+
+  .nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    width: 4px;
+    height: 4px;
+    background: var(--vermillion);
+    border-radius: 50%;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+    font-family: 'ZCOOL XiaoWei', serif;
+    color: var(--ink);
+    letter-spacing: 1px;
+  }
+
+  .nav-center {
+    width: 48px;
+    height: 48px;
+    background: var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-top: -16px;
+    box-shadow: 0 4px 16px rgba(26,23,20,0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .nav-center:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(26,23,20,0.4);
+  }
+
+  /* Design label */
+  .design-label {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    font-family: 'ZCOOL XiaoWei', serif;
+    color: var(--paper-darker);
+    font-size: 14px;
+    letter-spacing: 4px;
+    writing-mode: vertical-rl;
+    opacity: 0.6;
+  }
+
+  .design-label span {
+    display: block;
+    font-size: 11px;
+    color: var(--vermillion);
+    margin-top: 8px;
+    opacity: 0.8;
+    letter-spacing: 2px;
+  }
+
+  /* Animations */
+  @keyframes brushIn {
+    from { opacity: 0; transform: translateX(-20px); filter: blur(2px); }
+    to { opacity: 1; transform: translateX(0); filter: blur(0); }
+  }
+
+  @keyframes sealStamp {
+    0% { opacity: 0; transform: rotate(-15deg) scale(2); }
+    60% { opacity: 0.9; transform: rotate(-15deg) scale(0.95); }
+    100% { opacity: 0.8; transform: rotate(-15deg) scale(1); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fillBudget {
+    to { width: 68%; }
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.15); opacity: 0.2; }
+  }
+
+  /* Scrollbar for phone */
+  .screen { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<div class="design-label">
+  方案壹
+  <span>墨迹账簿</span>
+</div>
+
+<div class="phone">
+  <div class="screen">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span style="display:flex;gap:4px;align-items:center;">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="5" width="3" height="7" rx="1" fill="#3d3730"/><rect x="4.5" y="3" width="3" height="9" rx="1" fill="#3d3730"/><rect x="9" y="1" width="3" height="11" rx="1" fill="#3d3730"/><rect x="13" y="0" width="3" height="12" rx="1" fill="#3d3730" opacity=".3"/></svg>
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="0" y="1" width="20" height="10" rx="2" stroke="#3d3730" stroke-width="1.2"/><rect x="2" y="3" width="14" height="6" rx="1" fill="#3d3730"/><rect x="21" y="4" width="2.5" height="4" rx="1" fill="#3d3730" opacity=".4"/></svg>
+      </span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="greeting">三月十六 · 周一</div>
+      <div class="header-title">墨迹账簿</div>
+      <div class="seal">
+        <div>记</div>
+      </div>
+    </div>
+
+    <div class="brush-divider"></div>
+
+    <!-- AI Entry -->
+    <div class="ai-entry" onclick="this.style.transform='scale(0.98)'; setTimeout(()=>this.style.transform='', 150)">
+      <div class="ai-entry-header">
+        <div class="ai-icon">
+          <div class="ai-icon-ring"></div>
+        </div>
+        <div>
+          <div class="ai-entry-title">对墨迹说...</div>
+          <div class="ai-entry-subtitle">AI 智能记账 · 语音 / 文字</div>
+        </div>
+      </div>
+      <div class="ai-input-mock">
+        <span class="brush-cursor"></span>
+        "午饭花了 35 块，吃的黄焖鸡"
+      </div>
+    </div>
+
+    <!-- Overview -->
+    <div class="overview">
+      <div class="section-title">本月收支</div>
+      <div class="overview-cards">
+        <div class="overview-card expense">
+          <div class="label">支出</div>
+          <div class="amount"><span class="currency">¥</span>4,827</div>
+          <div class="trend">较上月 ↑ 12%</div>
+        </div>
+        <div class="overview-card income">
+          <div class="label">收入</div>
+          <div class="amount"><span class="currency">¥</span>15,000</div>
+          <div class="trend">工资已到账</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget -->
+    <div class="budget-section">
+      <div class="section-title">月度预算</div>
+      <div class="budget-bar-wrap">
+        <div class="budget-bar-fill"></div>
+      </div>
+      <div class="budget-info">
+        <span>已用 <span class="used">¥4,827</span> / ¥7,000</span>
+        <span>余 ¥2,173</span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-section">
+      <div class="section-title">七日流水</div>
+      <div class="ink-chart" id="inkChart"></div>
+    </div>
+
+    <div class="brush-divider"></div>
+
+    <!-- Transactions -->
+    <div class="transactions">
+      <div class="section-title">近日明细</div>
+
+      <div class="transaction-item">
+        <div class="tx-icon food">🍜</div>
+        <div class="tx-info">
+          <div class="tx-name">黄焖鸡米饭</div>
+          <div class="tx-detail">
+            今日 12:30 · 餐饮
+            <span class="tx-ai-tag">AI</span>
+          </div>
+        </div>
+        <div class="tx-amount negative">-¥35.00</div>
+      </div>
+
+      <div class="transaction-item">
+        <div class="tx-icon transport">🚇</div>
+        <div class="tx-info">
+          <div class="tx-name">地铁出行</div>
+          <div class="tx-detail">今日 08:15 · 交通</div>
+        </div>
+        <div class="tx-amount negative">-¥4.00</div>
+      </div>
+
+      <div class="transaction-item">
+        <div class="tx-icon coffee">🍵</div>
+        <div class="tx-info">
+          <div class="tx-name">瑞幸咖啡</div>
+          <div class="tx-detail">
+            昨日 15:20 · 饮品
+            <span class="tx-ai-tag">AI</span>
+          </div>
+        </div>
+        <div class="tx-amount negative">-¥16.80</div>
+      </div>
+
+      <div class="transaction-item">
+        <div class="tx-icon shopping">🛍</div>
+        <div class="tx-info">
+          <div class="tx-name">淘宝购物</div>
+          <div class="tx-detail">昨日 22:08 · 购物</div>
+        </div>
+        <div class="tx-amount negative">-¥128.00</div>
+      </div>
+
+      <div class="transaction-item">
+        <div class="tx-icon salary">💰</div>
+        <div class="tx-info">
+          <div class="tx-name">工资到账</div>
+          <div class="tx-detail">3月10日 · 收入</div>
+        </div>
+        <div class="tx-amount positive">+¥15,000</div>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">总览</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">图表</span>
+      </div>
+      <div class="nav-center" onclick="this.style.transform='scale(0.9)'; setTimeout(()=>this.style.transform='scale(1)', 150)">
+        ✒️
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">明细</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">吾</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Generate ink chart bars
+  const chartData = [
+    { label: '一', value: 65 },
+    { label: '二', value: 42 },
+    { label: '三', value: 88 },
+    { label: '四', value: 35 },
+    { label: '五', value: 72 },
+    { label: '六', value: 95, highlight: true },
+    { label: '日', value: 28 },
+  ];
+
+  const chart = document.getElementById('inkChart');
+  chartData.forEach((d, i) => {
+    const group = document.createElement('div');
+    group.className = 'ink-bar-group';
+
+    const bar = document.createElement('div');
+    bar.className = `ink-bar${d.highlight ? ' highlight' : ''}`;
+    bar.style.height = '0px';
+    setTimeout(() => {
+      bar.style.height = d.value + 'px';
+    }, 900 + i * 80);
+
+    const label = document.createElement('div');
+    label.className = 'ink-bar-label';
+    label.textContent = d.label;
+
+    group.appendChild(bar);
+    group.appendChild(label);
+    chart.appendChild(group);
+  });
+</script>
+
+</body>
+</html>

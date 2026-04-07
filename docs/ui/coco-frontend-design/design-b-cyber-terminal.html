@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLUX · AI记账终端 · 方案B</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700;800&display=swap');
+
+  :root {
+    --bg: #08080c;
+    --bg-card: #0f1014;
+    --bg-elevated: #16171d;
+    --acid: #b8ff52;
+    --acid-dim: #7aad35;
+    --cyan: #52e8ff;
+    --cyan-dim: #2a8c9e;
+    --magenta: #ff52b8;
+    --white: #e8e8ec;
+    --gray: #5a5a6e;
+    --gray-dim: #2e2e3a;
+    --red: #ff4a4a;
+    --border: #1e1f28;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050508;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Outfit', sans-serif;
+    padding: 20px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 0 1px var(--border),
+      0 0 60px rgba(184,255,82,0.05),
+      0 20px 60px rgba(0,0,0,0.8);
+  }
+
+  /* Scanline effect */
+  .phone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.008) 2px,
+      rgba(255,255,255,0.008) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .screen {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--gray);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--acid);
+    border-radius: 50%;
+    display: inline-block;
+    animation: blink-dot 2s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--acid);
+  }
+
+  /* Header */
+  .header {
+    padding: 12px 24px 20px;
+    animation: slideDown 0.5s ease-out both;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .brand-name {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -1px;
+  }
+
+  .brand-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--bg);
+    background: var(--acid);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+  .brand-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+
+  /* AI Terminal Input */
+  .terminal-input {
+    margin: 8px 20px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    animation: slideDown 0.5s 0.1s ease-out both;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .terminal-input:hover {
+    border-color: var(--acid-dim);
+    box-shadow: 0 0 20px rgba(184,255,82,0.05);
+  }
+
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .terminal-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--acid);
+  }
+
+  .terminal-label svg { opacity: 0.8; }
+
+  .terminal-mode {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+    padding: 3px 8px;
+    border: 1px solid var(--gray-dim);
+    border-radius: 6px;
+  }
+
+  .terminal-prompt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--gray);
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 10px;
+    border: 1px solid var(--gray-dim);
+  }
+
+  .prompt-caret {
+    color: var(--acid);
+    font-weight: 700;
+  }
+
+  .prompt-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: var(--acid);
+    animation: cursor-blink 1s step-end infinite;
+    opacity: 0.7;
+  }
+
+  .terminal-hint {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .hint-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan-dim);
+    padding: 4px 10px;
+    border: 1px solid var(--gray-dim);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .hint-chip:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(82,232,255,0.05);
+  }
+
+  /* Balance display */
+  .balance-section {
+    margin: 0 20px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    animation: slideDown 0.5s 0.2s ease-out both;
+  }
+
+  .balance-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+  }
+
+  .balance-card.out::before { background: linear-gradient(90deg, var(--magenta), transparent); }
+  .balance-card.in::before { background: linear-gradient(90deg, var(--acid), transparent); }
+
+  .balance-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .balance-amount {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .balance-card.out .balance-amount { color: var(--magenta); }
+  .balance-card.in .balance-amount { color: var(--acid); }
+
+  .balance-change {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+    margin-top: 4px;
+  }
+
+  /* Waveform chart */
+  .wave-section {
+    margin: 0 20px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    animation: slideDown 0.5s 0.3s ease-out both;
+  }
+
+  .wave-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .wave-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .wave-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .wave-tab {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--gray);
+    transition: all 0.2s;
+  }
+
+  .wave-tab.active {
+    background: var(--acid);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  .wave-canvas {
+    position: relative;
+    height: 80px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    padding-top: 10px;
+  }
+
+  .wave-bar {
+    flex: 1;
+    border-radius: 2px;
+    position: relative;
+    transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .wave-bar.expense {
+    background: linear-gradient(to top, var(--magenta), rgba(255,82,184,0.3));
+  }
+
+  .wave-bar.income {
+    background: linear-gradient(to top, var(--acid), rgba(184,255,82,0.3));
+  }
+
+  .wave-grid {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .wave-grid-line {
+    height: 1px;
+    background: var(--gray-dim);
+    opacity: 0.3;
+  }
+
+  /* Budget gauge */
+  .gauge-section {
+    margin: 0 20px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    animation: slideDown 0.5s 0.35s ease-out both;
+  }
+
+  .gauge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .gauge-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .gauge-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+
+  .gauge-bar {
+    height: 6px;
+    background: var(--gray-dim);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .gauge-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--acid));
+    width: 0%;
+    animation: fillGauge 1s 0.8s ease-out forwards;
+    box-shadow: 0 0 10px rgba(82,232,255,0.3);
+  }
+
+  .gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+  }
+
+  /* Transaction list */
+  .tx-section {
+    margin: 0 20px 24px;
+    animation: slideDown 0.5s 0.4s ease-out both;
+  }
+
+  .tx-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .tx-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .tx-see-all {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--acid-dim);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .tx-see-all:hover { color: var(--acid); }
+
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tx-item:hover {
+    border-color: var(--gray-dim);
+    background: var(--bg-elevated);
+  }
+
+  .tx-emoji {
+    width: 36px;
+    height: 36px;
+    background: var(--bg);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .tx-info { flex: 1; min-width: 0; }
+
+  .tx-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 2px;
+  }
+
+  .tx-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+  }
+
+  .tx-ai-badge {
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 5px;
+    background: var(--acid);
+    color: var(--bg);
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .tx-amount {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .tx-amount.neg { color: var(--white); }
+  .tx-amount.pos { color: var(--acid); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 20px 28px;
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+    z-index: 10;
+  }
+
+  .bnav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    opacity: 0.35;
+    transition: all 0.2s;
+  }
+
+  .bnav-item.active { opacity: 1; }
+
+  .bnav-icon { font-size: 18px; }
+
+  .bnav-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .bnav-item.active .bnav-label { color: var(--acid); }
+
+  .bnav-center {
+    width: 48px;
+    height: 48px;
+    background: var(--acid);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-top: -12px;
+    box-shadow: 0 4px 20px rgba(184,255,82,0.25);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .bnav-center:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 24px rgba(184,255,82,0.35);
+  }
+
+  /* Design label */
+  .design-label {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gray-dim);
+    text-align: right;
+  }
+
+  .design-label .tag {
+    color: var(--acid-dim);
+    font-size: 10px;
+  }
+
+  /* Animations */
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes cursor-blink {
+    50% { opacity: 0; }
+  }
+
+  @keyframes blink-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @keyframes fillGauge {
+    to { width: 68%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="design-label">
+  DESIGN B<br>
+  <span class="tag">FLUX TERMINAL</span>
+</div>
+
+<div class="phone">
+  <div class="screen">
+    <div class="status-bar">
+      <span>09:41</span>
+      <span style="display:flex;align-items:center;gap:6px;">
+        <span class="status-dot"></span>
+        <span>FLUX</span>
+      </span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <span class="brand-name">FLUX</span>
+        <span class="brand-tag">AI</span>
+      </div>
+      <div class="brand-sub">// 智能财务终端 v2.4</div>
+    </div>
+
+    <!-- AI Terminal -->
+    <div class="terminal-input">
+      <div class="terminal-header">
+        <div class="terminal-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          AI_TERMINAL
+        </div>
+        <div class="terminal-mode">NLP</div>
+      </div>
+      <div class="terminal-prompt">
+        <span class="prompt-caret">></span>
+        <span style="opacity:0.5;">输入自然语言记账...</span>
+        <span class="prompt-cursor"></span>
+      </div>
+      <div class="terminal-hint">
+        <span class="hint-chip">"午饭35"</span>
+        <span class="hint-chip">"打车到公司"</span>
+        <span class="hint-chip">"月度报告"</span>
+      </div>
+    </div>
+
+    <!-- Balance -->
+    <div class="balance-section">
+      <div class="balance-card out">
+        <div class="balance-label">Expense</div>
+        <div class="balance-amount">¥4,827</div>
+        <div class="balance-change">+12.3% vs prev</div>
+      </div>
+      <div class="balance-card in">
+        <div class="balance-label">Income</div>
+        <div class="balance-amount">¥15,000</div>
+        <div class="balance-change">salary posted</div>
+      </div>
+    </div>
+
+    <!-- Wave Chart -->
+    <div class="wave-section">
+      <div class="wave-header">
+        <div class="wave-title">7-Day Flow</div>
+        <div class="wave-tabs">
+          <div class="wave-tab active">7D</div>
+          <div class="wave-tab">30D</div>
+          <div class="wave-tab">YTD</div>
+        </div>
+      </div>
+      <div class="wave-canvas" id="waveChart">
+        <div class="wave-grid">
+          <div class="wave-grid-line"></div>
+          <div class="wave-grid-line"></div>
+          <div class="wave-grid-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget Gauge -->
+    <div class="gauge-section">
+      <div class="gauge-header">
+        <div class="gauge-title">Budget Used</div>
+        <div class="gauge-pct">68%</div>
+      </div>
+      <div class="gauge-bar">
+        <div class="gauge-fill"></div>
+      </div>
+      <div class="gauge-labels">
+        <span>¥4,827 used</span>
+        <span>¥7,000 limit</span>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="tx-section">
+      <div class="tx-header">
+        <div class="tx-title">Recent</div>
+        <div class="tx-see-all">view all →</div>
+      </div>
+
+      <div class="tx-item">
+        <div class="tx-emoji">🍜</div>
+        <div class="tx-info">
+          <div class="tx-name">黄焖鸡米饭</div>
+          <div class="tx-meta">
+            12:30 · 餐饮
+            <span class="tx-ai-badge">AI</span>
+          </div>
+        </div>
+        <div class="tx-amount neg">-35.00</div>
+      </div>
+
+      <div class="tx-item">
+        <div class="tx-emoji">🚇</div>
+        <div class="tx-info">
+          <div class="tx-name">地铁通勤</div>
+          <div class="tx-meta">08:15 · 交通</div>
+        </div>
+        <div class="tx-amount neg">-4.00</div>
+      </div>
+
+      <div class="tx-item">
+        <div class="tx-emoji">☕</div>
+        <div class="tx-info">
+          <div class="tx-name">瑞幸咖啡</div>
+          <div class="tx-meta">
+            昨日 · 饮品
+            <span class="tx-ai-badge">AI</span>
+          </div>
+        </div>
+        <div class="tx-amount neg">-16.80</div>
+      </div>
+
+      <div class="tx-item">
+        <div class="tx-emoji">🛒</div>
+        <div class="tx-info">
+          <div class="tx-name">淘宝购物</div>
+          <div class="tx-meta">昨日 · 购物</div>
+        </div>
+        <div class="tx-amount neg">-128.00</div>
+      </div>
+
+      <div class="tx-item">
+        <div class="tx-emoji">💵</div>
+        <div class="tx-info">
+          <div class="tx-name">工资到账</div>
+          <div class="tx-meta">3.10 · 收入</div>
+        </div>
+        <div class="tx-amount pos">+15,000</div>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="bnav-item active">
+        <span class="bnav-icon">⊞</span>
+        <span class="bnav-label">Home</span>
+      </div>
+      <div class="bnav-item">
+        <span class="bnav-icon">◈</span>
+        <span class="bnav-label">Stats</span>
+      </div>
+      <div class="bnav-center" onclick="this.style.transform='scale(0.92)'; setTimeout(()=>this.style.transform='', 150)">
+        ⚡
+      </div>
+      <div class="bnav-item">
+        <span class="bnav-icon">≡</span>
+        <span class="bnav-label">List</span>
+      </div>
+      <div class="bnav-item">
+        <span class="bnav-icon">◎</span>
+        <span class="bnav-label">Me</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const waveData = [
+    { expense: 55, income: 0 },
+    { expense: 32, income: 0 },
+    { expense: 68, income: 0 },
+    { expense: 25, income: 0 },
+    { expense: 48, income: 0 },
+    { expense: 72, income: 15 },
+    { expense: 20, income: 70 },
+    { expense: 60, income: 0 },
+    { expense: 38, income: 0 },
+    { expense: 50, income: 0 },
+    { expense: 42, income: 0 },
+    { expense: 65, income: 0 },
+    { expense: 30, income: 0 },
+    { expense: 55, income: 0 },
+  ];
+
+  const chart = document.getElementById('waveChart');
+  waveData.forEach((d, i) => {
+    const bar = document.createElement('div');
+    const isIncome = d.income > d.expense;
+    bar.className = `wave-bar ${isIncome ? 'income' : 'expense'}`;
+    bar.style.height = '0px';
+    const val = isIncome ? d.income : d.expense;
+    setTimeout(() => {
+      bar.style.height = val + 'px';
+    }, 600 + i * 50);
+    chart.appendChild(bar);
+  });
+</script>
+
+</body>
+</html>
