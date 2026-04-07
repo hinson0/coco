@@ -291,9 +291,7 @@ export default function ChatScreen() {
       {/* ── Top bar ── */}
       <View style={styles.topBar}>
         <TouchableOpacity
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.push("/(tabs)/diary")
-          }
+          onPress={() => router.replace("/(tabs)/diary")}
           style={styles.iconBtn}
           activeOpacity={0.75}
         >

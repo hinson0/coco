@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { AiAssistantCard } from "../../components/profile/AiAssistantCard";
 import { ExportSheet } from "../../components/profile/ExportSheet";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
@@ -93,7 +93,14 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     Alert.alert("退出登录", "确定要退出吗？", [
       { text: "取消", style: "cancel" },
-      { text: "退出", style: "destructive", onPress: signOut },
+      {
+        text: "退出",
+        style: "destructive",
+        onPress: async () => {
+          await signOut();
+          router.replace("/(auth)/login");
+        },
+      },
     ]);
   };
 
@@ -227,17 +234,18 @@ export default function ProfileScreen() {
       </Card>
 
       {/* 退出登录 */}
-      <Card style={styles.logoutCard}>
-        <AppText
-          size="2xl"
-          weight="semibold"
-          color="#DC2626"
-          style={styles.logoutText}
-          onPress={handleSignOut}
-        >
-          退出登录
-        </AppText>
-      </Card>
+      <TouchableOpacity onPress={handleSignOut} activeOpacity={0.7}>
+        <Card style={styles.logoutCard}>
+          <AppText
+            size="2xl"
+            weight="semibold"
+            color="#DC2626"
+            style={styles.logoutText}
+          >
+            退出登录
+          </AppText>
+        </Card>
+      </TouchableOpacity>
       <ExportSheet
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
