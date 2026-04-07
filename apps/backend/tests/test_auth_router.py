@@ -57,35 +57,6 @@ def test_register_duplicate_email():
     assert "already registered" in resp.json()["detail"]
 
 
-# ── /auth/login ───────────────────────────────────────
-
-
-def test_login_wrong_password():
-    import bcrypt
-
-    hashed = bcrypt.hashpw(b"correct_password", bcrypt.gensalt()).decode()
-
-    db = AsyncMock()
-    result = MagicMock()
-    result.mappings.return_value.one_or_none.return_value = {
-        "id": "user-uuid",
-        "password": hashed,
-    }
-
-
-def test_login_success_returns_tokens():
-    import bcrypt
-
-    hashed = bcrypt.hashpw(b"secret", bcrypt.gensalt()).decode()
-
-    db = AsyncMock()
-    result = MagicMock()
-    result.mappings.return_value.one_or_none.return_value = {
-        "id": "user-uuid",
-        "password": hashed,
-    }
-
-
 # ── /auth/refresh ─────────────────────────────────────
 
 
@@ -130,3 +101,51 @@ def test_refresh_with_access_token_fails():
 
     resp = client.post("/auth/refresh", json={"refresh_token": access_token})
     assert resp.status_code == 401
+
+
+def test_login_wrong_password():
+    import bcrypt
+
+    hashed = bcrypt.hashpw(b"correct_password", bcrypt.gensalt()).decode()
+
+    db = AsyncMock()
+    result = MagicMock()
+    result.mappings.return_value.one_or_none.return_value = {
+        "id": "user-uuid",
+        "password": hashed,
+    }
+    db.execute = AsyncMock(return_value=result)
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/login", json={"email": "a@b.com", "password": "wrong"})
+    assert resp.status_code == 401
+
+
+def test_login_success_returns_tokens():
+    import bcrypt
+
+    hashed = bcrypt.hashpw(b"secret", bcrypt.gensalt()).decode()
+
+    db = AsyncMock()
+    result = MagicMock()
+    result.mappings.return_value.one_or_none.return_value = {
+        "id": "user-uuid",
+        "password": hashed,
+    }
+    db.execute = AsyncMock(return_value=result)
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/login", json={"email": "a@b.com", "password": "secret"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
