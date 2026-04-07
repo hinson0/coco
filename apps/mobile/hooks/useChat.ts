@@ -40,7 +40,7 @@ type ChatResponse = {
 export function useChat() {
   const { db } = useOfflineContext();
   const qc = useQueryClient();
-  const { mutateAsync: addMessage } = useAddChatMessage();
+  const { mutateAsync: addMessage } = useAddChatMessage({ skipInvalidate: true });
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
@@ -101,7 +101,6 @@ export function useChat() {
             txId,
             thinkingMsgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         } else {
           // text 或 nl_result，都有 content 字段
           await db!.runAsync(
@@ -109,7 +108,6 @@ export function useChat() {
             resp.data.content,
             thinkingMsgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
       } catch (err) {
         console.error("[processText] /chat 异常:", err);
@@ -118,6 +116,7 @@ export function useChat() {
           "处理失败，请稍后再试。",
           thinkingMsgId,
         );
+      } finally {
         qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
@@ -129,6 +128,7 @@ export function useChat() {
       if (!db) return;
       console.log("[sendText] 文字输入:", text);
       await addMessage({ role: "user", content_type: "text", content: text });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
       try {
         await processText(text);
       } catch (err) {
@@ -138,9 +138,10 @@ export function useChat() {
           content_type: "text",
           content: "网络错误，请重试。",
         });
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
-    [db, addMessage, processText],
+    [db, qc, addMessage, processText],
   );
 
   const sendOcr = useCallback(
@@ -175,6 +176,7 @@ export function useChat() {
         content_type: "image",
         content: imageContent,
       });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
       console.log("[sendOcr] → 调用 /record-ocr");
       setLoading(true);
       try {
@@ -243,6 +245,7 @@ export function useChat() {
         onFail?.(imageMessageId);
       } finally {
         setLoading(false);
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
     [db, qc, addMessage, createTransaction],
@@ -273,6 +276,7 @@ export function useChat() {
         audio_uri: audioUri,
         duration_seconds: durationSeconds,
       });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
 
       // 3. 检查网络
       const netState = await NetInfo.fetch();
@@ -282,6 +286,7 @@ export function useChat() {
           content_type: "text",
           content: "未联网，无法使用语音服务。",
         });
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
         return;
       }
 
@@ -292,6 +297,7 @@ export function useChat() {
         content_type: "text",
         content: "思考中...",
       });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
 
       try {
         const resp = await apiFetch<ChatResponse>("/chat", {
@@ -309,7 +315,6 @@ export function useChat() {
             asrText,
             msgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
 
         if (resp.data.type === "bill") {
@@ -349,7 +354,6 @@ export function useChat() {
             txId,
             thinkingMsgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         } else {
           // text 或 nl_result
           await db.runAsync(
@@ -357,7 +361,6 @@ export function useChat() {
             resp.data.content,
             thinkingMsgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
       } catch (err) {
         console.error("[sendAsr] ❌ 异常:", err);
@@ -366,6 +369,7 @@ export function useChat() {
           "没听清，要不再说一次？",
           thinkingMsgId,
         );
+      } finally {
         qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
