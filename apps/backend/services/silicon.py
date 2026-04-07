@@ -75,6 +75,8 @@ async def extract_bill(text: str) -> dict | None:
         格式：{"amount": number, "category": string, "note": string, "occurred_at": string, "type": "expense"|"income"}
         分类选项：餐饮、交通、购物、娱乐、居住、医疗、教育、通讯、工资、理财、其他收入、其他支出
         occurred_at 使用 ISO 8601 格式（如 2026-04-03T14:30:00+08:00）
+        note 必须只包含具体事项，严禁包含任何日期时间词（今天、昨天、上周、早上、中午、晚上等）。
+        例如：用户说"今天中午吃饭花了30"，note 应为"吃饭"而非"今天中午吃饭"，因为时间已记录在 occurred_at。
         只返回 JSON，不要其他文字。
     """
     user = f"当前时间：{now}\n文字：{text}"
