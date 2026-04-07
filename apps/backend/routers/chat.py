@@ -1,8 +1,8 @@
 import re
 
 import structlog
-from config import settings
 from fastapi import APIRouter, Request
+from infra.config import settings
 from jose import jwt
 from schemas.chat import (
     ChatBillData,
