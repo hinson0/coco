@@ -201,7 +201,7 @@ apps/backend/
 - `supabase>=2.28.3`
 
 新增：
-- `python-jose` — JWT 签发/验证
+- `PyJWT` — JWT 签发/验证
 - `passlib[bcrypt]` — 密码 hash
 - `sqlalchemy[asyncio]` — ORM + async 支持
 - `asyncpg` — PostgreSQL async 驱动
