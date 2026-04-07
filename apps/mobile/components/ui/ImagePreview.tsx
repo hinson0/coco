@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 
 interface ImagePreviewProps {
@@ -12,7 +13,7 @@ export function ImagePreview({ uri, style }: ImagePreviewProps) {
       onPress={() => router.push({ pathname: '/image-viewer', params: { uri } })}
       style={style}
     >
-      <Image source={{ uri }} style={styles.thumbnail} resizeMode="cover" />
+      <Image source={uri} style={styles.thumbnail} contentFit="cover" />
     </Pressable>
   );
 }
