@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../components/ui/AppText';
 import { Card } from '../components/ui/Card';
 import { colors, radii, shadows } from '../constants/theme';
+import { useEntitlements, useAdWatchCount } from '../hooks/useEntitlement';
 
 function AdRow({ number, text, desc }: { readonly number: number; readonly text: string; readonly desc: string }) {
   return (
@@ -21,6 +22,13 @@ function AdRow({ number, text, desc }: { readonly number: number; readonly text:
 
 export default function AdRewardsScreen() {
   const insets = useSafeAreaInsets();
+  const { data: entitlements = [] } = useEntitlements();
+  const { data: watchCount = 0 } = useAdWatchCount();
+
+  const getBalance = (feature: string) => {
+    const ent = entitlements.find(e => e.feature === feature);
+    return ent?.balance ?? 0;
+  };
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -41,7 +49,7 @@ export default function AdRewardsScreen() {
             观看广告，免费解锁高级功能
           </AppText>
           <AppText size="base" color={colors.textLight} style={styles.introDesc}>
-            每天观看短视频广告即可逐步解锁付费功能，权益可累积，未使用不过期
+            已观看 {watchCount} 条广告 · 权益可累积，未使用不过期
           </AppText>
         </View>
 
@@ -67,6 +75,12 @@ export default function AdRewardsScreen() {
             text="多账户管理"
             desc="支持储蓄卡、信用卡、微信、支付宝等多种账户，独立追踪余额"
           />
+          <View style={styles.divider} />
+          <AdRow
+            number={4}
+            text="导出 CSV"
+            desc="将全部记账记录导出为 CSV 文件，每次解锁 1 周导出权限"
+          />
         </Card>
 
         {/* 累积规则 */}
@@ -79,7 +93,7 @@ export default function AdRewardsScreen() {
             <View style={styles.ruleText}>
               <AppText size="xl" weight="medium">循环解锁</AppText>
               <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
-                第 4 条广告解锁次日语音记账，第 5 条解锁次日小票识别，以此类推
+                每 4 条广告为一轮：语音记账 → 小票识别 → 多账户管理(7天) → 导出CSV(1周)，循环往复
               </AppText>
             </View>
           </View>
@@ -100,6 +114,52 @@ export default function AdRewardsScreen() {
               <AppText size="xl" weight="medium">永不过期</AppText>
               <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
                 已解锁的权益不会过期，用完才扣除
+              </AppText>
+            </View>
+          </View>
+        </Card>
+
+        {/* 我的权益 */}
+        <AppText size="base" color={colors.textLighter} weight="semibold" style={styles.sectionTitle}>
+          我的权益
+        </AppText>
+        <Card style={styles.ruleCard}>
+          <View style={styles.ruleRow}>
+            <AppText size="2xl" style={styles.ruleIcon}>🎤</AppText>
+            <View style={styles.ruleText}>
+              <AppText size="xl" weight="medium">语音记账</AppText>
+              <AppText size="base" color={colors.textLight}>
+                剩余 {getBalance('asr')} 次
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.ruleSeparator} />
+          <View style={styles.ruleRow}>
+            <AppText size="2xl" style={styles.ruleIcon}>📸</AppText>
+            <View style={styles.ruleText}>
+              <AppText size="xl" weight="medium">小票识别</AppText>
+              <AppText size="base" color={colors.textLight}>
+                剩余 {getBalance('ocr')} 次
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.ruleSeparator} />
+          <View style={styles.ruleRow}>
+            <AppText size="2xl" style={styles.ruleIcon}>💳</AppText>
+            <View style={styles.ruleText}>
+              <AppText size="xl" weight="medium">多账户管理</AppText>
+              <AppText size="base" color={colors.textLight}>
+                剩余 {getBalance('multi_account')} 天
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.ruleSeparator} />
+          <View style={styles.ruleRow}>
+            <AppText size="2xl" style={styles.ruleIcon}>📤</AppText>
+            <View style={styles.ruleText}>
+              <AppText size="xl" weight="medium">导出 CSV</AppText>
+              <AppText size="base" color={colors.textLight}>
+                剩余 {getBalance('csv_export')} 周
               </AppText>
             </View>
           </View>
