@@ -25,7 +25,7 @@ async def register(
         {"email": body.email},
     )
     if result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="邮箱已经注册过了!")
 
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     await db.execute(
@@ -49,7 +49,7 @@ async def login(
     if row is None or not bcrypt.checkpw(
         body.password.encode(), row["password"].encode()
     ):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
     user_id = str(row["id"])
     return TokenResponse(
@@ -68,7 +68,7 @@ async def refresh(body: RefreshRequest):
             raise ValueError("Not a refresh token")
         user_id: str = payload["sub"]
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
 
     return TokenResponse(
         access_token=create_access_token(user_id),

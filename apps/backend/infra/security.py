@@ -39,6 +39,6 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
             raise ValueError("Not an access token")
         return str(payload["sub"])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="登录状态异常，请重新登录")
