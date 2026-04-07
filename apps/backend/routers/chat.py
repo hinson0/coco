@@ -56,7 +56,7 @@ async def chat(body: ChatRequest, request: Request):
 
         # 语音输入：先做 ASR 转文字
         if body.audioBase64:
-            asr_text: str = recognize_speech(audio_base64=body.audioBase64)
+            asr_text = recognize_speech(audio_base64=body.audioBase64)
             if not asr_text:
                 return ChatResponse(data=ChatTextData(content="没听清，要不再说一次？"))
             text = asr_text
