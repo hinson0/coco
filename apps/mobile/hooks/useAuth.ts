@@ -1,41 +1,42 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import type { Session } from "@supabase/supabase-js";
+
+import {
+  getAccessToken,
+  getUserInfo,
+  login,
+  logout,
+  register,
+} from "../lib/auth";
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    Promise.all([getAccessToken(), getUserInfo()]).then(([token, info]) => {
+      setIsAuthenticated(!!token);
+      setUser(info);
       setLoading(false);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    await login(email, password);
+    const info = await getUserInfo();
+    setIsAuthenticated(true);
+    setUser(info);
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: "coco://auth/callback" },
-    });
-    if (error) throw error;
+    await register(email, password);
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await logout();
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
-  return { session, loading, signIn, signUp, signOut };
+  return { isAuthenticated, user, loading, signIn, signUp, signOut };
 }
