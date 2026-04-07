@@ -1,7 +1,7 @@
 import { Stack, router } from "expo-router";
 import { useEffect, useState, useRef } from "react";
 import { Platform, View, Text, AppState } from "react-native";
-import * as ExpoPangle from '../../modules/expo-pangle/src/ExpoPangle';
+import * as ExpoPangle from '../../../modules/expo-pangle/src/ExpoPangle';
 import { useEntitlementDecay } from '../hooks/useEntitlementDecay';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type * as SQLite from "expo-sqlite";

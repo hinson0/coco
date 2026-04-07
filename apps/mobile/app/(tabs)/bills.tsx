@@ -4,7 +4,7 @@ import { View, StyleSheet, TouchableOpacity, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ExpoPangle from '../../../modules/expo-pangle/src/ExpoPangle';
+import * as ExpoPangle from '../../../../modules/expo-pangle/src/ExpoPangle';
 import { useAdWatchCount, useEntitlements, useRecordAdWatch } from '../../hooks/useEntitlement';
 import { getRewardForWatch, FEATURES } from '../../lib/entitlements/rewards';
 import { AppText } from '../../components/ui/AppText';
