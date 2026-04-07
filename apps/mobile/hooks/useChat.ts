@@ -1,9 +1,7 @@
-1; // apps/mobile/hooks/useChat.ts
 import { useAddChatMessage } from "@/hooks/useLocalChatMessages";
 import { useCreateTransaction } from "@/hooks/useLocalTransactions";
 import { useOfflineContext } from "@/lib/offline-context";
 import type { Category } from "@coco/shared";
-import { parse } from "@coco/shared";
 import NetInfo from "@react-native-community/netinfo";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
@@ -13,6 +11,7 @@ import { apiFetch } from "../lib/api";
 
 type ChatBillData = {
   type: "bill";
+  asrText?: string;
   transaction: {
     amount: number;
     category: string;
@@ -24,11 +23,18 @@ type ChatBillData = {
 
 type ChatTextData = {
   type: "text";
+  asrText?: string;
+  content: string;
+};
+
+type ChatNlData = {
+  type: "nl_result";
+  asrText?: string;
   content: string;
 };
 
 type ChatResponse = {
-  data: ChatBillData | ChatTextData;
+  data: ChatBillData | ChatTextData | ChatNlData;
 };
 
 export function useChat() {
@@ -38,72 +44,11 @@ export function useChat() {
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
-  // ─── 核心处理逻辑：规则引擎 → 提示手动记账 ───
-  // sendText 和 sendAsr 共享此逻辑
+  // ─── 核心处理逻辑：直接调 /chat ───
+  // sendText 共享此逻辑
   const processText = useCallback(
     async (text: string) => {
       console.log("[processText] 输入:", text);
-
-      // 1. 先尝试规则引擎
-      const ruleResult = parse(text);
-      console.log(
-        "[processText] 规则引擎结果:",
-        ruleResult ? JSON.stringify(ruleResult) : "未命中",
-      );
-
-      if (ruleResult) {
-        const categoriesData = qc.getQueryData<readonly Category[]>([
-          "categories",
-        ]);
-        const otherName =
-          ruleResult.type === "expense" ? "其他支出" : "其他收入";
-        const category =
-          (ruleResult.categoryName
-            ? categoriesData?.find(
-                (c) =>
-                  c.name === ruleResult.categoryName &&
-                  c.type === ruleResult.type,
-              )
-            : null) ?? categoriesData?.find((c) => c.name === otherName);
-
-        if (category) {
-          const occurredAt = new Date().toISOString();
-          console.log(
-            "[processText] ✅ 规则引擎命中 → 分类:",
-            category.name,
-            "| 金额:",
-            ruleResult.amount,
-            "| note:",
-            ruleResult.note,
-          );
-          const txId = await createTransaction({
-            amount: ruleResult.amount,
-            category_id: category.id,
-            type: ruleResult.type,
-            note: ruleResult.note,
-            occurred_at: occurredAt,
-            source: "rule",
-          });
-          await addMessage({
-            role: "assistant",
-            content_type: "bill_card",
-            content: JSON.stringify({
-              id: txId,
-              amount: ruleResult.amount,
-              type: ruleResult.type,
-              note: ruleResult.note,
-              category_id: category.id,
-              occurred_at: occurredAt,
-            }),
-            transaction_id: txId,
-          });
-          return;
-        }
-        console.log("[processText] 规则引擎有结果但未匹配分类，提示手动记账");
-      }
-
-      // 2. 规则引擎未命中 → 调用 /chat（SiliconFlow fallback）
-      console.log("[processText] ⚠️ 规则引擎未命中，调用 /chat");
 
       const thinkingMsgId = await addMessage({
         role: "assistant",
@@ -158,6 +103,7 @@ export function useChat() {
           );
           qc.invalidateQueries({ queryKey: ["chat-messages"] });
         } else {
+          // text 或 nl_result，都有 content 字段
           await db!.runAsync(
             "UPDATE chat_messages SET content = ? WHERE id = ?",
             resp.data.content,
@@ -198,11 +144,7 @@ export function useChat() {
   );
 
   const sendOcr = useCallback(
-    async (
-      imageBase64: string,
-      onFail?: (imageMessageId: string) => void,
-      onOcrText?: (merchant: string | null) => void,
-    ) => {
+    async (imageBase64: string, onFail?: (imageMessageId: string) => void) => {
       if (!db) return;
       console.log("[sendOcr] 拍照记账");
       const netState = await NetInfo.fetch();
@@ -215,7 +157,7 @@ export function useChat() {
         });
         return;
       }
-      // 保存图片到本地文件系统，fallback 到占位符
+      // 保存图片到本地文件系统
       let imageContent = "[拍照]";
       try {
         const dir = `${FileSystem.documentDirectory}ocr-images/`;
@@ -266,8 +208,6 @@ export function useChat() {
             category?.name,
             "| 金额:",
             tx.amount,
-            "| note:",
-            tx.note,
           );
           await addMessage({
             role: "assistant",
@@ -283,22 +223,9 @@ export function useChat() {
             transaction_id: txId,
           });
           qc.invalidateQueries({ queryKey: ["transactions"] });
-        } else if (resp.data?.type === "ocr_text") {
-          // 识别到文字但正则提取不到金额 → 提示 + 触发导航回调
-          console.log(
-            "[sendOcr] ℹ️ OCR 有文字但无金额，merchant:",
-            resp.data.merchant,
-          );
-          await addMessage({
-            role: "assistant",
-            content_type: "text",
-            content: resp.data.merchant
-              ? `已识别商户「${resp.data.merchant}」，请手动补充金额完成记账。`
-              : "已识别小票内容，请手动补充金额完成记账。",
-          });
-          onOcrText?.(resp.data.merchant ?? null);
         } else {
-          console.log("[sendOcr] ⚠️ OCR 未识别:", resp.data?.message);
+          // error
+          console.log("[sendOcr] ⚠️ OCR 失败:", resp.data?.message);
           await addMessage({
             role: "assistant",
             content_type: "text",
@@ -358,47 +285,91 @@ export function useChat() {
         return;
       }
 
-      // 4. 调用 ASR API（纯语音转文字）
-      console.log("[sendAsr] → 调用 /record-asr");
+      // 4. 调用 /chat（后端做 ASR + classify_intent）
+      console.log("[sendAsr] → 调用 /chat (语音)");
+      const thinkingMsgId = await addMessage({
+        role: "assistant",
+        content_type: "text",
+        content: "思考中...",
+      });
+
       try {
-        const resp = await apiFetch<any>("/record-asr", {
+        const resp = await apiFetch<ChatResponse>("/chat", {
           method: "POST",
           body: JSON.stringify({ audioBase64 }),
         });
 
-        const asrText = resp.data?.asrText;
-        console.log("[sendAsr] ASR 返回:", asrText || "(空)");
-        if (!asrText) {
-          console.log("[sendAsr] ⚠️ ASR 无文字");
-          await addMessage({
-            role: "assistant",
-            content_type: "text",
-            content: "没听清，要不再说一次？",
-          });
-          return;
+        console.log("[sendAsr] /chat 返回:", JSON.stringify(resp.data));
+
+        // 更新语音气泡的转写文字
+        const asrText = resp.data.asrText;
+        if (asrText) {
+          await db.runAsync(
+            "UPDATE chat_messages SET content = ? WHERE id = ?",
+            asrText,
+            msgId,
+          );
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
 
-        // 5. 更新语音消息的 transcription
-        await db.runAsync(
-          "UPDATE chat_messages SET content = ? WHERE id = ?",
-          asrText,
-          msgId,
-        );
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        if (resp.data.type === "bill") {
+          const tx = resp.data.transaction;
+          const categoriesData = qc.getQueryData<readonly Category[]>([
+            "categories",
+          ]);
+          const otherName = tx.type === "income" ? "其他收入" : "其他支出";
+          const category =
+            (tx.category
+              ? categoriesData?.find(
+                  (c) => c.name === tx.category && c.type === tx.type,
+                )
+              : null) ?? categoriesData?.find((c) => c.name === otherName);
 
-        // 6. 复用文字处理逻辑：规则引擎 → 提示手动记账
-        console.log("[sendAsr] → 进入 processText:", asrText);
-        await processText(asrText);
+          const occurredAt = tx.occurred_at || new Date().toISOString();
+          const txId = await createTransaction({
+            amount: tx.amount,
+            category_id: category?.id ?? "",
+            type: tx.type,
+            note: tx.note,
+            occurred_at: occurredAt,
+            source: "asr",
+          });
+
+          await db.runAsync(
+            "UPDATE chat_messages SET content_type = ?, content = ?, transaction_id = ? WHERE id = ?",
+            "bill_card",
+            JSON.stringify({
+              id: txId,
+              amount: tx.amount,
+              type: tx.type,
+              note: tx.note,
+              category_id: category?.id ?? "",
+              occurred_at: occurredAt,
+            }),
+            txId,
+            thinkingMsgId,
+          );
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        } else {
+          // text 或 nl_result
+          await db.runAsync(
+            "UPDATE chat_messages SET content = ? WHERE id = ?",
+            resp.data.content,
+            thinkingMsgId,
+          );
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        }
       } catch (err) {
         console.error("[sendAsr] ❌ 异常:", err);
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: "没听清，要不再说一次？",
-        });
+        await db.runAsync(
+          "UPDATE chat_messages SET content = ? WHERE id = ?",
+          "没听清，要不再说一次？",
+          thinkingMsgId,
+        );
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
-    [db, qc, addMessage, processText],
+    [db, qc, addMessage, createTransaction],
   );
 
   return { sendText, sendOcr, sendAsr, isLoading };

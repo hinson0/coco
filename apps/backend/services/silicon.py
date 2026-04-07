@@ -89,6 +89,32 @@ async def extract_bill(text: str) -> dict | None:
     return None
 
 
+async def extract_bill_from_receipt(raw_text: str) -> dict | None:
+    """从小票 OCR 文本中提取记账信息（含逐行消费明细）"""
+    now = datetime.now(timezone.utc).isoformat()
+    system = """从小票 OCR 文本中提取记账信息，只返回 JSON。
+  格式：{"amount": number, "category": string, "note": string, "type": "expense"|"income", "occurred_at": string}
+
+  规则：
+  - amount：小票上的总金额（实付金额/合计金额）
+  - category：分类选项为 餐饮、交通、购物、娱乐、居住、医疗、教育、通讯、工资、理财、其他收入、其他支出
+  - note：逐行列出消费明细，每行格式为「商品名 金额」，用换行符分隔。例如："拿铁 28.00\\n美式 22.00\\n蛋糕 49.50"
+  - type：通常为 "expense"
+  - occurred_at：小票上的日期，使用 ISO 8601 格式。若无日期则留空字符串
+
+  只返回 JSON，不要其他文字。"""
+    user = f"当前时间：{now}\n小票 OCR 文本：\n{raw_text}"
+    raw = await _call_silicon(system, user)
+    parsed = extract_json(raw)
+    if (
+        parsed
+        and isinstance(parsed.get("amount"), (int, float))
+        and parsed["amount"] > 0
+    ):
+        return parsed
+    return None
+
+
 async def generate_sql(text: str) -> str:
     """
        将用户的问题转为 PostgreSQL SELECT 查询。

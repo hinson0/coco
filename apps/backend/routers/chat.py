@@ -1,9 +1,16 @@
 import re
 
+import structlog
 from config import settings
 from fastapi import APIRouter, Request
 from jose import jwt
-from schemas.chat import ChatBillData, ChatRequest, ChatResponse, ChatTextData
+from schemas.chat import (
+    ChatBillData,
+    ChatNlData,
+    ChatRequest,
+    ChatResponse,
+    ChatTextData,
+)
 from schemas.ocr import Transaction
 from services.silicon import (
     chat_reply,
@@ -12,8 +19,11 @@ from services.silicon import (
     generate_sql,
     summarize_result,
 )
+from services.tencent import recognize_speech
 
 from supabase import create_client
+
+log = structlog.get_logger()
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -42,13 +52,24 @@ def is_safe_sql(sql: str) -> bool:
 @router.post("", response_model=ChatResponse)
 async def chat(body: ChatRequest, request: Request):
     try:
-        # intent
-        intent = await classify_intent(body.text)
+        asr_text: str | None = None
 
-        # record 的intent
+        # 语音输入：先做 ASR 转文字
+        if body.audioBase64:
+            asr_text = recognize_speech(audio_base64=body.audioBase64)
+            if not asr_text:
+                return ChatResponse(data=ChatTextData(content="没听清，要不再说一次？"))
+            text = asr_text
+        else:
+            assert body.text is not None, "文本输入不能为空"
+            text = body.text
+
+        # 统一走 classify_intent
+        intent = await classify_intent(text)
+        log.info("chat.intent", intent=intent, has_audio=body.audioBase64 is not None)
+
         if intent == "record":
-            # 调 extract_bill，成功返回 ChatBillData，失败返回 ChatTextData
-            bill = await extract_bill(body.text)
+            bill = await extract_bill(text)
             if bill:
                 transaction = Transaction(
                     amount=float(bill["amount"]),
@@ -57,26 +78,32 @@ async def chat(body: ChatRequest, request: Request):
                     type="income" if bill.get("type") == "income" else "expense",
                     occurred_at=bill.get("occurred_at", ""),
                 )
-                return ChatResponse(data=ChatBillData(transaction=transaction))
+                return ChatResponse(
+                    data=ChatBillData(transaction=transaction, asrText=asr_text)
+                )
             else:
                 return ChatResponse(
                     data=ChatTextData(
-                        content="没解析到账单信息，可以试试「手动记账」。"
+                        content="没解析到账单信息，可以试试「手动记账」。",
+                        asrText=asr_text,
                     )
                 )
         elif intent == "query":
             user_id = get_user_id(request)
             if not user_id:
                 return ChatResponse(
-                    data=ChatTextData(content="登录状态异常，请重新登录。")
+                    data=ChatTextData(
+                        content="登录状态异常，请重新登录。", asrText=asr_text
+                    )
                 )
-            sql = await generate_sql(body.text)
-            print(f"[DEBUG] 生成的 SQL: {repr(sql)}")  # ← 加这行
-            print(f"[DEBUG] is_safe_sql: {is_safe_sql(sql)}")  # ← 加这行
+            sql = await generate_sql(text)
             if not is_safe_sql(sql):
-                return ChatResponse(data=ChatTextData(content="查询失败，请换个说法。"))
+                return ChatResponse(
+                    data=ChatTextData(
+                        content="查询失败，请换个说法。", asrText=asr_text
+                    )
+                )
 
-            # 注入 user_id
             sql = re.sub(
                 r"WHERE\s+",
                 f"WHERE transactions.user_id = '{user_id}' AND ",
@@ -93,16 +120,17 @@ async def chat(body: ChatRequest, request: Request):
             try:
                 result = supabase.rpc("exec_readonly_sql", {"sql_query": sql}).execute()
                 query_result = result.data
-            except Exception as e:
-                print(f"[DEBUG] supabase rpc 报错: {e}")
+            except Exception:
                 return ChatResponse(
-                    data=ChatTextData(content="查询出错，请换个方式描述。")
+                    data=ChatTextData(
+                        content="查询出错，请换个方式描述。", asrText=asr_text
+                    )
                 )
 
-            result = await summarize_result(question=body.text, rows=query_result)
-            return ChatResponse(data=ChatTextData(content=result))
+            summary = await summarize_result(question=text, rows=query_result)
+            return ChatResponse(data=ChatNlData(content=summary, asrText=asr_text))
         else:
-            reply = await chat_reply(body.text)
-            return ChatResponse(data=ChatTextData(content=reply))
-    except Exception as e:
+            reply = await chat_reply(text)
+            return ChatResponse(data=ChatTextData(content=reply, asrText=asr_text))
+    except Exception:
         return ChatResponse(data=ChatTextData(content="处理失败，请稍后再试。"))
