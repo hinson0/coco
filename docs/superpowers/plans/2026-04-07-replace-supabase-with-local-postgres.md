@@ -52,6 +52,7 @@ apps/backend/logging_config.py       ← 移入 infra/
 ## Task 1：Docker 基础设施 + package.json 脚本
 
 **Files:**
+
 - Create: `docker-compose.yml`
 - Modify: `package.json`（根目录）
 
@@ -131,6 +132,7 @@ git commit -m "feat: 添加 Docker Compose + pnpm dev:all 启动脚本"
 ## Task 2：改写数据库 Schema
 
 **Files:**
+
 - Modify: `supabase/migrations/001_initial_schema.sql`
 - Delete: `supabase/config.toml`
 
@@ -247,6 +249,7 @@ git commit -m "feat: 改写 schema 替换 auth.users/RLS，新增 users 表"
 ## Task 3：更新后端 Python 依赖
 
 **Files:**
+
 - Modify: `apps/backend/pyproject.toml`
 
 > 注意：本 Task 只**新增**依赖，不删除旧依赖（supabase/python-jose）。旧依赖在 Task 6 代码全部更新后才删除。
@@ -300,6 +303,7 @@ git commit -m "feat(backend): 新增 PyJWT/passlib/sqlalchemy/asyncpg 依赖"
 ## Task 4：重组后端目录——创建 `infra/` 层
 
 **Files:**
+
 - Create: `apps/backend/infra/__init__.py`
 - Create: `apps/backend/infra/config.py`
 - Create: `apps/backend/infra/logging_config.py`
@@ -521,10 +525,13 @@ def health():
 - [ ] **Step 8：更新 `apps/backend/routers/chat.py` 的 import（仅改 config 那一行，其余不动）**
 
 将第 4 行：
+
 ```python
 from config import settings
 ```
+
 改为：
+
 ```python
 from infra.config import settings
 ```
@@ -534,10 +541,13 @@ from infra.config import settings
 - [ ] **Step 9：更新 `apps/backend/tests/test_logging_config.py` 的 import**
 
 将第 6 行：
+
 ```python
 from logging_config import setup_logging
 ```
+
 改为：
+
 ```python
 from infra.logging_config import setup_logging
 ```
@@ -571,6 +581,7 @@ git commit -m "refactor(backend): 重组目录，config/logging/database/securit
 ## Task 5：后端 JWT 认证路由（TDD）
 
 **Files:**
+
 - Create: `apps/backend/schemas/auth.py`
 - Create: `apps/backend/tests/test_auth_router.py`（先写）
 - Create: `apps/backend/routers/auth.py`（后写）
@@ -799,7 +810,7 @@ async def register(
         {"email": body.email},
     )
     if result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="邮箱已经注册过了.")
 
     hashed = pwd_context.hash(body.password)
     await db.execute(
@@ -891,6 +902,7 @@ git commit -m "feat(backend): 新增 JWT 认证路由 /auth/register /auth/login
 ## Task 6：更新 chat 路由 + 移除旧依赖（TDD）
 
 **Files:**
+
 - Modify: `apps/backend/tests/test_chat_router.py`（先更新测试）
 - Modify: `apps/backend/routers/chat.py`（再更新实现）
 - Modify: `apps/backend/pyproject.toml`（最后移除旧依赖）
@@ -1237,6 +1249,7 @@ git commit -m "feat(backend): 移除 Supabase，chat 路由改用 SQLAlchemy + J
 ## Task 7：替换前端 Supabase 认证
 
 **Files:**
+
 - Delete: `apps/mobile/lib/supabase.ts`
 - Create: `apps/mobile/lib/auth.ts`
 - Modify: `apps/mobile/lib/api.ts`
@@ -1329,7 +1342,11 @@ import { getAccessToken, refreshAccessToken } from "./auth";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
-async function fetchWithToken<T>(token: string, path: string, options?: RequestInit): Promise<Response> {
+async function fetchWithToken<T>(
+  token: string,
+  path: string,
+  options?: RequestInit,
+): Promise<Response> {
   return fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -1341,7 +1358,10 @@ async function fetchWithToken<T>(token: string, path: string, options?: RequestI
   });
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
   const token = await getAccessToken();
   if (!token) throw new Error("Not authenticated");
 
@@ -1398,19 +1418,25 @@ export function useAuth() {
 - [ ] **Step 6：更新 `apps/mobile/app/_layout.tsx`**
 
 将第 38 行：
+
 ```typescript
 const { session, loading } = useAuth();
 ```
+
 改为：
+
 ```typescript
 const { isAuthenticated, loading } = useAuth();
 ```
 
 将第 62 行：
+
 ```typescript
 if (!loading && !session) router.replace("/(auth)/login");
 ```
+
 改为：
+
 ```typescript
 if (!loading && !isAuthenticated) router.replace("/(auth)/login");
 ```
@@ -1418,11 +1444,13 @@ if (!loading && !isAuthenticated) router.replace("/(auth)/login");
 - [ ] **Step 7：从 `apps/mobile/package.json` 移除 `@supabase/supabase-js`**
 
 在 `apps/mobile/package.json` 中找到并删除：
+
 ```json
 "@supabase/supabase-js": "^2.99.1",
 ```
 
 然后运行：
+
 ```bash
 pnpm install
 ```
@@ -1450,20 +1478,20 @@ git commit -m "feat(mobile): 移除 Supabase SDK，改用自建 JWT 认证 + Asy
 
 ## 自检（Spec Coverage）
 
-| 设计要求 | 对应 Task |
-|---|---|
-| Docker Compose 运行 PostgreSQL | Task 1 |
-| `pnpm dev:all` 一条命令启动 | Task 1 |
-| Schema 去掉 RLS/auth.users | Task 2 |
-| 新增 `users` 表 | Task 2 |
-| 新增 PyJWT/passlib/sqlalchemy 依赖 | Task 3 |
-| 后端 `infra/` 目录重组 | Task 4 |
-| `/auth/register /auth/login /auth/refresh` | Task 5 |
-| access token (1h) + refresh token (30d) | Task 5 |
-| chat.py 移除 supabase，改用 get_current_user + get_db | Task 6 |
-| 移除 supabase/python-jose 依赖 | Task 6 |
-| 前端 lib/auth.ts | Task 7 |
-| 前端 api.ts 401 自动 refresh | Task 7 |
-| useAuth 改写 | Task 7 |
-| _layout.tsx session → isAuthenticated | Task 7 |
-| 删除 supabase.ts + supabase-js 依赖 | Task 7 |
+| 设计要求                                              | 对应 Task |
+| ----------------------------------------------------- | --------- |
+| Docker Compose 运行 PostgreSQL                        | Task 1    |
+| `pnpm dev:all` 一条命令启动                           | Task 1    |
+| Schema 去掉 RLS/auth.users                            | Task 2    |
+| 新增 `users` 表                                       | Task 2    |
+| 新增 PyJWT/passlib/sqlalchemy 依赖                    | Task 3    |
+| 后端 `infra/` 目录重组                                | Task 4    |
+| `/auth/register /auth/login /auth/refresh`            | Task 5    |
+| access token (1h) + refresh token (30d)               | Task 5    |
+| chat.py 移除 supabase，改用 get_current_user + get_db | Task 6    |
+| 移除 supabase/python-jose 依赖                        | Task 6    |
+| 前端 lib/auth.ts                                      | Task 7    |
+| 前端 api.ts 401 自动 refresh                          | Task 7    |
+| useAuth 改写                                          | Task 7    |
+| \_layout.tsx session → isAuthenticated                | Task 7    |
+| 删除 supabase.ts + supabase-js 依赖                   | Task 7    |
