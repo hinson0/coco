@@ -50,7 +50,7 @@ UPDATE budgets SET user_id = ? WHERE user_id IS NULL;
 UPDATE categories SET user_id = ? WHERE user_id IS NULL AND is_default = 0;
 ```
 
-触发时机：`_layout.tsx` 中 `useEffect` 监听 `user?.id` 变化，当 db 和 userId 都就绪时执行一次。用一个 `AsyncStorage` flag（如 `migrated_null_data`）防止重复执行。
+触发时机：`_layout.tsx` 中 `useEffect` 监听 `user?.id` 变化，当 db 和 userId 都就绪时执行。无需 flag 防重复 — SQL 本身幂等（`WHERE user_id IS NULL` 在无 NULL 数据时影响 0 行）。
 
 ### 4. 各 Hook 改动
 
