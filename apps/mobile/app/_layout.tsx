@@ -5,7 +5,7 @@ import { Stack, router } from "expo-router";
 import type * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
-import { useAuth } from "../hooks/useAuth";
+import { AuthProvider, useAuth } from "../hooks/useAuth";
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -34,14 +34,13 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function AppContent() {
   const { isAuthenticated, loading } = useAuth();
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
 
   useEffect(() => {
     initDatabase().then(setDb);
 
-    // 请求通知权限 + 设置 Android channel
     async function setupNotifications() {
       if (!Notifications) return;
       try {
@@ -80,10 +79,18 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <OfflineContext.Provider value={{ db }}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </OfflineContext.Provider>
-    </QueryClientProvider>
+    <OfflineContext.Provider value={{ db }}>
+      <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
+    </OfflineContext.Provider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }

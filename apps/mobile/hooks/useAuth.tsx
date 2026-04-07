@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import {
   getAccessToken,
@@ -8,7 +9,18 @@ import {
   register,
 } from "../lib/auth";
 
-export function useAuth() {
+type AuthState = {
+  isAuthenticated: boolean;
+  user: { id: string; email: string } | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthState | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,5 +50,17 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { isAuthenticated, user, loading, signIn, signUp, signOut };
+  return (
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, loading, signIn, signUp, signOut }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 }

@@ -29,6 +29,7 @@ export async function login(email: string, password: string): Promise<void> {
     throw new Error(data.detail ?? "Login failed");
   }
   const { access_token, refresh_token } = await resp.json();
+  console.log("[auth] login success, token length:", access_token?.length);
   await AsyncStorage.setItem(ACCESS_TOKEN_KEY, access_token);
   await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
   // 存用户信息：从 JWT payload 解码 user_id，email 直接用登录时的入参
