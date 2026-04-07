@@ -1,0 +1,1 @@
+../../../apps/mobile/eslint.config.js
