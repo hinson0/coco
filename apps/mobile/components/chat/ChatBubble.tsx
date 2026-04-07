@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, type ViewStyle } from 'react-native';
 import { AppText } from '../ui/AppText';
 import { colors, radii, spacing, shadows } from '../../constants/theme';
@@ -9,15 +10,15 @@ import { RecordCard } from './RecordCard';
 interface ChatBubbleProps {
   readonly message: ChatMessage;
   readonly status?: 'pending' | 'failed';
-  readonly onDelete?: () => void;
+  readonly onDelete?: (messageId: string) => void;
   readonly onRetry?: () => void;
   readonly transaction?: Transaction;
   readonly categories?: readonly Category[];
-  readonly onEditRecord?: () => void;
+  readonly onEditRecord?: (messageId: string) => void;
   readonly onSuggestion?: (label: string) => void;
   readonly isPlaying?: boolean;
-  readonly onPlay?: () => void;
-  readonly onResendOcr?: () => void;
+  readonly onPlay?: (messageId: string) => void;
+  readonly onResendOcr?: (messageId: string) => void;
 }
 
 function formatTime(isoString: string): string {
@@ -35,10 +36,10 @@ function Avatar({ emoji, style }: { emoji: string; style: ViewStyle }) {
   );
 }
 
-function handleLongPress(onDelete?: () => void) {
+function handleLongPress(messageId: string, onDelete?: (id: string) => void) {
   if (!onDelete) return;
   Alert.alert("消息操作", "", [
-    { text: "删除", style: "destructive", onPress: onDelete },
+    { text: "删除", style: "destructive", onPress: () => onDelete(messageId) },
     { text: "取消", style: "cancel" },
   ]);
 }
@@ -51,7 +52,7 @@ function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   );
 }
 
-export function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay, onResendOcr }: ChatBubbleProps) {
+export const ChatBubble = React.memo(function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay, onResendOcr }: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
   const isUser = role === 'user';
@@ -67,7 +68,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
             role="user"
             duration={message.duration_seconds ?? 0}
             isPlaying={isPlaying ?? false}
-            onPlay={onPlay ?? (() => {})}
+            onPlay={onPlay ? () => onPlay(message.id) : () => {}}
           />
         );
       }
@@ -88,13 +89,13 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
           <TouchableOpacity
             style={styles.bubbleArea}
             activeOpacity={0.75}
-            onLongPress={() => handleLongPress(onDelete)}
+            onLongPress={() => handleLongPress(message.id, onDelete)}
           >
             {bubbleContent}
             <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
           </TouchableOpacity>
           {content_type === 'image' && onResendOcr && (
-            <TouchableOpacity onPress={onResendOcr} style={styles.resendOcrBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => onResendOcr(message.id)} style={styles.resendOcrBtn} activeOpacity={0.7}>
               <AppText size="sm" color={colors.white}>↩ 重新识别</AppText>
             </TouchableOpacity>
           )}
@@ -126,15 +127,15 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
         <TouchableOpacity
           style={[styles.bubbleArea, { flex: 1 }]}
           activeOpacity={0.75}
-          onLongPress={() => handleLongPress(onDelete)}
+          onLongPress={() => handleLongPress(message.id, onDelete)}
         >
           {parsedTransaction ? (
             <RecordCard
               transaction={parsedTransaction}
               categoryName={matchedCategory?.name}
               categoryIcon={matchedCategory?.icon}
-              onEdit={onEditRecord}
-              onDelete={onDelete}
+              onEdit={onEditRecord ? () => onEditRecord(message.id) : undefined}
+              onDelete={onDelete ? () => onDelete(message.id) : undefined}
             />
           ) : (
             <View style={[styles.bubble, styles.bubbleAssistant]}>
@@ -154,7 +155,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
       <TouchableOpacity
         style={styles.bubbleArea}
         activeOpacity={0.75}
-        onLongPress={() => handleLongPress(onDelete)}
+        onLongPress={() => handleLongPress(message.id, onDelete)}
       >
         <View style={[styles.bubble, styles.bubbleAssistant]}>
           <AppText size="xl" color={colors.text}>{content}</AppText>
@@ -163,7 +164,7 @@ export function ChatBubble({ message, status, onDelete, onRetry, transaction, ca
       </TouchableOpacity>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   // Row layouts — horizontal, avatar beside bubble

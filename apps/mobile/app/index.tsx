@@ -1,7 +1,7 @@
 import type { ChatMessage, Transaction } from "@coco/shared";
 import * as FileSystem from "expo-file-system/legacy";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -151,27 +151,16 @@ export default function ChatScreen() {
     setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
   }
 
-  async function handleResendOcr(imagePath: string, imageMessageId: string) {
-    setFailedOcrIds((prev) => {
-      const next = new Set(prev);
-      next.delete(imageMessageId);
-      return next;
-    });
-    try {
-      const base64 = await FileSystem.readAsStringAsync(imagePath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      sendOcr(base64, onOcrFail);
-    } catch {
-      setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
-    }
-  }
   const [loadedLimit, setLoadedLimit] = useState(INITIAL_LIMIT);
   const { data: messages = [], isFetching: isFetchingMessages } =
     useLocalChatMessages(loadedLimit);
   const deleteMutation = useDeleteChatMessage();
   const clearMutation = useClearChatMessages();
   const { data: categories = [] } = useLocalCategories();
+
+  // 用 ref 保存最新 messages，让 useCallback 不依赖 messages 数组引用
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
@@ -217,12 +206,65 @@ export default function ChatScreen() {
     setLoadedLimit((prev) => prev + LOAD_MORE_SIZE);
   }
 
-  const listItems = buildListItems(messages, isSending);
+  const handleDelete = useCallback(
+    (messageId: string) => deleteMutation.mutate(messageId),
+    [deleteMutation],
+  );
 
-  // Show welcome message only when no messages exist
-  if (messages.length === 0) {
-    listItems.push({ type: "message", data: WELCOME_MESSAGE });
-  }
+  const handleEditRecord = useCallback(
+    (messageId: string) => {
+      const msg = messagesRef.current.find((m) => m.id === messageId);
+      if (!msg || msg.content_type !== "bill_card") return;
+      try {
+        const tx = JSON.parse(msg.content) as Transaction;
+        router.push({
+          pathname: "/manual-entry",
+          params: { txData: JSON.stringify(tx), msgId: msg.id },
+        });
+      } catch {
+        /* ignore parse errors */
+      }
+    },
+    [],
+  );
+
+  const handleResendOcr = useCallback(
+    async (messageId: string) => {
+      const msg = messagesRef.current.find((m) => m.id === messageId);
+      if (!msg || !msg.content.startsWith("file://")) return;
+      setFailedOcrIds((prev) => {
+        const next = new Set(prev);
+        next.delete(messageId);
+        return next;
+      });
+      try {
+        const base64 = await FileSystem.readAsStringAsync(msg.content, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        sendOcr(base64, onOcrFail);
+      } catch {
+        setFailedOcrIds((prev) => new Set(prev).add(messageId));
+      }
+    },
+    [sendOcr],
+  );
+
+  const handlePlayAudio = useCallback(
+    (messageId: string) => {
+      const msg = messagesRef.current.find((m) => m.id === messageId);
+      if (!msg || msg.content_type !== "audio" || !msg.audio_uri) return;
+      playAudio(msg.id, msg.audio_uri);
+    },
+    [playAudio],
+  );
+
+  const listItems = useMemo(() => {
+    const items = buildListItems(messages, isSending);
+    if (messages.length === 0) {
+      items.push({ type: "message", data: WELCOME_MESSAGE });
+    }
+    return items;
+  }, [messages, isSending]);
 
   function handleSelectTool(tool: string) {
     if (tool === "手动记账") {
@@ -232,57 +274,48 @@ export default function ChatScreen() {
     sendText(tool);
   }
 
-  function renderItem({ item }: { item: ListItem }) {
-    if (item.type === "separator") {
-      return <DateSeparator label={item.label} />;
-    }
-    if (item.type === "typing") {
+  const renderItem = useCallback(
+    ({ item }: { item: ListItem }) => {
+      if (item.type === "separator") {
+        return <DateSeparator label={item.label} />;
+      }
+      if (item.type === "typing") {
+        return (
+          <View style={styles.typingWrapper}>
+            <TypingIndicator />
+          </View>
+        );
+      }
+      const msg = item.data;
+
       return (
-        <View style={styles.typingWrapper}>
-          <TypingIndicator />
+        <View style={styles.bubbleWrapper}>
+          <ChatBubble
+            message={msg}
+            categories={categories}
+            onDelete={handleDelete}
+            onEditRecord={
+              msg.content_type === "bill_card" ? handleEditRecord : undefined
+            }
+            isPlaying={playingId === msg.id}
+            onPlay={
+              msg.content_type === "audio" && msg.audio_uri
+                ? handlePlayAudio
+                : undefined
+            }
+            onResendOcr={
+              msg.content_type === "image" &&
+              msg.content.startsWith("file://") &&
+              failedOcrIds.has(msg.id)
+                ? handleResendOcr
+                : undefined
+            }
+          />
         </View>
       );
-    }
-    const msg = item.data;
-
-    return (
-      <View style={styles.bubbleWrapper}>
-        <ChatBubble
-          message={msg}
-          categories={categories}
-          onDelete={() => deleteMutation.mutate(msg.id)}
-          onEditRecord={
-            msg.content_type === "bill_card"
-              ? () => {
-                  try {
-                    const tx = JSON.parse(msg.content) as Transaction;
-                    router.push({
-                      pathname: "/manual-entry",
-                      params: { txData: JSON.stringify(tx), msgId: msg.id },
-                    });
-                  } catch {
-                    /* ignore parse errors */
-                  }
-                }
-              : undefined
-          }
-          isPlaying={playingId === msg.id}
-          onPlay={
-            msg.content_type === "audio" && msg.audio_uri
-              ? () => playAudio(msg.id, msg.audio_uri!)
-              : undefined
-          }
-          onResendOcr={
-            msg.content_type === "image" &&
-            msg.content.startsWith("file://") &&
-            failedOcrIds.has(msg.id)
-              ? () => handleResendOcr(msg.content, msg.id)
-              : undefined
-          }
-        />
-      </View>
-    );
-  }
+    },
+    [categories, handleDelete, handleEditRecord, handleResendOcr, handlePlayAudio, playingId, failedOcrIds],
+  );
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
