@@ -49,12 +49,7 @@ export function useChat() {
   const processText = useCallback(
     async (text: string) => {
       console.log("[processText] 输入:", text);
-
-      const thinkingMsgId = await addMessage({
-        role: "assistant",
-        content_type: "text",
-        content: "思考中...",
-      });
+      setLoading(true);
 
       try {
         const resp = await apiFetch<ChatResponse>("/chat", {
@@ -87,10 +82,10 @@ export function useChat() {
             source: "llm",
           });
 
-          await db!.runAsync(
-            "UPDATE chat_messages SET content_type = ?, content = ?, transaction_id = ? WHERE id = ?",
-            "bill_card",
-            JSON.stringify({
+          await addMessage({
+            role: "assistant",
+            content_type: "bill_card",
+            content: JSON.stringify({
               id: txId,
               amount: tx.amount,
               type: tx.type,
@@ -98,27 +93,25 @@ export function useChat() {
               category_id: category?.id ?? "",
               occurred_at: occurredAt,
             }),
-            txId,
-            thinkingMsgId,
-          );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+            transaction_id: txId,
+          });
+          qc.invalidateQueries({ queryKey: ["transactions"] });
         } else {
-          // text 或 nl_result，都有 content 字段
-          await db!.runAsync(
-            "UPDATE chat_messages SET content = ? WHERE id = ?",
-            resp.data.content,
-            thinkingMsgId,
-          );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+          await addMessage({
+            role: "assistant",
+            content_type: "text",
+            content: resp.data.content,
+          });
         }
       } catch (err) {
         console.error("[processText] /chat 异常:", err);
-        await db!.runAsync(
-          "UPDATE chat_messages SET content = ? WHERE id = ?",
-          "处理失败，请稍后再试。",
-          thinkingMsgId,
-        );
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        await addMessage({
+          role: "assistant",
+          content_type: "text",
+          content: "处理失败，请稍后再试。",
+        });
+      } finally {
+        setLoading(false);
       }
     },
     [qc, addMessage, createTransaction, db],
@@ -287,11 +280,7 @@ export function useChat() {
 
       // 4. 调用 /chat（后端做 ASR + classify_intent）
       console.log("[sendAsr] → 调用 /chat (语音)");
-      const thinkingMsgId = await addMessage({
-        role: "assistant",
-        content_type: "text",
-        content: "思考中...",
-      });
+      setLoading(true);
 
       try {
         const resp = await apiFetch<ChatResponse>("/chat", {
@@ -335,10 +324,10 @@ export function useChat() {
             source: "asr",
           });
 
-          await db.runAsync(
-            "UPDATE chat_messages SET content_type = ?, content = ?, transaction_id = ? WHERE id = ?",
-            "bill_card",
-            JSON.stringify({
+          await addMessage({
+            role: "assistant",
+            content_type: "bill_card",
+            content: JSON.stringify({
               id: txId,
               amount: tx.amount,
               type: tx.type,
@@ -346,27 +335,25 @@ export function useChat() {
               category_id: category?.id ?? "",
               occurred_at: occurredAt,
             }),
-            txId,
-            thinkingMsgId,
-          );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+            transaction_id: txId,
+          });
+          qc.invalidateQueries({ queryKey: ["transactions"] });
         } else {
-          // text 或 nl_result
-          await db.runAsync(
-            "UPDATE chat_messages SET content = ? WHERE id = ?",
-            resp.data.content,
-            thinkingMsgId,
-          );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+          await addMessage({
+            role: "assistant",
+            content_type: "text",
+            content: resp.data.content,
+          });
         }
       } catch (err) {
         console.error("[sendAsr] ❌ 异常:", err);
-        await db.runAsync(
-          "UPDATE chat_messages SET content = ? WHERE id = ?",
-          "没听清，要不再说一次？",
-          thinkingMsgId,
-        );
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        await addMessage({
+          role: "assistant",
+          content_type: "text",
+          content: "没听清，要不再说一次？",
+        });
+      } finally {
+        setLoading(false);
       }
     },
     [db, qc, addMessage, createTransaction],
