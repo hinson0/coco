@@ -69,11 +69,9 @@ def recognize_receipt(image_base64: str) -> str:
         request = ocr_models.GeneralAccurateOCRRequest()
         request.ImageBase64 = image_base64
         response = client.GeneralAccurateOCR(request)
-        print(response.TextDetections)
         raw_text = "\n".join(
             det.DetectedText for det in (response.TextDetections or [])
         )
-        print(raw_text)
         duration_ms = round((time.monotonic() - start) * 1000)
         log.info(
             "ocr.done",
