@@ -52,6 +52,20 @@ UPDATE categories SET user_id = ? WHERE user_id IS NULL AND is_default = 0;
 
 触发时机：`_layout.tsx` 中 `useEffect` 监听 `user?.id` 变化，当 db 和 userId 都就绪时执行。无需 flag 防重复 — SQL 本身幂等（`WHERE user_id IS NULL` 在无 NULL 数据时影响 0 行）。
 
+### 3.1 为 user_id 添加索引
+
+在 `schema.ts` 的 `runMigrations` 中新增：
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
+```
+
+所有表的 SELECT/UPDATE 都要按 user_id 过滤，索引避免全表扫描。
+
 ### 4. 各 Hook 改动
 
 **通用模式**：每个 hook 通过 `useOfflineDb()` 获取 `{ db, userId }`。
