@@ -6,17 +6,18 @@ import { useOfflineContext } from "@/lib/offline-context";
 import type { Account, CreateAccountInput, UpdateAccountInput } from "@coco/shared";
 
 export function useAccounts() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["accounts"],
+    queryKey: ["accounts", userId],
     queryFn: async (): Promise<readonly Account[]> => {
-      if (!db) return [];
+      if (!db || !userId) return [];
       return db.getAllAsync<Account>(
-        "SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY created_at ASC"
+        "SELECT * FROM accounts WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
+        userId
       );
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
@@ -49,15 +50,16 @@ export function useAccountBalance(accountId: string | undefined) {
 }
 
 export function useTotalAssets() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["total-assets"],
+    queryKey: ["total-assets", userId],
     queryFn: async (): Promise<number> => {
-      if (!db) return 0;
+      if (!db || !userId) return 0;
 
       const accounts = await db.getAllAsync<Account>(
-        "SELECT * FROM accounts WHERE deleted_at IS NULL"
+        "SELECT * FROM accounts WHERE user_id = ? AND deleted_at IS NULL",
+        userId
       );
 
       let total = 0;
@@ -74,22 +76,23 @@ export function useTotalAssets() {
       }
       return total;
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
 export function useCreateAccount() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateAccountInput) => {
-      if (!db) throw new Error("Database not initialized");
+      if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         id,
+        userId,
         input.name,
         input.icon,
         input.type,
