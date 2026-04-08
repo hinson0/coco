@@ -22,12 +22,12 @@ export function useAccounts() {
 }
 
 export function useAccountBalance(accountId: string | undefined) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["account-balance", accountId],
+    queryKey: ["account-balance", accountId, userId],
     queryFn: async (): Promise<number> => {
-      if (!db || !accountId) return 0;
+      if (!db || !accountId || !userId) return 0;
 
       const account = await db.getFirstAsync<Account>(
         "SELECT * FROM accounts WHERE id = ?",
@@ -45,7 +45,7 @@ export function useAccountBalance(accountId: string | undefined) {
       );
       return account.initial_balance + (income?.total ?? 0) - (expense?.total ?? 0);
     },
-    enabled: !!db && !!accountId,
+    enabled: !!db && !!accountId && !!userId,
   });
 }
 
