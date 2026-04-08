@@ -18,12 +18,14 @@ export async function migrateNullUserData(
   db: SQLite.SQLiteDatabase,
   userId: string,
 ): Promise<void> {
-  await db.runAsync("UPDATE transactions SET user_id = ? WHERE user_id IS NULL", userId);
-  await db.runAsync("UPDATE chat_messages SET user_id = ? WHERE user_id IS NULL", userId);
-  await db.runAsync("UPDATE accounts SET user_id = ? WHERE user_id IS NULL", userId);
-  await db.runAsync("UPDATE budgets SET user_id = ? WHERE user_id IS NULL", userId);
-  await db.runAsync(
-    "UPDATE categories SET user_id = ? WHERE user_id IS NULL AND is_default = 0",
-    userId,
-  );
+  await db.withTransactionAsync(async () => {
+    await db.runAsync("UPDATE transactions SET user_id = ? WHERE user_id IS NULL", userId);
+    await db.runAsync("UPDATE chat_messages SET user_id = ? WHERE user_id IS NULL", userId);
+    await db.runAsync("UPDATE accounts SET user_id = ? WHERE user_id IS NULL", userId);
+    await db.runAsync("UPDATE budgets SET user_id = ? WHERE user_id IS NULL", userId);
+    await db.runAsync(
+      "UPDATE categories SET user_id = ? WHERE user_id IS NULL AND is_default = 0",
+      userId,
+    );
+  });
 }

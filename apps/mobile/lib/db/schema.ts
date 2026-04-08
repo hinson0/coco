@@ -100,17 +100,20 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     "TEXT REFERENCES accounts(id)",
   );
   // 清理已有重复分类（保留最早创建的，软删除其余），然后建唯一索引
+  // GROUP BY 包含 user_id，不同用户可以有同名分类
   await db.execAsync(`
     UPDATE categories SET deleted_at = datetime('now')
     WHERE deleted_at IS NULL
       AND rowid NOT IN (
         SELECT MIN(rowid) FROM categories
         WHERE deleted_at IS NULL
-        GROUP BY name, type
+        GROUP BY name, type, user_id
       )
   `);
+  // 重建索引：加入 user_id 以支持多用户同名分类
+  await db.execAsync("DROP INDEX IF EXISTS idx_categories_name_type");
   await db.execAsync(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type, user_id) WHERE deleted_at IS NULL"
   );
   // 语音消息字段
   await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
