@@ -16,12 +16,12 @@ import { useEnsureProfile, useProfile } from "../../hooks/useLocalProfile";
 import { useOfflineContext } from "../../lib/offline-context";
 
 function useProfileStats() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "stats"],
+    queryKey: ["transactions", "stats", userId],
     queryFn: async () => {
-      if (!db) return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
+      if (!db || !userId) return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
 
       const now = new Date();
       const monthStart = new Date(
@@ -37,15 +37,18 @@ function useProfileStats() {
 
       const [monthlyRow, budgetRow, dayRows] = await Promise.all([
         db.getFirstAsync<{ count: number }>(
-          "SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?",
+          "SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?",
+          userId,
           monthStart,
           monthEnd,
         ),
         db.getFirstAsync<{ count: number }>(
-          "SELECT COUNT(DISTINCT strftime('%Y-%m', occurred_at)) as count FROM transactions WHERE deleted_at IS NULL",
+          "SELECT COUNT(DISTINCT strftime('%Y-%m', occurred_at)) as count FROM transactions WHERE user_id = ? AND deleted_at IS NULL",
+          userId,
         ),
         db.getAllAsync<{ day: string }>(
-          "SELECT DISTINCT date(occurred_at) as day FROM transactions WHERE deleted_at IS NULL ORDER BY day DESC",
+          "SELECT DISTINCT date(occurred_at) as day FROM transactions WHERE user_id = ? AND deleted_at IS NULL ORDER BY day DESC",
+          userId,
         ),
       ]);
 
@@ -70,7 +73,7 @@ function useProfileStats() {
         budgetMonths: budgetRow?.count ?? 0,
       };
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 

@@ -93,25 +93,25 @@ function currentMonthLabel(): string {
 // ─── Hook: current month stats from DB ───────────────────────────────────────
 
 function useCurrentMonthStats(categoryId?: string) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
   return useQuery({
-    queryKey: ['transactions', 'month-stats', categoryId ?? 'all'],
+    queryKey: ['transactions', 'month-stats', categoryId ?? 'all', userId],
     queryFn: async () => {
-      if (!db) return { count: 0, expense: 0 };
+      if (!db || !userId) return { count: 0, expense: 0 };
       const catFilter = categoryId ? ' AND category_id = ?' : '';
-      const params: (string | number)[] = [monthStart, monthEnd];
+      const params: (string | number)[] = [userId, monthStart, monthEnd];
       if (categoryId) params.push(categoryId);
       const row = await db.getFirstAsync<{ count: number; expense: number }>(
-        `SELECT COUNT(*) as count, COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?${catFilter}`,
+        `SELECT COUNT(*) as count, COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense FROM transactions WHERE user_id = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?${catFilter}`,
         ...params
       );
       return { count: row?.count ?? 0, expense: row?.expense ?? 0 };
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
