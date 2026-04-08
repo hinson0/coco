@@ -1,4 +1,4 @@
-import { initDatabase } from "@/lib/db";
+import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
@@ -35,7 +35,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
 
   useEffect(() => {
@@ -56,6 +56,13 @@ function AppContent() {
     }
     setupNotifications();
   }, []);
+
+  // 用户登录后，迁移 NULL 数据
+  useEffect(() => {
+    if (db && user?.id) {
+      migrateNullUserData(db, user.id);
+    }
+  }, [db, user?.id]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.replace("/(auth)/login");
@@ -79,7 +86,7 @@ function AppContent() {
   }
 
   return (
-    <OfflineContext.Provider value={{ db }}>
+    <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
       <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
     </OfflineContext.Provider>
   );
