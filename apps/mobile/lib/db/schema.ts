@@ -115,6 +115,12 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   // 语音消息字段
   await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
   await addColumnIfNotExists(db, "chat_messages", "duration_seconds", "INTEGER");
+  // user_id 索引（多用户数据隔离）
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)");
 }
 
 async function addColumnIfNotExists(
