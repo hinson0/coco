@@ -39,7 +39,7 @@ export function useLocalChatMessages(limit: number = CHAT_PAGE_SIZE) {
   });
 }
 
-export function useAddChatMessage() {
+export function useAddChatMessage(options?: { skipInvalidate?: boolean }) {
   const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
@@ -63,7 +63,9 @@ export function useAddChatMessage() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      if (!options?.skipInvalidate) {
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      }
     },
   });
 }

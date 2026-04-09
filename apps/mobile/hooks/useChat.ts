@@ -40,7 +40,7 @@ type ChatResponse = {
 export function useChat() {
   const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
-  const { mutateAsync: addMessage } = useAddChatMessage();
+  const { mutateAsync: addMessage } = useAddChatMessage({ skipInvalidate: true });
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 
@@ -113,6 +113,7 @@ export function useChat() {
         });
       } finally {
         setLoading(false);
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
     [qc, addMessage, createTransaction, db],
@@ -123,6 +124,7 @@ export function useChat() {
       if (!db) return;
       console.log("[sendText] 文字输入:", text);
       await addMessage({ role: "user", content_type: "text", content: text });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
       try {
         await processText(text);
       } catch (err) {
@@ -132,9 +134,10 @@ export function useChat() {
           content_type: "text",
           content: "网络错误，请重试。",
         });
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
-    [db, addMessage, processText],
+    [db, qc, addMessage, processText],
   );
 
   const sendOcr = useCallback(
@@ -169,6 +172,7 @@ export function useChat() {
         content_type: "image",
         content: imageContent,
       });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
       console.log("[sendOcr] → 调用 /record-ocr");
       setLoading(true);
       try {
@@ -238,6 +242,7 @@ export function useChat() {
         onFail?.(imageMessageId);
       } finally {
         setLoading(false);
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
     [db, qc, addMessage, createTransaction],
@@ -268,6 +273,7 @@ export function useChat() {
         audio_uri: audioUri,
         duration_seconds: durationSeconds,
       });
+      qc.invalidateQueries({ queryKey: ["chat-messages"] });
 
       // 3. 检查网络
       const netState = await NetInfo.fetch();
@@ -277,6 +283,7 @@ export function useChat() {
           content_type: "text",
           content: "未联网，无法使用语音服务。",
         });
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
         return;
       }
 
@@ -300,7 +307,6 @@ export function useChat() {
             asrText,
             msgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
 
         if (resp.data.type === "bill") {
@@ -357,6 +363,7 @@ export function useChat() {
         });
       } finally {
         setLoading(false);
+        qc.invalidateQueries({ queryKey: ["chat-messages"] });
       }
     },
     [db, qc, addMessage, createTransaction],
