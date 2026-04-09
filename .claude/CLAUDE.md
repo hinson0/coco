@@ -47,6 +47,14 @@ brainstorming → writing-plans → executing-plans
 - `executing-plans` 全部 Task 完成后，**必须**调用 `superpowers:requesting-code-review`
 - Learning 模式不是跳过 code review 和测试的理由
 
+# UI 规范（必须遵守）
+
+## 多行文本输入框键盘
+
+所有 `multiline` 的 `TextInput`（如备注输入框）必须设置：
+- `returnKeyType="default"` — 键盘显示"换行"而非"完成"
+- `blurOnSubmit={false}` — 按回车键换行而非提交/关闭键盘
+
 # 协作模式（必须遵守）
 
 ## Learning 模式下的分工

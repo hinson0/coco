@@ -281,6 +281,8 @@ export default function ManualEntryScreen() {
           placeholderTextColor={colors.textLighter}
           multiline
           textAlignVertical="top"
+          returnKeyType="default"
+          blurOnSubmit={false}
           onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
         />
       </ScrollView>
