@@ -26,13 +26,14 @@ export function useCreateBudget() {
       if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       await db.runAsync(
-        "INSERT INTO budgets (id, user_id, category_id, amount, period, start_date) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO budgets (id, user_id, category_id, amount, period, start_date, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         id,
         userId,
         input.category_id,
         input.amount,
         input.period,
-        input.start_date
+        input.start_date,
+        new Date().toISOString()
       );
       return id;
     },
@@ -50,8 +51,9 @@ export function useUpdateBudget() {
     mutationFn: async (params: UpdateBudgetInput & { readonly id: string }) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
-        "UPDATE budgets SET amount = ? WHERE id = ?",
+        "UPDATE budgets SET amount = ?, updated_at = ? WHERE id = ?",
         params.amount,
+        new Date().toISOString(),
         params.id
       );
     },

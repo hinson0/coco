@@ -49,13 +49,14 @@ export function useAddChatMessage(options?: { skipInvalidate?: boolean }) {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, audio_uri, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, updated_at, audio_uri, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         id,
         userId,
         input.role,
         input.content_type,
         input.content,
         input.transaction_id ?? null,
+        now,
         now,
         input.audio_uri ?? null,
         input.duration_seconds ?? null,
