@@ -1,5 +1,6 @@
 import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
+import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import type * as SQLite from "expo-sqlite";
@@ -67,6 +68,15 @@ function AppContent() {
   useEffect(() => {
     if (!loading && !isAuthenticated) router.replace("/(auth)/login");
   }, [isAuthenticated, loading]);
+
+  // 每 30s 静默 push（仅 App 前台有效）
+  useEffect(() => {
+    if (!db || !user?.id) return;
+    const interval = setInterval(() => {
+      push(db, user.id).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [db, user?.id]);
 
   if (loading) {
     return (
