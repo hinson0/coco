@@ -38,7 +38,7 @@ CoCo 当前以本地 SQLite 为唯一数据源（纯离线架构）。本方案�
 新建 `apps/mobile/lib/sync/sync-service.ts`：
 
 - `push(db, userId)`
-  1. 查询本地所有表中 `updated_at > last_push_at` 的记录
+  1. 查询本地所有表中满足 `last_push_at IS NULL OR updated_at > last_push_at` 的记录（初始状态 NULL 时推送全量）
   2. 通过现有 `apiFetch` 批量 POST 到 `/sync/push`（token 由 apiFetch 内部管理）
   3. 成功后将 `last_push_at` 更新为本次同步时间
 
@@ -51,7 +51,7 @@ CoCo 当前以本地 SQLite 为唯一数据源（纯离线架构）。本方案�
 
 ### 定时 Push（前端）
 
-在根 `_layout.tsx` 的 `useEffect` 中：
+在根 `_layout.tsx` 的 `useEffect` 中（仅在 App **前台**运行时有效，切出 App 后 setInterval 被系统暂停，这是预期行为）：
 
 ```ts
 const interval = setInterval(() => {
@@ -97,15 +97,16 @@ CREATE TABLE IF NOT EXISTS accounts (
   user_id     uuid REFERENCES users(id) ON DELETE CASCADE,
   name        text NOT NULL,
   icon        text NOT NULL,
-  type        text NOT NULL,
+  type        text NOT NULL CHECK(type IN ('cash', 'bank', 'e_wallet', 'credit', 'custom')),
   initial_balance numeric(12,2) NOT NULL DEFAULT 0,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now(),
   deleted_at  timestamptz
 );
 
+-- user_profiles.id 即 user_id（主键等于用户 ID，一对一关系）
 CREATE TABLE IF NOT EXISTS user_profiles (
-  id           uuid PRIMARY KEY,
+  id           uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   nickname     text,
   avatar_type  text NOT NULL DEFAULT 'emoji',
   avatar_value text NOT NULL DEFAULT '🌿',
@@ -220,6 +221,7 @@ WHERE excluded.updated_at > transactions.updated_at;
 
 - Push 失败：静默吞掉（`catch(() => {})`），下次 30s 重试
 - Pull 失败：在 `sync-help.tsx` 的「立即同步」按钮附近显示简短错误文本（如"同步失败，请检查网络"），不用 Toast
+- 未登录状态：`sync-help.tsx` 检测到 `userId` 为 null 时，「立即同步」按钮禁用，显示"请先登录后再同步"
 
 ---
 
