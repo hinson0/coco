@@ -38,7 +38,7 @@ type ChatResponse = {
 };
 
 export function useChat() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
   const { mutateAsync: addMessage } = useAddChatMessage();
   const { mutateAsync: createTransaction } = useCreateTransaction();
@@ -63,6 +63,7 @@ export function useChat() {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
             "categories",
+            userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
           const category =
@@ -180,6 +181,7 @@ export function useChat() {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
             "categories",
+            userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
           const category =
@@ -305,6 +307,7 @@ export function useChat() {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
             "categories",
+            userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
           const category =
