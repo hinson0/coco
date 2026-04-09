@@ -1,13 +1,13 @@
-import { Stack, router } from "expo-router";
-import { useCallback, useEffect, useState, useRef } from "react";
-import { Platform, View, Text, AppState } from "react-native";
-import { AppOpenAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
-import { useEntitlementDecay } from '../hooks/useEntitlementDecay';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type * as SQLite from "expo-sqlite";
-import { useAuth } from "../hooks/useAuth";
-import { initDatabase } from "@/lib/db";
+import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack, router } from "expo-router";
+import type * as SQLite from "expo-sqlite";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform, Text, View } from "react-native";
+import { AppOpenAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
+import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
+import { AuthProvider, useAuth } from "../hooks/useAuth";
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -29,8 +29,10 @@ try {
 } catch {}
 
 // AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
-const APP_OPEN_AD_ID = __DEV__ ? TestIds.APP_OPEN : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy';
-const SPLASH_MIN_INTERVAL_MS = 30_000; // 两次开屏广告最小间隔 30 秒
+const APP_OPEN_AD_ID = __DEV__
+  ? TestIds.APP_OPEN
+  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
+const SPLASH_MIN_INTERVAL_MS = 30_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,14 +42,13 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
-  const { session, loading } = useAuth();
+function AppContent() {
+  const { isAuthenticated, user, loading } = useAuth();
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
 
   useEffect(() => {
     initDatabase().then(setDb);
 
-    // 请求通知权限 + 设置 Android channel
     async function setupNotifications() {
       if (!Notifications) return;
       try {
@@ -64,14 +65,20 @@ export default function RootLayout() {
     setupNotifications();
   }, []);
 
+  // 用户登录后，迁移 NULL 数据
   useEffect(() => {
-    if (!loading && !session) router.replace("/(auth)/login");
-  }, [session, loading]);
+    if (db && user?.id) {
+      migrateNullUserData(db, user.id);
+    }
+  }, [db, user?.id]);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) router.replace("/(auth)/login");
+  }, [isAuthenticated, loading]);
 
   // === AdMob 开屏广告 ===
   const lastSplashTime = useRef(0);
 
-  // 加载并展示开屏广告
   const tryShowSplash = useCallback(() => {
     // TODO: Pro 用户检查
     const now = Date.now();
@@ -83,7 +90,6 @@ export default function RootLayout() {
       appOpenAd.show();
     });
     const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
-      // 开屏失败静默忽略
       unsubLoaded();
       unsubError();
     });
@@ -95,11 +101,10 @@ export default function RootLayout() {
     appOpenAd.load();
   }, []);
 
-  // 首次启动 + 后台恢复时展示开屏
   useEffect(() => {
     tryShowSplash();
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
         tryShowSplash();
       }
     });
@@ -108,19 +113,36 @@ export default function RootLayout() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F5F5F5" }}>
-        <Text style={{ color: "#2D9B83", fontSize: 28, fontWeight: "800" }}>CoCo</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#F5F5F5",
+        }}
+      >
+        <Text style={{ color: "#2D9B83", fontSize: 28, fontWeight: "800" }}>
+          CoCo
+        </Text>
       </View>
     );
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <OfflineContext.Provider value={{ db }}>
-        <EntitlementDecayRunner />
-        <Stack screenOptions={{ headerShown: false }} />
-      </OfflineContext.Provider>
-    </QueryClientProvider>
+    <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
+      <EntitlementDecayRunner />
+      <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
+    </OfflineContext.Provider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppContent />
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 

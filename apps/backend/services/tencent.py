@@ -1,7 +1,7 @@
 import time
 
 import structlog
-from config import settings
+from infra.config import settings
 from tencentcloud.asr.v20190614 import asr_client
 from tencentcloud.asr.v20190614 import models as asr_models
 from tencentcloud.common import credential

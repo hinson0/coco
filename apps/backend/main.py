@@ -2,9 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from config import settings
-from logging_config import setup_logging
+from infra.config import settings
+from infra.logging_config import setup_logging
 from routers import all_routers
 
 

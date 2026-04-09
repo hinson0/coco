@@ -14,21 +14,22 @@ import { colors, radii, shadows } from "../constants/theme";
 import { useOfflineContext } from "../lib/offline-context";
 
 function useBudgetMonthsDetail() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "budget-months-detail"],
+    queryKey: ["transactions", "budget-months-detail", userId],
     queryFn: async () => {
-      if (!db)
+      if (!db || !userId)
         return { total: 0, months: [] as { month: string; count: number }[] };
 
       const rows = await db.getAllAsync<{ month: string; count: number }>(
-        "SELECT strftime('%Y-%m', occurred_at) as month, COUNT(*) as count FROM transactions WHERE deleted_at IS NULL GROUP BY month ORDER BY month DESC",
+        "SELECT strftime('%Y-%m', occurred_at) as month, COUNT(*) as count FROM transactions WHERE user_id = ? AND deleted_at IS NULL GROUP BY month ORDER BY month DESC",
+        userId,
       );
 
       return { total: rows.length, months: rows };
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 

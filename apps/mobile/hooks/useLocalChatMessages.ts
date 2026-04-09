@@ -21,35 +21,37 @@ export interface AddMessageInput {
 const CHAT_PAGE_SIZE = 30;
 
 export function useLocalChatMessages(limit: number = CHAT_PAGE_SIZE) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["chat-messages", limit],
+    queryKey: ["chat-messages", userId, limit],
     queryFn: async (): Promise<readonly ChatMessage[]> => {
-      if (!db) return [];
+      if (!db || !userId) return [];
       const rows = await db.getAllAsync<ChatMessage>(
-        "SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT ?",
+        "SELECT * FROM chat_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        userId,
         limit,
       );
       return [...rows].reverse();
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
     placeholderData: keepPreviousData,
   });
 }
 
 export function useAddChatMessage(options?: { skipInvalidate?: boolean }) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: AddMessageInput): Promise<string> => {
-      if (!db) throw new Error("Database not initialized");
+      if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, audio_uri, duration_seconds) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, audio_uri, duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         id,
+        userId,
         input.role,
         input.content_type,
         input.content,
@@ -84,13 +86,13 @@ export function useDeleteChatMessage() {
 }
 
 export function useClearChatMessages() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      if (!db) throw new Error("Database not initialized");
-      await db.runAsync("DELETE FROM chat_messages");
+      if (!db || !userId) throw new Error("Database not initialized");
+      await db.runAsync("DELETE FROM chat_messages WHERE user_id = ?", userId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
