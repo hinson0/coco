@@ -5,7 +5,7 @@ Monorepo (pnpm workspace)：
 - `apps/mobile` — Expo React Native 移动端（主应用）
 - `apps/backend` — Python FastAPI 后端（ASR、OCR、文本记账），包管理用 `uv`
 - `packages/shared` — 共享类型、规则引擎（`parse()`）
-- `supabase/migrations/` — 数据库 schema（本地 PostgreSQL）
+- `apps/backend/alembic/` — 数据库迁移（Alembic + PostgreSQL）
 
 # 常用命令
 
