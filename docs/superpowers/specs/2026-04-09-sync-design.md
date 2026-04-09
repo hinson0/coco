@@ -37,13 +37,13 @@ CoCo 当前以本地 SQLite 为唯一数据源（纯离线架构）。本方案�
 
 新建 `apps/mobile/lib/sync/sync-service.ts`：
 
-- `push(db, userId, token)`
+- `push(db, userId)`
   1. 查询本地所有表中 `updated_at > last_push_at` 的记录
-  2. 批量 POST 到 `/sync/push`
+  2. 通过现有 `apiFetch` 批量 POST 到 `/sync/push`（token 由 apiFetch 内部管理）
   3. 成功后将 `last_push_at` 更新为本次同步时间
 
-- `pull(db, userId, token)`
-  1. GET `/sync/pull` 拉取该用户在 PostgreSQL 的全量数据
+- `pull(db, userId)`
+  1. 通过 `apiFetch` GET `/sync/pull` 拉取该用户在 PostgreSQL 的全量数据
   2. 对每条记录与本地做 LWW 合并（`updated_at` 更新者写入）
   3. 成功后将 `last_pull_at` 更新为本次同步时间
 
@@ -55,7 +55,7 @@ CoCo 当前以本地 SQLite 为唯一数据源（纯离线架构）。本方案�
 
 ```ts
 const interval = setInterval(() => {
-  if (db && userId && token) push(db, userId, token).catch(() => {});
+  if (db && userId) push(db, userId).catch(() => {});
 }, 30_000);
 return () => clearInterval(interval);
 ```
@@ -68,7 +68,7 @@ return () => clearInterval(interval);
 
 1. **给 5 张表加 `updated_at TEXT`**（`user_profiles` 已有）
    - 通过现有 `addColumnIfNotExists` 迁移机制
-   - 存量数据默认填 `created_at` 的值
+   - 存量数据默认值：有 `created_at` 的表填 `created_at`，`budgets` 表无 `created_at` 则填 `datetime('now')`
 
 2. **新增 `sync_watermarks` 表**
 
@@ -85,10 +85,57 @@ CREATE TABLE IF NOT EXISTS sync_watermarks (
 
 ### PostgreSQL（后端，用户手写）
 
-新建 Alembic migration：
+需要两个 Alembic migration（可合并为一个）：
 
-1. 给 6 张表加 `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
-2. 加触发器（每张表）：`ON UPDATE` 时自动将 `updated_at` 设为 `now()`
+**步骤一：补建 SQLite 有但 PG 没有的两张表**
+
+当前 PG schema 缺少 `accounts` 和 `user_profiles`，需先建表：
+
+```sql
+CREATE TABLE IF NOT EXISTS accounts (
+  id          uuid PRIMARY KEY,
+  user_id     uuid REFERENCES users(id) ON DELETE CASCADE,
+  name        text NOT NULL,
+  icon        text NOT NULL,
+  type        text NOT NULL,
+  initial_balance numeric(12,2) NOT NULL DEFAULT 0,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id           uuid PRIMARY KEY,
+  nickname     text,
+  avatar_type  text NOT NULL DEFAULT 'emoji',
+  avatar_value text NOT NULL DEFAULT '🌿',
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**步骤二：给其余 4 张已有表加 `updated_at`**
+
+```sql
+ALTER TABLE categories   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE budgets      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+```
+
+**步骤三：加触发器（每张表），`ON UPDATE` 时自动刷新 `updated_at`**
+
+```sql
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+-- 对每张表执行：
+CREATE TRIGGER trg_<table>_updated_at
+BEFORE UPDATE ON <table>
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+```
 
 ---
 
@@ -111,12 +158,28 @@ CREATE TABLE IF NOT EXISTS sync_watermarks (
 }
 ```
 
-**逻辑**：对每条记录执行 upsert，LWW 在数据库层实现：
+**逻辑**：对每条记录执行 upsert，LWW 在数据库层实现。以 transactions 为例：
 
 ```sql
-INSERT INTO transactions (...) VALUES (...)
-ON CONFLICT (id) DO UPDATE SET ...
+INSERT INTO transactions (id, user_id, category_id, amount, type, note,
+  occurred_at, source, raw_input, receipt_url, ai_confidence,
+  created_at, updated_at, deleted_at, account_id)
+VALUES (...)
+ON CONFLICT (id) DO UPDATE SET
+  category_id   = excluded.category_id,
+  amount        = excluded.amount,
+  type          = excluded.type,
+  note          = excluded.note,
+  occurred_at   = excluded.occurred_at,
+  source        = excluded.source,
+  raw_input     = excluded.raw_input,
+  receipt_url   = excluded.receipt_url,
+  ai_confidence = excluded.ai_confidence,
+  updated_at    = excluded.updated_at,
+  deleted_at    = excluded.deleted_at,
+  account_id    = excluded.account_id
 WHERE excluded.updated_at > transactions.updated_at;
+-- 其余 5 张表逻辑相同：更新除 id 以外的所有字段，条件为 excluded.updated_at 更新
 ```
 
 **响应**：`{ "ok": true }`
