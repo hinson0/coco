@@ -54,7 +54,7 @@ const CREATE_CHAT_MESSAGES = `
   );
 `;
 
-// 用户个人资料表（头像 + 昵称，本地存储 + 后台同步到 Supabase）
+// 用户个人资料表（头像 + 昵称，本地存储）
 const CREATE_USER_PROFILES = `
     CREATE TABLE IF NOT EXISTS user_profiles (
       id TEXT PRIMARY KEY,
