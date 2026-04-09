@@ -124,6 +124,10 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync("CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
   await db.execAsync("CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)");
   await db.execAsync("CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)");
+  // 聊天消息按时间排序的索引，加速 ORDER BY created_at DESC LIMIT 查询
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)"
+  );
 }
 
 async function addColumnIfNotExists(
