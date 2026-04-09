@@ -67,10 +67,16 @@ export default function RevenueScreen() {
     const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
       if (isPausedRef.current || !isActiveRef.current) {
         cleanup();
+        setAdState('idle');
         return;
       }
       setAdState('playing');
-      rewarded.show();
+      rewarded.show().catch(() => {
+        // show() 失败（频率限制等），回到 idle 等待重试
+        cleanup();
+        setAdState('idle');
+        setTimeout(() => loadAndPlay(), 5000);
+      });
     });
 
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
@@ -80,8 +86,9 @@ export default function RevenueScreen() {
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
       cleanup();
-      // 自动加载下一条
-      loadAndPlay();
+      setAdState('idle');
+      // 延迟 2 秒再加载下一条，避免 AdMob 频率限制
+      setTimeout(() => loadAndPlay(), 2000);
     });
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {

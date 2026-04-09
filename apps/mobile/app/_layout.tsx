@@ -72,9 +72,10 @@ function AppContent() {
     }
   }, [db, user?.id]);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) router.replace("/(auth)/login");
-  }, [isAuthenticated, loading]);
+  // TODO: 暂时跳过登录，测试广告功能
+  // useEffect(() => {
+  //   if (!loading && !isAuthenticated) router.replace("/(auth)/login");
+  // }, [isAuthenticated, loading]);
 
   // === AdMob 开屏广告 ===
   const lastSplashTime = useRef(0);
