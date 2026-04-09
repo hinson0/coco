@@ -3,9 +3,18 @@
   "version": "1.0.1",
   "scripts": {
     "dev": "pnpm --filter mobile dev",
+    "dev:infra": "docker compose up -d",
+    "dev:backend": "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "pnpm --filter mobile dev",
+    "dev:all": "pnpm dev:infra && concurrently -n backend,frontend -c blue,green \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "db:migrate": "cd apps/backend && uv run alembic upgrade head",
+    "db:reset": "docker compose down -v && docker compose up -d && sleep 2 && pnpm db:migrate",
     "w": "node scripts/worktree-dev.mjs",
     "test": "pnpm --filter mobile test",
     "test:scripts": "node --test scripts/__tests__/*.test.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   },
   "packageManager": "pnpm@10.30.3"
 }

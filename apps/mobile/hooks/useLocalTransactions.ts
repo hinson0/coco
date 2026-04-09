@@ -5,70 +5,75 @@ import { useOfflineContext } from "@/lib/offline-context";
 import type { Transaction, CreateTransactionInput, UpdateTransactionInput } from "@coco/shared";
 
 export function useLocalTransactions(page = 1, limit = 20) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", page],
+    queryKey: ["transactions", page, userId],
     queryFn: async () => {
-      if (!db) return { data: [] as Transaction[], total: 0, page, limit };
+      if (!db || !userId) return { data: [] as Transaction[], total: 0, page, limit };
       const offset = (page - 1) * limit;
       const [rows, countRow] = await Promise.all([
         db.getAllAsync<Transaction>(
-          "SELECT * FROM transactions WHERE deleted_at IS NULL ORDER BY occurred_at DESC LIMIT ? OFFSET ?",
+          "SELECT * FROM transactions WHERE user_id = ? AND deleted_at IS NULL ORDER BY occurred_at DESC LIMIT ? OFFSET ?",
+          userId,
           limit,
           offset
         ),
         db.getFirstAsync<{ count: number }>(
-          "SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL"
+          "SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND deleted_at IS NULL",
+          userId
         ),
       ]);
       return { data: rows, total: countRow?.count ?? 0, page, limit };
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
 export function useMonthlyTransactions(year: number, month: number, accountId?: string | null) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   const startDate = new Date(year, month, 1).toISOString();
   const endDate = new Date(year, month + 1, 1).toISOString();
 
   return useQuery({
-    queryKey: ["transactions", "monthly", `${year}-${String(month + 1).padStart(2, "0")}`, accountId ?? "all"],
+    queryKey: ["transactions", "monthly", `${year}-${String(month + 1).padStart(2, "0")}`, accountId ?? "all", userId],
     queryFn: async (): Promise<readonly Transaction[]> => {
-      if (!db) return [];
+      if (!db || !userId) return [];
       if (accountId) {
         return db.getAllAsync<Transaction>(
-          "SELECT * FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? AND account_id = ? ORDER BY occurred_at DESC",
+          "SELECT * FROM transactions WHERE user_id = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? AND account_id = ? ORDER BY occurred_at DESC",
+          userId,
           startDate,
           endDate,
           accountId
         );
       }
       return db.getAllAsync<Transaction>(
-        "SELECT * FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC",
+        "SELECT * FROM transactions WHERE user_id = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC",
+        userId,
         startDate,
         endDate
       );
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
 export function useCreateTransaction() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateTransactionInput): Promise<string> => {
-      if (!db) throw new Error("Database not initialized");
+      if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
         `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, account_id)
-         VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
+        userId,
         input.category_id,
         input.amount,
         input.type,

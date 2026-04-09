@@ -1,9 +1,10 @@
 import re
+from typing import Annotated
 
 import structlog
-from config import settings
-from fastapi import APIRouter, Request
-from jose import jwt
+from fastapi import APIRouter, Depends
+from infra.database import get_db
+from infra.security import get_current_user
 from schemas.chat import (
     ChatBillData,
     ChatNlData,
@@ -20,25 +21,12 @@ from services.silicon import (
     summarize_result,
 )
 from services.tencent import recognize_speech
-
-from supabase import create_client
+from sqlalchemy import text as sql_text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = structlog.get_logger()
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-def get_user_id(request: Request) -> str | None:
-    """从 Authorization header 解码 user_id"""
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        return None
-    token = auth.split(" ")[1]
-    try:
-        payload = jwt.get_unverified_claims(token)
-        return payload.get("sub")
-    except Exception:
-        return None
 
 
 def is_safe_sql(sql: str) -> bool:
@@ -50,26 +38,28 @@ def is_safe_sql(sql: str) -> bool:
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(body: ChatRequest, request: Request):
+async def chat(
+    body: ChatRequest,
+    current_user_id: Annotated[str, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         asr_text: str | None = None
 
-        # 语音输入：先做 ASR 转文字
         if body.audioBase64:
             asr_text = recognize_speech(audio_base64=body.audioBase64)
             if not asr_text:
                 return ChatResponse(data=ChatTextData(content="没听清，要不再说一次？"))
-            text = asr_text
+            text_input = asr_text
         else:
             assert body.text is not None, "文本输入不能为空"
-            text = body.text
+            text_input = body.text
 
-        # 统一走 classify_intent
-        intent = await classify_intent(text)
+        intent = await classify_intent(text_input)
         log.info("chat.intent", intent=intent, has_audio=body.audioBase64 is not None)
 
         if intent == "record":
-            bill = await extract_bill(text)
+            bill = await extract_bill(text_input)
             if bill:
                 transaction = Transaction(
                     amount=float(bill["amount"]),
@@ -89,37 +79,25 @@ async def chat(body: ChatRequest, request: Request):
                     )
                 )
         elif intent == "query":
-            user_id = get_user_id(request)
-            if not user_id:
-                return ChatResponse(
-                    data=ChatTextData(
-                        content="登录状态异常，请重新登录。", asrText=asr_text
-                    )
-                )
-            sql = await generate_sql(text)
-            if not is_safe_sql(sql):
+            sql_query = await generate_sql(text_input)
+            if not is_safe_sql(sql_query):
                 return ChatResponse(
                     data=ChatTextData(
                         content="查询失败，请换个说法。", asrText=asr_text
                     )
                 )
 
-            sql = re.sub(
+            sql_query = re.sub(
                 r"WHERE\s+",
-                f"WHERE transactions.user_id = '{user_id}' AND ",
-                sql,
+                f"WHERE transactions.user_id = '{current_user_id}' AND ",
+                sql_query,
                 count=1,
                 flags=re.IGNORECASE,
             )
 
-            supabase = create_client(
-                settings.supabase_url,
-                settings.supabase_service_role_key,
-            )
-
             try:
-                result = supabase.rpc("exec_readonly_sql", {"sql_query": sql}).execute()
-                query_result = result.data
+                result = await db.execute(sql_text(sql_query))
+                query_result = [dict(row) for row in result.mappings().all()]
             except Exception:
                 return ChatResponse(
                     data=ChatTextData(
@@ -127,10 +105,10 @@ async def chat(body: ChatRequest, request: Request):
                     )
                 )
 
-            summary = await summarize_result(question=text, rows=query_result)
+            summary = await summarize_result(question=text_input, rows=query_result)
             return ChatResponse(data=ChatNlData(content=summary, asrText=asr_text))
         else:
-            reply = await chat_reply(text)
+            reply = await chat_reply(text_input)
             return ChatResponse(data=ChatTextData(content=reply, asrText=asr_text))
     except Exception:
         return ChatResponse(data=ChatTextData(content="处理失败，请稍后再试。"))

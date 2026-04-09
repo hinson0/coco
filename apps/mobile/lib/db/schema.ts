@@ -54,7 +54,7 @@ const CREATE_CHAT_MESSAGES = `
   );
 `;
 
-// 用户个人资料表（头像 + 昵称，本地存储 + 后台同步到 Supabase）
+// 用户个人资料表（头像 + 昵称，本地存储）
 const CREATE_USER_PROFILES = `
     CREATE TABLE IF NOT EXISTS user_profiles (
       id TEXT PRIMARY KEY,
@@ -100,21 +100,30 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     "TEXT REFERENCES accounts(id)",
   );
   // 清理已有重复分类（保留最早创建的，软删除其余），然后建唯一索引
+  // GROUP BY 包含 user_id，不同用户可以有同名分类
   await db.execAsync(`
     UPDATE categories SET deleted_at = datetime('now')
     WHERE deleted_at IS NULL
       AND rowid NOT IN (
         SELECT MIN(rowid) FROM categories
         WHERE deleted_at IS NULL
-        GROUP BY name, type
+        GROUP BY name, type, user_id
       )
   `);
+  // 重建索引：加入 user_id 以支持多用户同名分类
+  await db.execAsync("DROP INDEX IF EXISTS idx_categories_name_type");
   await db.execAsync(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type) WHERE deleted_at IS NULL"
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type, user_id) WHERE deleted_at IS NULL"
   );
   // 语音消息字段
   await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
   await addColumnIfNotExists(db, "chat_messages", "duration_seconds", "INTEGER");
+  // user_id 索引（多用户数据隔离）
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)");
+  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)");
   // 聊天消息按时间排序的索引，加速 ORDER BY created_at DESC LIMIT 查询
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)"

@@ -96,12 +96,12 @@ function buildCsv(rows: ExportRow[]): string {
 }
 
 export function ExportSheet({ visible, onClose }: ExportSheetProps) {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const insets = useSafeAreaInsets();
   const [exporting, setExporting] = useState(false);
 
   async function handleExport() {
-    if (!db) return;
+    if (!db || !userId) return;
     setExporting(true);
     try {
       const rows = await db.getAllAsync<ExportRow>(
@@ -120,8 +120,9 @@ export function ExportSheet({ visible, onClose }: ExportSheetProps) {
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         LEFT JOIN accounts a ON t.account_id = a.id
-        WHERE t.deleted_at IS NULL
+        WHERE t.user_id = ? AND t.deleted_at IS NULL
         ORDER BY t.occurred_at DESC`,
+        userId,
       );
 
       if (rows.length === 0) {

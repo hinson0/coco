@@ -2,8 +2,7 @@ import json
 
 import pytest
 import structlog
-
-from logging_config import setup_logging
+from infra.logging_config import setup_logging
 
 
 @pytest.fixture(autouse=True)
