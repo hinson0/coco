@@ -7,7 +7,7 @@
     "dev:backend": "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
     "dev:frontend": "pnpm --filter mobile dev",
     "dev:all": "pnpm dev:infra && concurrently -n backend,frontend -c blue,green \"pnpm dev:backend\" \"pnpm dev:frontend\"",
-    "db:migrate": "docker exec -i coco-postgres-1 psql -U coco -d coco < supabase/migrations/001_initial_schema.sql && docker exec -i coco-postgres-1 psql -U coco -d coco < supabase/seed.sql",
+    "db:migrate": "cd apps/backend && uv run alembic upgrade head",
     "db:reset": "docker compose down -v && docker compose up -d && sleep 2 && pnpm db:migrate",
     "w": "node scripts/worktree-dev.mjs",
     "test": "pnpm --filter mobile test",
