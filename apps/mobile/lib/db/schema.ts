@@ -128,6 +128,31 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)"
   );
+
+  // ── 同步支持：给各表加 updated_at ──
+  await addColumnIfNotExists(db, "transactions", "updated_at", "TEXT");
+  await db.execAsync(`UPDATE transactions SET updated_at = created_at WHERE updated_at IS NULL`);
+
+  await addColumnIfNotExists(db, "categories", "updated_at", "TEXT");
+  await db.execAsync(`UPDATE categories SET updated_at = datetime('now') WHERE updated_at IS NULL`);
+
+  await addColumnIfNotExists(db, "budgets", "updated_at", "TEXT");
+  await db.execAsync(`UPDATE budgets SET updated_at = datetime('now') WHERE updated_at IS NULL`);
+
+  await addColumnIfNotExists(db, "chat_messages", "updated_at", "TEXT");
+  await db.execAsync(`UPDATE chat_messages SET updated_at = created_at WHERE updated_at IS NULL`);
+
+  await addColumnIfNotExists(db, "accounts", "updated_at", "TEXT");
+  await db.execAsync(`UPDATE accounts SET updated_at = created_at WHERE updated_at IS NULL`);
+
+  // ── 同步水位线表 ──
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS sync_watermarks (
+      table_name   TEXT PRIMARY KEY,
+      last_push_at TEXT,
+      last_pull_at TEXT
+    )
+  `);
 }
 
 async function addColumnIfNotExists(
