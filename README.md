@@ -42,9 +42,9 @@
                           │
           ┌───────────────┼───────────────┐
           ▼               ▼               ▼
-    Supabase         智谱 GLM        腾讯云
-  (PostgreSQL        (NL理解/        (ASR/OCR)
-   + Auth + RLS)     text-to-SQL)
+    PostgreSQL       智谱 GLM        腾讯云
+  (Docker本地        (NL理解/        (ASR/OCR)
+   + JWT认证)        text-to-SQL)
 ```
 
 ## Monorepo 结构
@@ -84,7 +84,7 @@ coco/
 | 离线存储 | expo-sqlite（Operation Queue）|
 | 网络感知 | @react-native-community/netinfo |
 | 后端 | Python · FastAPI · uv · Docker |
-| 数据库 | Supabase (PostgreSQL + Auth + RLS) |
+| 数据库 | PostgreSQL (Docker) + JWT 认证 |
 | AI | 智谱 GLM (NL理解 / text-to-SQL) · 腾讯云 OCR / ASR |
 | 工程化 | pnpm workspace |
 | 测试 | Jest · ts-jest · better-sqlite3 (SQLite mock) |
@@ -108,8 +108,6 @@ pnpm install
 
 # 配置移动端环境变量
 # 编辑 apps/mobile/.env：
-#   EXPO_PUBLIC_SUPABASE_URL
-#   EXPO_PUBLIC_SUPABASE_ANON_KEY
 #   EXPO_PUBLIC_API_URL=http://<本机局域网IP>:8000
 
 # 配置后端环境变量

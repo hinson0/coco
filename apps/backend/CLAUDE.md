@@ -1,7 +1,6 @@
 # 常见陷阱
 
 - **路由注册在 `routers/__init__.py`**，不在 `main.py`（`main.py` 只调用 `app.include_router(all_routers)`）
-- **Supabase RPC 参数名**：`supabase.rpc("exec_readonly_sql", {"sql_query": sql})`，参数是 `sql_query` 不是 `sql_text`
 - **SQL 安全校验**：用 `re.search(rf"\b{kw}\b", sql)` 而非 `kw in sql`，防止 `DELETED_AT` 误匹配 `DELETE`
 - **SiliconFlow API**：兼容 OpenAI 格式，base URL `https://api.siliconflow.cn/v1`，model `Qwen/Qwen3-8B`
 
@@ -111,9 +110,9 @@ def list_items(db: Annotated[Session, Depends(get_db)]):
 router = APIRouter(prefix="/record-asr", tags=["asr"])
 ```
 
-## SQLAlchemy v2 语法（备注，当前未使用）
+## SQLAlchemy v2 语法
 
-当前项目通过 `supabase-py` 访问数据库，不使用 SQLAlchemy。如未来引入，使用 v2 语法：
+当前项目使用 SQLAlchemy async engine + raw SQL（`text()`）。数据库迁移使用 Alembic（`apps/backend/alembic/`）。语法规范：
 
 ```python
 # v1 旧写法（禁止）

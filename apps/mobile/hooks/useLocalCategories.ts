@@ -5,32 +5,34 @@ import { useOfflineContext } from "@/lib/offline-context";
 import type { Category, CreateCategoryInput } from "@coco/shared";
 
 export function useLocalCategories() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", userId],
     queryFn: async (): Promise<readonly Category[]> => {
-      if (!db) return [];
+      if (!db || !userId) return [];
       const rows = await db.getAllAsync<Category>(
-        "SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY type, name"
+        "SELECT * FROM categories WHERE deleted_at IS NULL AND (user_id = ? OR (user_id IS NULL AND is_default = 1)) ORDER BY type, name",
+        userId
       );
       return rows.map((r) => ({ ...r, is_default: Boolean(r.is_default) }));
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
 export function useCreateCategory() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreateCategoryInput) => {
-      if (!db) throw new Error("Database not initialized");
+      if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       await db.runAsync(
-        "INSERT INTO categories (id, user_id, name, icon, type, is_default) VALUES (?, NULL, ?, ?, ?, 0)",
+        "INSERT INTO categories (id, user_id, name, icon, type, is_default) VALUES (?, ?, ?, ?, ?, 0)",
         id,
+        userId,
         input.name,
         input.icon,
         input.type

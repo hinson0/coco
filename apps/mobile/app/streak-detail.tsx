@@ -15,19 +15,20 @@ import { colors, radii, shadows } from "../constants/theme";
 import { useOfflineContext } from "../lib/offline-context";
 
 function useStreakDetail() {
-  const { db } = useOfflineContext();
+  const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "streak-detail"],
+    queryKey: ["transactions", "streak-detail", userId],
     queryFn: async () => {
-      if (!db)
+      if (!db || !userId)
         return {
           streak: 0,
           recentDays: [] as { day: string; count: number }[],
         };
 
       const dayRows = await db.getAllAsync<{ day: string; count: number }>(
-        "SELECT date(occurred_at) as day, COUNT(*) as count FROM transactions WHERE deleted_at IS NULL GROUP BY day ORDER BY day DESC LIMIT 30",
+        "SELECT date(occurred_at) as day, COUNT(*) as count FROM transactions WHERE user_id = ? AND deleted_at IS NULL GROUP BY day ORDER BY day DESC LIMIT 30",
+        userId,
       );
 
       const daySet = new Set(dayRows.map((r) => r.day));
@@ -46,7 +47,7 @@ function useStreakDetail() {
 
       return { streak, recentDays: dayRows.slice(0, 14) };
     },
-    enabled: !!db,
+    enabled: !!db && !!userId,
   });
 }
 
