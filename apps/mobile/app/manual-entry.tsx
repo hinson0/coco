@@ -279,6 +279,8 @@ export default function ManualEntryScreen() {
           onChangeText={setNote}
           placeholder="添加备注..."
           placeholderTextColor={colors.textLighter}
+          multiline
+          textAlignVertical="top"
           onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
         />
       </ScrollView>
@@ -457,6 +459,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     fontSize: 14,
     marginTop: 20,
+    minHeight: 60,
   },
 
   // Bottom save button
