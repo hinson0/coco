@@ -71,9 +71,6 @@ export default function RootLayout() {
   // === AdMob 开屏广告 ===
   const lastSplashTime = useRef(0);
 
-  // 权益衰减（放在根布局）
-  useEntitlementDecay();
-
   // 加载并展示开屏广告
   const tryShowSplash = useCallback(() => {
     // TODO: Pro 用户检查
@@ -120,8 +117,15 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <OfflineContext.Provider value={{ db }}>
+        <EntitlementDecayRunner />
         <Stack screenOptions={{ headerShown: false }} />
       </OfflineContext.Provider>
     </QueryClientProvider>
   );
+}
+
+/** 权益衰减必须在 QueryClientProvider + OfflineContext 内部运行 */
+function EntitlementDecayRunner() {
+  useEntitlementDecay();
+  return null;
 }
