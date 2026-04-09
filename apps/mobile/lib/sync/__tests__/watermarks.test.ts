@@ -49,4 +49,13 @@ describe("watermarks", () => {
     const wm = await getWatermark(db, "transactions");
     expect(wm.last_push_at).toBe("2026-04-09T11:00:00.000Z");
   });
+
+  it("push_at and pull_at coexist on the same table", async () => {
+    const db = await makeDb();
+    await setLastPushAt(db, "transactions", "2026-04-09T10:00:00.000Z");
+    await setLastPullAt(db, "transactions", "2026-04-09T12:00:00.000Z");
+    const wm = await getWatermark(db, "transactions");
+    expect(wm.last_push_at).toBe("2026-04-09T10:00:00.000Z");
+    expect(wm.last_pull_at).toBe("2026-04-09T12:00:00.000Z");
+  });
 });
