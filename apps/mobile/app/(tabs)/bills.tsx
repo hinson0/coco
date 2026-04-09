@@ -4,15 +4,15 @@ import { View, StyleSheet, TouchableOpacity, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ExpoPangle from '../../../../modules/expo-pangle/src/ExpoPangle';
+import { RewardedAd, RewardedAdEventType, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { useAdWatchCount, useEntitlements, useRecordAdWatch } from '../../hooks/useEntitlement';
 import { getRewardForWatch, FEATURES } from '../../lib/entitlements/rewards';
 import { AppText } from '../../components/ui/AppText';
 import { Card } from '../../components/ui/Card';
 import { colors, radii, shadows } from '../../constants/theme';
 
-// 穿山甲广告位 ID — 替换为实际值
-const REWARDED_SLOT_ID = 'YOUR_REWARDED_SLOT';
+// AdMob 激励视频广告位（__DEV__ 时使用测试 ID）
+const REWARDED_AD_ID = __DEV__ ? TestIds.REWARDED : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy';
 
 const FEATURE_LABELS: Record<string, string> = {
   asr: '语音记账',
@@ -58,34 +58,53 @@ export default function RevenueScreen() {
   // 当前循环中的进度（4 个一循环）
   const posInCycle = watchCount % FEATURES.length;
 
-  const loadAndPlay = useCallback(async () => {
+  const loadAndPlay = useCallback(() => {
     if (isPausedRef.current || !isActiveRef.current) return;
     setAdState('loading');
-    try {
-      await ExpoPangle.loadRewardedVideo(REWARDED_SLOT_ID);
-      if (isPausedRef.current || !isActiveRef.current) return;
-      setAdState('playing');
-      const result = await ExpoPangle.showRewardedVideo();
-      if (result.success) {
-        await recordWatch({ slotId: REWARDED_SLOT_ID, durationSec: null });
-        setErrorCount(0);
-        // 自动加载下一条
-        loadAndPlay();
-      } else {
-        setAdState('idle');
+
+    const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_ID);
+
+    const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      if (isPausedRef.current || !isActiveRef.current) {
+        cleanup();
+        return;
       }
-    } catch {
+      setAdState('playing');
+      rewarded.show();
+    });
+
+    const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
+      await recordWatch({ slotId: REWARDED_AD_ID, durationSec: null });
+      setErrorCount(0);
+    });
+
+    const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      cleanup();
+      // 自动加载下一条
+      loadAndPlay();
+    });
+
+    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
+      cleanup();
       setErrorCount((prev) => {
         const next = prev + 1;
         if (next >= 3) {
           setAdState('error');
         } else {
-          // 3 秒后重试
           setTimeout(() => loadAndPlay(), 3000);
         }
         return next;
       });
+    });
+
+    function cleanup() {
+      unsubLoaded();
+      unsubEarned();
+      unsubClosed();
+      unsubError();
     }
+
+    rewarded.load();
   }, [recordWatch]);
 
   // 进入页面自动开始

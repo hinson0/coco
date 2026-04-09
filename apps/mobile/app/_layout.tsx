@@ -1,7 +1,7 @@
 import { Stack, router } from "expo-router";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Platform, View, Text, AppState } from "react-native";
-import * as ExpoPangle from '../../../modules/expo-pangle/src/ExpoPangle';
+import { AppOpenAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { useEntitlementDecay } from '../hooks/useEntitlementDecay';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type * as SQLite from "expo-sqlite";
@@ -28,9 +28,8 @@ try {
   });
 } catch {}
 
-// 穿山甲配置 — 替换为实际的 App ID 和广告位 ID
-const PANGLE_APP_ID = 'YOUR_APP_ID';
-const SPLASH_SLOT_ID = 'YOUR_SPLASH_SLOT';
+// AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
+const APP_OPEN_AD_ID = __DEV__ ? TestIds.APP_OPEN : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy';
 const SPLASH_MIN_INTERVAL_MS = 30_000; // 两次开屏广告最小间隔 30 秒
 
 const queryClient = new QueryClient({
@@ -69,48 +68,46 @@ export default function RootLayout() {
     if (!loading && !session) router.replace("/(auth)/login");
   }, [session, loading]);
 
-  // === 穿山甲初始化 + 开屏广告 ===
+  // === AdMob 开屏广告 ===
   const lastSplashTime = useRef(0);
-  const pangleReady = useRef(false);
 
   // 权益衰减（放在根布局）
   useEntitlementDecay();
 
-  // 初始化穿山甲 SDK + 首次开屏
-  useEffect(() => {
-    async function initPangle() {
-      try {
-        await ExpoPangle.init({ appId: PANGLE_APP_ID });
-        pangleReady.current = true;
-        await tryShowSplash();
-      } catch (err) {
-        console.error('[Pangle] init failed:', err);
-      }
-    }
-    initPangle();
+  // 加载并展示开屏广告
+  const tryShowSplash = useCallback(() => {
+    // TODO: Pro 用户检查
+    const now = Date.now();
+    if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
+    lastSplashTime.current = now;
+
+    const appOpenAd = AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
+    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+      appOpenAd.show();
+    });
+    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
+      // 开屏失败静默忽略
+      unsubLoaded();
+      unsubError();
+    });
+    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+      unsubLoaded();
+      unsubError();
+      unsubClosed();
+    });
+    appOpenAd.load();
   }, []);
 
-  // 后台恢复时开屏广告
+  // 首次启动 + 后台恢复时展示开屏
   useEffect(() => {
+    tryShowSplash();
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && pangleReady.current) {
+      if (nextState === 'active') {
         tryShowSplash();
       }
     });
     return () => subscription.remove();
-  }, []);
-
-  async function tryShowSplash() {
-    // TODO: Pro 用户检查 — 后续实现 Pro 系统后补全
-    const now = Date.now();
-    if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
-    lastSplashTime.current = now;
-    try {
-      await ExpoPangle.showSplashAd(SPLASH_SLOT_ID);
-    } catch {
-      // 开屏失败静默忽略
-    }
-  }
+  }, [tryShowSplash]);
 
   if (loading) {
     return (
