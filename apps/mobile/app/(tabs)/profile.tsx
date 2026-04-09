@@ -194,6 +194,13 @@ export default function ProfileScreen() {
           title="记账提醒"
           onPress={() => setReminderVisible(true)}
         />
+        <View style={styles.separator} />
+        <MenuItem
+          icon="☁️"
+          iconBg={colors.sagePale}
+          title="多设备同步"
+          onPress={() => router.push("/sync-help")}
+        />
       </Card>
 
       {/* 其他 */}
