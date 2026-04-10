@@ -63,8 +63,7 @@ export function ensureEnvSymlinks(cwd, wtDir) {
 // ── 依赖安装 ──────────────────────────────────
 
 function ensureDeps(wtDir) {
-  const run = (cmd, opts = {}) =>
-    execSync(cmd, { stdio: "inherit", ...opts });
+  const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
 
   if (!existsSync(resolve(wtDir, "node_modules"))) {
     console.log("📦 安装前端依赖...");
@@ -187,8 +186,12 @@ function main() {
     const cleanup = () => {
       if (cleaned) return;
       cleaned = true;
-      try { backendProc?.kill(); } catch {}
-      try { mobileProc?.kill(); } catch {}
+      try {
+        backendProc?.kill();
+      } catch {}
+      try {
+        mobileProc?.kill();
+      } catch {}
       if (restoreFn) restoreFn();
     };
 
@@ -214,7 +217,7 @@ function main() {
       { cwd: backendDir, env: { ...process.env, FORCE_COLOR: "1" } },
       "backend",
       CYAN,
-      onChildExit
+      onChildExit,
     );
 
     mobileProc = spawnWithPrefix(
@@ -223,11 +226,11 @@ function main() {
       { cwd: wtDir, env: { ...mobileEnv, FORCE_COLOR: "1" } },
       "mobile",
       GREEN,
-      onChildExit
+      onChildExit,
     );
 
     console.log(
-      `\n🚀 backend → http://${hostIp}:${backendPort}  |  mobile → http://${hostIp}:${frontendPort}\n`
+      `\n🚀 backend → http://${hostIp}:${backendPort}  |  mobile → http://${hostIp}:${frontendPort}\n`,
     );
 
     process.on("SIGINT", () => {
