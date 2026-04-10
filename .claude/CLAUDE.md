@@ -15,6 +15,11 @@ Monorepo (pnpm workspace)：
 
 # Git 工作流（必须遵守）
 
+## Commit Message 语言
+
+- commit message 和 PR title/body 统一使用**中文**描述，type 前缀保持英文（如 `feat:` `fix:` `docs:`）
+- 示例：`feat(backend): 引入 Alembic 数据库迁移`
+
 ## 禁止直接推送 main
 
 - **严禁** `git push origin xxx:main`，任何情况都不允许直接推送到 main
