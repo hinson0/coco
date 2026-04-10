@@ -19,8 +19,8 @@ sync-w name:
     cd "{{ justfile_directory() }}/.claude/worktrees/{{name}}/apps/backend" && uv sync
 
 # 启动基础设施+前后端开发服务器
-dev:
+dev port="8000":
     docker compose up -d
     npx concurrently -n backend,frontend -c blue,green \
-        "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000" \
-        "pnpm --filter mobile dev"
+        "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port {{port}}" \
+        "cd apps/mobile && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 npx expo start --port $(({{port}} + 80))"
