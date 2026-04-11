@@ -1,5 +1,6 @@
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends
 from infra.database import get_db
 from infra.security import get_current_user
@@ -10,6 +11,8 @@ from schemas.sync import (
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = structlog.get_logger()
+
 router = APIRouter(prefix="/sync", tags=["sync"])
 
 UserId = Annotated[str, Depends(get_current_user)]
@@ -19,6 +22,8 @@ Db = Annotated[AsyncSession, Depends(get_db)]
 @router.post("/push")
 async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
     """接收客户端批量上传，LWW upsert 到 PostgreSQL"""
+
+    logger.debug(f"push body keys:{body.model_dump().keys()}")
 
     profiles = [r.model_dump() for r in body.user_profiles if r.id == user_id]
     if profiles:
@@ -40,7 +45,11 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             profiles,
         )
 
-    categories = [r.model_dump() for r in body.categories if r.user_id == user_id]
+    categories = [
+        r.model_dump()
+        for r in body.categories
+        if r.user_id == user_id or r.user_id is None
+    ]
     if categories:
         await db.execute(
             text(
@@ -127,7 +136,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
                  :created_at, :updated_at, :deleted_at, :audio_uri, :duration_seconds)
             ON CONFLICT (id) DO UPDATE SET
                 content = EXCLUDED.content, updated_at = EXCLUDED.updated_at, 
-                deleted_at = EXCLUDED.deleted_at
+                deleted_at = EXCLUDED.deleted_at,
                 transaction_id = EXCLUDED.transaction_id
             WHERE EXCLUDED.updated_at > chat_messages.updated_at
             """
