@@ -43,10 +43,16 @@ export default function RevenueScreen() {
   const [errorCount, setErrorCount] = useState(0);
   const isPausedRef = useRef(false);
   const isActiveRef = useRef(true);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: watchCount = 0 } = useAdWatchCount();
   const { data: entitlements = [] } = useEntitlements();
   const { mutateAsync: recordWatch } = useRecordAdWatch();
+
+  // 用 ref 存 recordWatch 避免闭包过期
+  const recordWatchRef = useRef(recordWatch);
+  recordWatchRef.current = recordWatch;
 
   // 下一个奖励
   const nextReward = getRewardForWatch(watchCount + 1);
@@ -58,13 +64,23 @@ export default function RevenueScreen() {
   // 当前循环中的进度（4 个一循环）
   const posInCycle = watchCount % FEATURES.length;
 
-  const loadAndPlay = useCallback(() => {
+  // 用 ref 保存 loadAndPlay，解决递归调用闭包过期问题
+  const loadAndPlayRef = useRef<() => void>(() => {});
+
+  loadAndPlayRef.current = () => {
     if (isPausedRef.current || !isActiveRef.current) return;
+
+    // 清理上一轮
+    cleanupRef.current?.();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
     setAdState('loading');
 
     const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_ID);
+    let settled = false; // 防止重复处理
 
     const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      if (settled) return;
       if (isPausedRef.current || !isActiveRef.current) {
         cleanup();
         setAdState('idle');
@@ -72,33 +88,39 @@ export default function RevenueScreen() {
       }
       setAdState('playing');
       rewarded.show().catch(() => {
-        // show() 失败（频率限制等），回到 idle 等待重试
+        if (settled) return;
+        settled = true;
         cleanup();
-        setAdState('idle');
-        setTimeout(() => loadAndPlay(), 5000);
+        setAdState('loading');
+        timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 3000);
       });
     });
 
-    const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
-      await recordWatch({ slotId: REWARDED_AD_ID, durationSec: null });
+    const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+      recordWatchRef.current({ slotId: REWARDED_AD_ID, durationSec: null });
       setErrorCount(0);
     });
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      setAdState('idle');
-      // 延迟 2 秒再加载下一条，避免 AdMob 频率限制
-      setTimeout(() => loadAndPlay(), 2000);
+      // 关闭后立即加载下一条
+      setAdState('loading');
+      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 1000);
     });
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
+      if (settled) return;
+      settled = true;
       cleanup();
       setErrorCount((prev) => {
         const next = prev + 1;
         if (next >= 3) {
           setAdState('error');
         } else {
-          setTimeout(() => loadAndPlay(), 3000);
+          setAdState('loading');
+          timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 3000);
         }
         return next;
       });
@@ -109,19 +131,34 @@ export default function RevenueScreen() {
       unsubEarned();
       unsubClosed();
       unsubError();
+      cleanupRef.current = null;
     }
 
+    cleanupRef.current = cleanup;
+
+    // 超时保护：15 秒内没有任何回调，重置状态
+    timeoutRef.current = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        setAdState('loading');
+        timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 2000);
+      }
+    }, 15000);
+
     rewarded.load();
-  }, [recordWatch]);
+  };
 
   // 进入页面自动开始
   useEffect(() => {
     isActiveRef.current = true;
     if (!isPausedRef.current) {
-      loadAndPlay();
+      loadAndPlayRef.current();
     }
     return () => {
       isActiveRef.current = false;
+      cleanupRef.current?.();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
@@ -130,23 +167,24 @@ export default function RevenueScreen() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         isActiveRef.current = true;
-        if (!isPausedRef.current && adState === 'idle') {
-          loadAndPlay();
+        if (!isPausedRef.current && adState !== 'playing') {
+          loadAndPlayRef.current();
         }
       } else {
         isActiveRef.current = false;
       }
     });
     return () => sub.remove();
-  }, [adState, loadAndPlay]);
+  }, [adState]);
 
   const handlePauseResume = () => {
     if (isPausedRef.current) {
       isPausedRef.current = false;
-      setAdState('idle');
-      loadAndPlay();
+      loadAndPlayRef.current();
     } else {
       isPausedRef.current = true;
+      cleanupRef.current?.();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setAdState('paused');
     }
   };
