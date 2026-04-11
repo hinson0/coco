@@ -32,10 +32,11 @@ export function getRewardsForWatch(watchCount: number): Reward[] {
   return [CYCLE_FEATURES[cycleIndex], ...BONUS_REWARDS];
 }
 
-/** @deprecated 使用 getRewardsForWatch（返回数组） */
-export function getRewardForWatch(watchCount: number): Reward {
-  return getRewardsForWatch(watchCount)[0];
-}
 
-/** 兼容：旧代码中引用的 FEATURES */
-export const FEATURES = CYCLE_FEATURES;
+/** 功能展示元数据（UI 统一引用） */
+export const FEATURE_META: Record<FeatureKey, { label: string; icon: string }> = {
+  asr:           { label: '语音记账', icon: '🎤' },
+  ocr:           { label: '小票识别', icon: '📸' },
+  multi_account: { label: '多账户管理', icon: '💳' },
+  csv_export:    { label: '导出 CSV', icon: '📤' },
+};

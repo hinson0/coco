@@ -6,35 +6,44 @@ import { getEntitlement, applyDecay } from '@/lib/entitlements/queries';
 import { calculateDailyDecay } from '@/lib/entitlements/decay';
 import type { FeatureKey } from '@/lib/entitlements/rewards';
 
+const ALL_FEATURES: FeatureKey[] = ['asr', 'ocr', 'multi_account', 'csv_export'];
+
 /**
  * 在 App 启动和从后台恢复时，检查并执行所有权益的每日衰减。
- * 所有功能（asr/ocr/multi_account/csv_export）都按天 -1。
+ * 所有功能都按天 -1。
  */
 export function useEntitlementDecay() {
   const { db } = useOfflineContext();
   const qc = useQueryClient();
   const hasRunRef = useRef(false);
 
+  // 用 ref 保持最新引用，避免闭包过期
+  const dbRef = useRef(db);
+  dbRef.current = db;
+  const qcRef = useRef(qc);
+  qcRef.current = qc;
+
   const runDecay = async () => {
-    if (!db) return;
+    const currentDb = dbRef.current;
+    if (!currentDb) return;
     const now = new Date().toISOString();
     let changed = false;
 
-    const features: FeatureKey[] = ['asr', 'ocr', 'multi_account', 'csv_export'];
-    for (const feature of features) {
-      const ent = await getEntitlement(db, feature);
+    for (const feature of ALL_FEATURES) {
+      const ent = await getEntitlement(currentDb, feature);
       const decay = calculateDailyDecay(ent.balance, ent.last_decay_at, now);
       if (decay > 0) {
-        await applyDecay(db, feature, decay, now);
+        await applyDecay(currentDb, feature, decay, now);
         changed = true;
       }
     }
 
     if (changed) {
-      qc.invalidateQueries({ queryKey: ['entitlements'] });
+      qcRef.current.invalidateQueries({ queryKey: ['entitlements'] });
     }
   };
 
+  // App 启动时执行一次
   useEffect(() => {
     if (db && !hasRunRef.current) {
       hasRunRef.current = true;
@@ -42,6 +51,7 @@ export function useEntitlementDecay() {
     }
   }, [db]);
 
+  // 后台恢复时执行（只挂载一次，通过 ref 拿最新 db）
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
@@ -49,5 +59,5 @@ export function useEntitlementDecay() {
       }
     });
     return () => subscription.remove();
-  }, [db]);
+  }, []);
 }
