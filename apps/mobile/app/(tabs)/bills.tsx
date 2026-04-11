@@ -264,10 +264,10 @@ export default function RevenueScreen() {
               const isFirst = i === 0;
               return (
                 <View key={r.feature} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {i > 0 && <AppText size="base" color={colors.textLighter}> → </AppText>}
+                  {i > 0 && <AppText size="sm" color={colors.textLighter}> → </AppText>}
                   <View style={isFirst ? styles.rewardTagActive : undefined}>
-                    <AppText size="base" color={isFirst ? colors.sage : colors.textLight}>
-                      {meta.icon} {meta.label} +{r.amount} 天
+                    <AppText size="sm" color={isFirst ? colors.sage : colors.textLight}>
+                      {meta.icon} {meta.label} +{r.amount}天
                     </AppText>
                   </View>
                 </View>
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: { paddingHorizontal: 20, paddingBottom: 100 },
   rewardCard: { marginBottom: 12 },
-  rewardTags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 2 },
+  rewardTags: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   rewardTagActive: {
     backgroundColor: colors.sagePale, paddingHorizontal: 6, paddingVertical: 2,
     borderRadius: radii.sm,
