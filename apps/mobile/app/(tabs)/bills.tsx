@@ -202,11 +202,13 @@ export default function RevenueScreen() {
       {/* Header */}
       <View style={styles.header}>
         <AppText size="5xl" weight="bold" color={colors.text}>收益</AppText>
-        <View style={styles.headerRight}>
+      </View>
+
+      {/* 累计观看 — 突出显示 */}
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <AppText size="4xl" weight="bold" color={colors.sage}>{watchCount}</AppText>
           <AppText size="base" color={colors.textLight}>累计观看</AppText>
-          <View style={styles.countBadge}>
-            <AppText size="lg" weight="bold" color={colors.white}>{watchCount}</AppText>
-          </View>
         </View>
       </View>
 
@@ -312,11 +314,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 14,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  countBadge: {
-    backgroundColor: colors.sage, borderRadius: radii.full,
-    paddingHorizontal: 10, paddingVertical: 2,
+  statsRow: {
+    flexDirection: 'row', justifyContent: 'center',
+    paddingHorizontal: 20, paddingBottom: 4,
   },
+  statItem: { alignItems: 'center', gap: 2 },
   adContainer: {
     flex: 1, marginHorizontal: 20, marginVertical: 12,
     backgroundColor: colors.white, borderRadius: radii.xl,
