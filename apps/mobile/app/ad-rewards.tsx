@@ -61,25 +61,25 @@ export default function AdRewardsScreen() {
           <AdRow
             number={1}
             text="语音记账"
-            desc="长按说话即可记账，支持 60 秒语音输入，自动识别金额和分类"
+            desc="每条广告 +1 天（奇数条解锁），长按说话即可记账"
           />
           <View style={styles.divider} />
           <AdRow
             number={2}
             text="小票识别"
-            desc="拍摄小票或选择相册照片，OCR 自动识别金额和商家信息"
+            desc="每条广告 +1 天（偶数条解锁），拍照自动识别金额"
           />
           <View style={styles.divider} />
           <AdRow
             number={3}
             text="多账户管理"
-            desc="支持储蓄卡、信用卡、微信、支付宝等多种账户，独立追踪余额"
+            desc="每条广告 +1 天，支持储蓄卡、信用卡、微信、支付宝等"
           />
           <View style={styles.divider} />
           <AdRow
             number={4}
             text="导出 CSV"
-            desc="将全部记账记录导出为 CSV 文件，每次解锁 1 周导出权限"
+            desc="每条广告 +1 天，将记账记录导出为 CSV 文件"
           />
         </Card>
 
@@ -93,7 +93,7 @@ export default function AdRewardsScreen() {
             <View style={styles.ruleText}>
               <AppText size="xl" weight="medium">循环解锁</AppText>
               <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
-                每 4 条广告为一轮：语音记账 → 小票识别 → 多账户管理(7天) → 导出CSV(1周)，循环往复
+                每条广告同时解锁多项权益：语音/小票交替 +1 天，多账户和导出每条都 +1 天
               </AppText>
             </View>
           </View>
@@ -129,7 +129,7 @@ export default function AdRewardsScreen() {
             <View style={styles.ruleText}>
               <AppText size="xl" weight="medium">语音记账</AppText>
               <AppText size="base" color={colors.textLight}>
-                剩余 {getBalance('asr')} 次
+                剩余 {getBalance('asr')} 天
               </AppText>
             </View>
           </View>
@@ -139,7 +139,7 @@ export default function AdRewardsScreen() {
             <View style={styles.ruleText}>
               <AppText size="xl" weight="medium">小票识别</AppText>
               <AppText size="base" color={colors.textLight}>
-                剩余 {getBalance('ocr')} 次
+                剩余 {getBalance('ocr')} 天
               </AppText>
             </View>
           </View>
@@ -159,7 +159,7 @@ export default function AdRewardsScreen() {
             <View style={styles.ruleText}>
               <AppText size="xl" weight="medium">导出 CSV</AppText>
               <AppText size="base" color={colors.textLight}>
-                剩余 {getBalance('csv_export')} 周
+                剩余 {getBalance('csv_export')} 天
               </AppText>
             </View>
           </View>

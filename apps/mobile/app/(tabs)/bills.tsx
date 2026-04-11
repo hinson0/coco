@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RewardedAd, RewardedAdEventType, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { useAdWatchCount, useEntitlements, useRecordAdWatch } from '../../hooks/useEntitlement';
-import { getRewardForWatch, FEATURES } from '../../lib/entitlements/rewards';
+import { getRewardsForWatch, CYCLE_FEATURES } from '../../lib/entitlements/rewards';
 import { AppText } from '../../components/ui/AppText';
 import { Card } from '../../components/ui/Card';
 import { colors, radii, shadows } from '../../constants/theme';
@@ -29,10 +29,10 @@ const FEATURE_ICONS: Record<string, string> = {
 };
 
 const AMOUNT_LABELS: Record<string, string> = {
-  asr: '次',
-  ocr: '次',
+  asr: '天',
+  ocr: '天',
   multi_account: '天',
-  csv_export: '周',
+  csv_export: '天',
 };
 
 type AdState = 'loading' | 'playing' | 'paused' | 'error' | 'idle';
@@ -54,15 +54,14 @@ export default function RevenueScreen() {
   const recordWatchRef = useRef(recordWatch);
   recordWatchRef.current = recordWatch;
 
-  // 下一个奖励
-  const nextReward = getRewardForWatch(watchCount + 1);
-  const nextLabel = FEATURE_LABELS[nextReward.feature];
-  const nextIcon = FEATURE_ICONS[nextReward.feature];
-  const nextAmount = nextReward.amount;
-  const nextUnit = AMOUNT_LABELS[nextReward.feature];
+  // 下一条广告的奖励
+  const nextRewards = getRewardsForWatch(watchCount + 1);
+  const nextCycleReward = nextRewards[0]; // 交替的那个（asr/ocr）
+  const nextLabel = FEATURE_LABELS[nextCycleReward.feature];
+  const nextIcon = FEATURE_ICONS[nextCycleReward.feature];
 
-  // 当前循环中的进度（4 个一循环）
-  const posInCycle = watchCount % FEATURES.length;
+  // 当前循环中的进度（2 个一循环：asr/ocr）
+  const posInCycle = watchCount % CYCLE_FEATURES.length;
 
   // 用 ref 保存 loadAndPlay，解决递归调用闭包过期问题
   const loadAndPlayRef = useRef<() => void>(() => {});
@@ -272,23 +271,11 @@ export default function RevenueScreen() {
       {/* 下一个奖励进度 */}
       <View style={styles.bottomSection}>
         <Card style={styles.rewardCard}>
-          <View style={styles.rewardRow}>
-            <AppText size="2xl">{nextIcon}</AppText>
-            <View style={styles.rewardInfo}>
-              <AppText size="lg" weight="medium" color={colors.text}>
-                下一个奖励: {nextLabel}
-              </AppText>
-              <AppText size="base" color={colors.textLight}>
-                +{nextAmount} {nextUnit}
-              </AppText>
-            </View>
-          </View>
-          {/* 进度条 */}
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(posInCycle / FEATURES.length) * 100}%` }]} />
-          </View>
-          <AppText size="sm" color={colors.textLighter} style={styles.progressLabel}>
-            本轮进度 {posInCycle}/{FEATURES.length}
+          <AppText size="lg" weight="medium" color={colors.text} style={{ marginBottom: 8 }}>
+            下一条广告奖励
+          </AppText>
+          <AppText size="base" color={colors.textLight}>
+            {nextIcon} {nextLabel} +1 天 · 💳 多账户 +1 天 · 📤 导出 +1 天
           </AppText>
         </Card>
 
