@@ -37,6 +37,20 @@ async function getChangedRows(
       lastPushAt,
     );
   }
+  // categories 需要包含默认分类（user_id IS NULL），因为 budgets/transactions 会引用它们
+  if (table === "categories") {
+    if (lastPushAt === null) {
+      return db.getAllAsync<Row>(
+        `SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL`,
+        userId,
+      );
+    }
+    return db.getAllAsync<Row>(
+      `SELECT * FROM categories WHERE (user_id = ? OR user_id IS NULL) AND updated_at > ?`,
+      userId,
+      lastPushAt,
+    );
+  }
   if (lastPushAt === null) {
     return db.getAllAsync<Row>(
       `SELECT * FROM ${table} WHERE user_id = ?`,
