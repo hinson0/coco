@@ -114,7 +114,7 @@ export function useCheckAndConsume() {
     // 按次计费的功能立即扣减
     if (feature === 'asr' || feature === 'ocr') {
       await consumeEntitlement(db, feature);
-      qc.invalidateQueries({ queryKey: ['entitlements'] });
+      qc.invalidateQueries({ queryKey: ENTITLEMENT_KEY });
     }
     return true;
   }, [db, qc]);

@@ -87,17 +87,20 @@ function AppContent() {
     lastSplashTime.current = now;
 
     const appOpenAd = AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
-    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-      appOpenAd.show();
-    });
-    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
-      unsubLoaded();
-      unsubError();
-    });
-    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+    function cleanupAll() {
       unsubLoaded();
       unsubError();
       unsubClosed();
+    }
+    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+      cleanupAll();
+      appOpenAd.show();
+    });
+    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
+      cleanupAll();
+    });
+    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+      cleanupAll();
     });
     appOpenAd.load();
   }, []);

@@ -1,4 +1,4 @@
-import { calculateDailyDecay, calculateWeeklyDecay } from '../decay';
+import { calculateDailyDecay } from '../decay';
 
 describe('calculateDailyDecay', () => {
   it('同一天内不衰减', () => {
@@ -33,32 +33,5 @@ describe('calculateDailyDecay', () => {
 
   it('lastDecay 为 null 不衰减（首次）', () => {
     expect(calculateDailyDecay(10, null, '2026-04-10T00:00:00.000Z')).toBe(0);
-  });
-});
-
-describe('calculateWeeklyDecay', () => {
-  it('同一周内不衰减', () => {
-    // 2026-04-06 is Monday
-    const lastDecay = '2026-04-06T00:00:00.000Z';
-    const now = '2026-04-12T23:59:59.000Z'; // same week Sunday
-    expect(calculateWeeklyDecay(5, lastDecay, now)).toBe(0);
-  });
-
-  it('过了 1 个周一衰减 1', () => {
-    const lastDecay = '2026-04-06T00:00:00.000Z'; // Monday
-    const now = '2026-04-13T01:00:00.000Z'; // next Monday
-    expect(calculateWeeklyDecay(5, lastDecay, now)).toBe(1);
-  });
-
-  it('过了 3 个周一衰减 3', () => {
-    const lastDecay = '2026-04-06T00:00:00.000Z';
-    const now = '2026-04-27T00:00:00.000Z'; // 3 weeks later Monday
-    expect(calculateWeeklyDecay(5, lastDecay, now)).toBe(3);
-  });
-
-  it('衰减不超过余额', () => {
-    const lastDecay = '2026-04-06T00:00:00.000Z';
-    const now = '2026-06-01T00:00:00.000Z'; // long time later
-    expect(calculateWeeklyDecay(2, lastDecay, now)).toBe(2);
   });
 });

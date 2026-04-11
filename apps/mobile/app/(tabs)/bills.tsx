@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RewardedAd, RewardedAdEventType, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { useAdWatchCount, useEntitlements, useRecordAdWatch } from '../../hooks/useEntitlement';
-import { getRewardsForWatch, CYCLE_FEATURES } from '../../lib/entitlements/rewards';
+import { getRewardsForWatch, CYCLE_FEATURES, FEATURE_META } from '../../lib/entitlements/rewards';
 import { AppText } from '../../components/ui/AppText';
 import { Card } from '../../components/ui/Card';
 import { colors, radii, shadows } from '../../constants/theme';
@@ -14,26 +14,7 @@ import { colors, radii, shadows } from '../../constants/theme';
 // AdMob 激励视频广告位（__DEV__ 时使用测试 ID）
 const REWARDED_AD_ID = __DEV__ ? TestIds.REWARDED : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy';
 
-const FEATURE_LABELS: Record<string, string> = {
-  asr: '语音记账',
-  ocr: '小票识别',
-  multi_account: '多账户管理',
-  csv_export: '导出 CSV',
-};
-
-const FEATURE_ICONS: Record<string, string> = {
-  asr: '🎤',
-  ocr: '📸',
-  multi_account: '💳',
-  csv_export: '📤',
-};
-
-const AMOUNT_LABELS: Record<string, string> = {
-  asr: '天',
-  ocr: '天',
-  multi_account: '天',
-  csv_export: '天',
-};
+const isPaused = (state: AdState) => state === 'paused';
 
 type AdState = 'loading' | 'playing' | 'paused' | 'error' | 'idle';
 
@@ -56,9 +37,8 @@ export default function RevenueScreen() {
 
   // 下一条广告的奖励
   const nextRewards = getRewardsForWatch(watchCount + 1);
-  const nextCycleReward = nextRewards[0]; // 交替的那个（asr/ocr）
-  const nextLabel = FEATURE_LABELS[nextCycleReward.feature];
-  const nextIcon = FEATURE_ICONS[nextCycleReward.feature];
+  const nextCycleReward = nextRewards[0];
+  const nextMeta = FEATURE_META[nextCycleReward.feature];
 
   // 当前循环中的进度（2 个一循环：asr/ocr）
   const posInCycle = watchCount % CYCLE_FEATURES.length;
@@ -182,12 +162,16 @@ export default function RevenueScreen() {
     }
   }, [adState]);
 
-  // 后台/前台切换
+  // 用 ref 跟踪 adState，避免 AppState effect 频繁重挂
+  const adStateRef = useRef(adState);
+  adStateRef.current = adState;
+
+  // 后台/前台切换（只挂载一次）
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         isActiveRef.current = true;
-        if (!isPausedRef.current && adState !== 'playing') {
+        if (!isPausedRef.current && adStateRef.current !== 'playing') {
           loadAndPlayRef.current();
         }
       } else {
@@ -195,7 +179,7 @@ export default function RevenueScreen() {
       }
     });
     return () => sub.remove();
-  }, [adState]);
+  }, []);
 
   const handlePauseResume = () => {
     if (isPausedRef.current) {
@@ -252,7 +236,7 @@ export default function RevenueScreen() {
             <TouchableOpacity
               style={styles.retryBtn}
               activeOpacity={0.7}
-              onPress={() => { setErrorCount(0); loadAndPlay(); }}
+              onPress={() => { setErrorCount(0); loadAndPlayRef.current(); }}
             >
               <AppText size="lg" weight="medium" color={colors.sage}>重试</AppText>
             </TouchableOpacity>
@@ -275,19 +259,19 @@ export default function RevenueScreen() {
             下一条广告奖励
           </AppText>
           <AppText size="base" color={colors.textLight}>
-            {nextIcon} {nextLabel} +1 天 · 💳 多账户 +1 天 · 📤 导出 +1 天
+            {nextMeta.icon} {nextMeta.label} +1 天 · 💳 多账户 +1 天 · 📤 导出 +1 天
           </AppText>
         </Card>
 
         {/* 控制按钮 */}
         <View style={styles.controls}>
           <TouchableOpacity
-            style={[styles.controlBtn, isPausedRef.current && styles.controlBtnActive]}
+            style={[styles.controlBtn, isPaused(adState) && styles.controlBtnActive]}
             activeOpacity={0.7}
             onPress={handlePauseResume}
           >
-            <AppText size="lg" weight="medium" color={isPausedRef.current ? colors.white : colors.text}>
-              {isPausedRef.current ? '▶ 开始' : '⏸ 暂停'}
+            <AppText size="lg" weight="medium" color={isPaused(adState) ? colors.white : colors.text}>
+              {isPaused(adState) ? '▶ 开始' : '⏸ 暂停'}
             </AppText>
           </TouchableOpacity>
           <TouchableOpacity
