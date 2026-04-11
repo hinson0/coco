@@ -30,12 +30,13 @@ export function useCreateCategory() {
       if (!db || !userId) throw new Error("Database not initialized");
       const id = Crypto.randomUUID();
       await db.runAsync(
-        "INSERT INTO categories (id, user_id, name, icon, type, is_default) VALUES (?, ?, ?, ?, ?, 0)",
+        "INSERT INTO categories (id, user_id, name, icon, type, is_default, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?)",
         id,
         userId,
         input.name,
         input.icon,
-        input.type
+        input.type,
+        new Date().toISOString()
       );
       return id;
     },
@@ -53,9 +54,10 @@ export function useUpdateCategory() {
     mutationFn: async (params: { readonly id: string; readonly name: string; readonly icon: string }) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
-        "UPDATE categories SET name = ?, icon = ? WHERE id = ?",
+        "UPDATE categories SET name = ?, icon = ?, updated_at = ? WHERE id = ?",
         params.name,
         params.icon,
+        new Date().toISOString(),
         params.id
       );
     },
@@ -73,7 +75,8 @@ export function useDeleteCategory() {
     mutationFn: async (id: string) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
-        "UPDATE categories SET deleted_at = ? WHERE id = ? AND is_default = 0",
+        "UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND is_default = 0",
+        new Date().toISOString(),
         new Date().toISOString(),
         id
       );

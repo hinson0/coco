@@ -90,13 +90,14 @@ export function useCreateAccount() {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO accounts (id, user_id, name, icon, type, initial_balance, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         id,
         userId,
         input.name,
         input.icon,
         input.type,
         input.initial_balance,
+        now,
         now
       );
       return id;
@@ -121,6 +122,8 @@ export function useUpdateAccount() {
       if (params.icon !== undefined) { fields.push("icon = ?"); values.push(params.icon); }
       if (params.type !== undefined) { fields.push("type = ?"); values.push(params.type); }
       if (params.initial_balance !== undefined) { fields.push("initial_balance = ?"); values.push(params.initial_balance); }
+      fields.push("updated_at = ?");
+      values.push(new Date().toISOString());
       if (fields.length === 0) return;
       values.push(params.id);
       await db.runAsync(
@@ -144,7 +147,8 @@ export function useDeleteAccount() {
     mutationFn: async (id: string) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
-        "UPDATE accounts SET deleted_at = ? WHERE id = ?",
+        "UPDATE accounts SET deleted_at = ?, updated_at = ? WHERE id = ?",
+        new Date().toISOString(),
         new Date().toISOString(),
         id
       );
