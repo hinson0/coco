@@ -4,8 +4,10 @@ import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import type * as SQLite from "expo-sqlite";
-import { useEffect, useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform, Text, View } from "react-native";
+import { AppOpenAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
+import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
@@ -26,6 +28,12 @@ try {
     }),
   });
 } catch {}
+
+// AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
+const APP_OPEN_AD_ID = __DEV__
+  ? TestIds.APP_OPEN
+  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
+const SPLASH_MIN_INTERVAL_MS = 30_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,9 +73,53 @@ function AppContent() {
     }
   }, [db, user?.id]);
 
+  // TODO: 暂时跳过登录，测试广告功能
+  // useEffect(() => {
+  //   if (!loading && !isAuthenticated) router.replace("/(auth)/login");
+  // }, [isAuthenticated, loading]);
+
+  // === AdMob 开屏广告 ===
+  const lastSplashTime = useRef(0);
+
+  const tryShowSplash = useCallback(() => {
+    // TODO: Pro 用户检查
+    const now = Date.now();
+    if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
+    lastSplashTime.current = now;
+
+    const appOpenAd = AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
+    function cleanupAll() {
+      unsubLoaded();
+      unsubError();
+      unsubClosed();
+    }
+    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+      cleanupAll();
+      appOpenAd.show();
+    });
+    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
+      cleanupAll();
+    });
+    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+      cleanupAll();
+    });
+    appOpenAd.load();
+  }, []);
+
+  // 只在真正从后台恢复时弹开屏广告（非广告关闭导致的 active）
+  const wasBackgroundRef = useRef(false);
   useEffect(() => {
-    if (!loading && !isAuthenticated) router.replace("/(auth)/login");
-  }, [isAuthenticated, loading]);
+    tryShowSplash(); // 冷启动
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background") {
+        wasBackgroundRef.current = true;
+      } else if (nextState === "active" && wasBackgroundRef.current) {
+        wasBackgroundRef.current = false;
+        tryShowSplash();
+      }
+    });
+    return () => subscription.remove();
+  }, [tryShowSplash]);
 
   // 每 30s 静默 push（仅 App 前台有效）
   useEffect(() => {
@@ -97,6 +149,7 @@ function AppContent() {
 
   return (
     <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
+      <EntitlementDecayRunner />
       <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
     </OfflineContext.Provider>
   );
@@ -110,4 +163,10 @@ export default function RootLayout() {
       </QueryClientProvider>
     </AuthProvider>
   );
+}
+
+/** 权益衰减必须在 QueryClientProvider + OfflineContext 内部运行 */
+function EntitlementDecayRunner() {
+  useEntitlementDecay();
+  return null;
 }
