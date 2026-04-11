@@ -79,11 +79,22 @@ export default function RevenueScreen() {
     const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_ID);
     let settled = false; // 防止重复处理
 
+    /** 只在未暂停时调度下一轮，否则回到暂停状态 */
+    function scheduleNext(delayMs: number) {
+      if (isPausedRef.current || !isActiveRef.current) {
+        setAdState(isPausedRef.current ? 'paused' : 'idle');
+        return;
+      }
+      setAdState('loading');
+      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), delayMs);
+    }
+
     const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
       if (settled) return;
       if (isPausedRef.current || !isActiveRef.current) {
+        settled = true;
         cleanup();
-        setAdState('idle');
+        setAdState(isPausedRef.current ? 'paused' : 'idle');
         return;
       }
       setAdState('playing');
@@ -91,8 +102,7 @@ export default function RevenueScreen() {
         if (settled) return;
         settled = true;
         cleanup();
-        setAdState('loading');
-        timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 3000);
+        scheduleNext(3000);
       });
     });
 
@@ -105,9 +115,7 @@ export default function RevenueScreen() {
       if (settled) return;
       settled = true;
       cleanup();
-      // 关闭后立即加载下一条
-      setAdState('loading');
-      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 1000);
+      scheduleNext(1000);
     });
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
@@ -119,8 +127,7 @@ export default function RevenueScreen() {
         if (next >= 3) {
           setAdState('error');
         } else {
-          setAdState('loading');
-          timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 3000);
+          scheduleNext(3000);
         }
         return next;
       });
@@ -141,8 +148,7 @@ export default function RevenueScreen() {
       if (!settled) {
         settled = true;
         cleanup();
-        setAdState('loading');
-        timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 2000);
+        scheduleNext(2000);
       }
     }, 15000);
 
