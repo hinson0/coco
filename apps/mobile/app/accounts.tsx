@@ -1,5 +1,6 @@
 // apps/mobile/app/accounts.tsx
 // 账户列表页面：总资产卡片 + 账户列表 + 余额显示
+import { useState } from "react";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, Image, type ImageSourcePropType } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +9,8 @@ import { useAccounts, useTotalAssets, useDeleteAccount } from "../hooks/useLocal
 import { useOfflineContext } from "../lib/offline-context";
 import { useQuery } from "@tanstack/react-query";
 import { AppText } from "../components/ui/AppText";
+import { useCheckAndConsume } from "../hooks/useEntitlement";
+import { EntitlementGate } from "../components/shared/EntitlementGate";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { Account } from "@coco/shared";
 import type * as SQLite from "expo-sqlite";
@@ -70,6 +73,17 @@ export default function AccountsScreen() {
   const { data: accounts = [] } = useAccounts();
   const { data: totalAssets = 0 } = useTotalAssets();
   const { mutateAsync: deleteAccount } = useDeleteAccount();
+  const checkAndConsume = useCheckAndConsume();
+  const [showGate, setShowGate] = useState(false);
+
+  const handleAddAccount = async () => {
+    const ok = await checkAndConsume('multi_account');
+    if (!ok) {
+      setShowGate(true);
+      return;
+    }
+    router.push('/account-edit');
+  };
 
   const handleDelete = (id: string, name: string) => {
     Alert.alert("删除账户", `确定要删除"${name}"吗？已有的交易记录不会受影响。`, [
@@ -116,12 +130,17 @@ export default function AccountsScreen() {
         ListFooterComponent={
           <TouchableOpacity
             style={styles.addBtn}
-            onPress={() => router.push("/account-edit")}
+            onPress={handleAddAccount}
             activeOpacity={0.8}
           >
             <AppText size="2xl" weight="semibold" color={colors.white}>+ 添加账户</AppText>
           </TouchableOpacity>
         }
+      />
+      <EntitlementGate
+        visible={showGate}
+        onClose={() => setShowGate(false)}
+        featureLabel="多账户管理"
       />
     </View>
   );

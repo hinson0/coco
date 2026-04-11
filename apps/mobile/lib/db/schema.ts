@@ -80,6 +80,26 @@ const CREATE_ACCOUNTS = `
     );
   `;
 
+const CREATE_AD_WATCH_LOGS = `
+  CREATE TABLE IF NOT EXISTS ad_watch_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    watched_at TEXT NOT NULL,
+    ad_type TEXT NOT NULL CHECK(ad_type IN ('rewarded_video', 'splash')),
+    slot_id TEXT,
+    duration_sec INTEGER
+  );
+`;
+
+const CREATE_ENTITLEMENTS = `
+  CREATE TABLE IF NOT EXISTS entitlements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    feature TEXT NOT NULL UNIQUE CHECK(feature IN ('asr', 'ocr', 'multi_account', 'csv_export')),
+    balance INTEGER NOT NULL DEFAULT 0,
+    total_earned INTEGER NOT NULL DEFAULT 0,
+    last_decay_at TEXT
+  );
+`;
+
 export async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(CREATE_CATEGORIES);
   await db.execAsync(CREATE_TRANSACTIONS);
@@ -87,6 +107,8 @@ export async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(CREATE_CHAT_MESSAGES);
   await db.execAsync(CREATE_USER_PROFILES); // 新增
   await db.execAsync(CREATE_ACCOUNTS); // 新增
+  await db.execAsync(CREATE_AD_WATCH_LOGS);
+  await db.execAsync(CREATE_ENTITLEMENTS);
   await runMigrations(db); // 新增
 }
 
