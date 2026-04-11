@@ -202,13 +202,11 @@ export default function RevenueScreen() {
       {/* Header */}
       <View style={styles.header}>
         <AppText size="5xl" weight="bold" color={colors.text}>收益</AppText>
-      </View>
-
-      {/* 累计观看 — 突出显示 */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <AppText size="4xl" weight="bold" color={colors.sage}>{watchCount}</AppText>
+        <View style={styles.headerRight}>
           <AppText size="base" color={colors.textLight}>累计观看</AppText>
+          <View style={styles.countBadge}>
+            <AppText size="lg" weight="bold" color={colors.white}>{watchCount}</AppText>
+          </View>
         </View>
       </View>
 
@@ -300,7 +298,7 @@ export default function RevenueScreen() {
         </View>
 
         {/* 说明文字 */}
-        <AppText size="sm" color={colors.textLighter} style={styles.tip}>
+        <AppText size="base" color={colors.textLight} style={styles.tip}>
           点击"开始"后将自动播放广告。每条广告播放完毕，手动关闭后会自动加载下一条，如此循环往复，持续累积你的权益。
         </AppText>
       </View>
@@ -314,11 +312,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 14,
   },
-  statsRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    paddingHorizontal: 20, paddingBottom: 4,
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  countBadge: {
+    backgroundColor: colors.sage, borderRadius: radii.full,
+    paddingHorizontal: 10, paddingVertical: 2,
   },
-  statItem: { alignItems: 'center', gap: 2 },
   adContainer: {
     flex: 1, marginHorizontal: 20, marginVertical: 12,
     backgroundColor: colors.white, borderRadius: radii.xl,
@@ -347,5 +345,5 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   controlBtnActive: { backgroundColor: colors.sage },
-  tip: { textAlign: 'center', marginTop: 12, paddingHorizontal: 8, lineHeight: 18 },
+  tip: { textAlign: 'center', marginTop: 16, paddingHorizontal: 12, lineHeight: 20 },
 });
