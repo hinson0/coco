@@ -49,20 +49,21 @@ export async function addEntitlement(
   );
 }
 
-/** 扣减权益余额，返回扣减后余额。余额不足返回 -1。 */
+/** 原子扣减权益余额。余额不足返回 -1，否则返回扣减后余额。 */
 export async function consumeEntitlement(
   db: SQLite.SQLiteDatabase,
   feature: FeatureKey,
 ): Promise<number> {
-  const row = await getEntitlement(db, feature);
-  if (row.balance <= 0) return -1;
-  const newBalance = row.balance - 1;
-  await db.runAsync(
-    'UPDATE entitlements SET balance = ? WHERE feature = ?',
-    newBalance,
+  const result = await db.runAsync(
+    'UPDATE entitlements SET balance = balance - 1 WHERE feature = ? AND balance > 0',
     feature,
   );
-  return newBalance;
+  if (result.changes === 0) return -1;
+  const row = await db.getFirstAsync<{ balance: number }>(
+    'SELECT balance FROM entitlements WHERE feature = ?',
+    feature,
+  );
+  return row?.balance ?? -1;
 }
 
 /** 批量衰减（用于 multi_account / csv_export），更新 last_decay_at */

@@ -236,7 +236,7 @@ export default function RevenueScreen() {
             <TouchableOpacity
               style={styles.retryBtn}
               activeOpacity={0.7}
-              onPress={() => { setErrorCount(0); loadAndPlayRef.current(); }}
+              onPress={() => { setErrorCount(0); isPausedRef.current = false; loadAndPlayRef.current(); }}
             >
               <AppText size="lg" weight="medium" color={colors.sage}>重试</AppText>
             </TouchableOpacity>
@@ -259,7 +259,7 @@ export default function RevenueScreen() {
             下一条广告奖励
           </AppText>
           <AppText size="base" color={colors.textLight}>
-            {nextMeta.icon} {nextMeta.label} +1 天 · 💳 多账户 +1 天 · 📤 导出 +1 天
+            {nextRewards.map(r => `${FEATURE_META[r.feature].icon} ${FEATURE_META[r.feature].label} +${r.amount} 天`).join(' · ')}
           </AppText>
         </Card>
 
@@ -317,13 +317,6 @@ const styles = StyleSheet.create({
   },
   bottomSection: { paddingHorizontal: 20, paddingBottom: 100 },
   rewardCard: { marginBottom: 12 },
-  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  rewardInfo: { flex: 1, gap: 2 },
-  progressBar: {
-    height: 6, backgroundColor: colors.creamDark, borderRadius: 3, overflow: 'hidden',
-  },
-  progressFill: { height: 6, backgroundColor: colors.sage, borderRadius: 3 },
-  progressLabel: { marginTop: 6, textAlign: 'right' },
   controls: { flexDirection: 'row', gap: 12 },
   controlBtn: {
     flex: 1, paddingVertical: 14, borderRadius: radii.lg,

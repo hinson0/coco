@@ -111,9 +111,9 @@ export default function AdRewardsScreen() {
           <View style={styles.ruleRow}>
             <AppText size="2xl" style={styles.ruleIcon}>♾️</AppText>
             <View style={styles.ruleText}>
-              <AppText size="xl" weight="medium">永不过期</AppText>
+              <AppText size="xl" weight="medium">按天消耗</AppText>
               <AppText size="base" color={colors.textLight} style={styles.ruleDesc}>
-                已解锁的权益不会过期，用完才扣除
+                每天自动扣除 1 天权益，可提前囤积多天
               </AppText>
             </View>
           </View>

@@ -12,7 +12,7 @@ import { getRewardsForWatch } from '@/lib/entitlements/rewards';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-const ENTITLEMENT_KEY = ['entitlements'];
+export const ENTITLEMENT_KEY = ['entitlements'];
 const AD_WATCH_COUNT_KEY = ['ad-watch-count'];
 
 /** 查询所有权益余额 */
