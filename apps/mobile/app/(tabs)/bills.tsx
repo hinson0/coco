@@ -285,7 +285,7 @@ export default function RevenueScreen() {
             onPress={handlePauseResume}
           >
             <AppText size="lg" weight="medium" color={isPausedRef.current ? colors.white : colors.text}>
-              {isPausedRef.current ? '▶ 继续' : '⏸ 暂停'}
+              {isPausedRef.current ? '▶ 开始' : '⏸ 暂停'}
             </AppText>
           </TouchableOpacity>
           <TouchableOpacity
