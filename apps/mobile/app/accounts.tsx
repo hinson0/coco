@@ -9,7 +9,7 @@ import { useAccounts, useTotalAssets, useDeleteAccount } from "../hooks/useLocal
 import { useOfflineContext } from "../lib/offline-context";
 import { useQuery } from "@tanstack/react-query";
 import { AppText } from "../components/ui/AppText";
-import { getEntitlement } from "../lib/entitlements/queries";
+import { useCheckAndConsume } from "../hooks/useEntitlement";
 import { EntitlementGate } from "../components/shared/EntitlementGate";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 import type { Account } from "@coco/shared";
@@ -73,14 +73,12 @@ export default function AccountsScreen() {
   const { data: accounts = [] } = useAccounts();
   const { data: totalAssets = 0 } = useTotalAssets();
   const { mutateAsync: deleteAccount } = useDeleteAccount();
-  const { db } = useOfflineContext();
+  const checkAndConsume = useCheckAndConsume();
   const [showGate, setShowGate] = useState(false);
 
   const handleAddAccount = async () => {
-    if (!db) return;
-    // TODO: Pro check
-    const ent = await getEntitlement(db, 'multi_account');
-    if (ent.balance <= 0) {
+    const ok = await checkAndConsume('multi_account');
+    if (!ok) {
       setShowGate(true);
       return;
     }
