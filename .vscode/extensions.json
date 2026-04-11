@@ -1,10 +1,15 @@
 {
   "recommendations": [
+    // ts/JS 相关
     "esbenp.prettier-vscode", // 代码格式化工具，支持多种语言
     "dbaeumer.vscode-eslint", // JavaScript/TypeScript 语法检查与风格统一
-    "charliermarsh.ruff", // Python 代码自动格式化
+
+    // python 相关
+    "ms-python.black-formatter", // Python 代码自动格式化
     "ms-toolsai.jupyter", // Jupyter Notebook 支持
     "ms-python.python", // Python 语言支持（调试、IntelliSense 等）
+
+    // 工具类
     "tomoki1207.pdf", // PDF 预览
     "yzane.markdown-pdf" // Markdown 导出为 PDF
   ]
