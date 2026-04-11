@@ -39,9 +39,9 @@ type AdState = 'loading' | 'playing' | 'paused' | 'error' | 'idle';
 
 export default function RevenueScreen() {
   const insets = useSafeAreaInsets();
-  const [adState, setAdState] = useState<AdState>('idle');
+  const [adState, setAdState] = useState<AdState>('paused');
   const [errorCount, setErrorCount] = useState(0);
-  const isPausedRef = useRef(false);
+  const isPausedRef = useRef(true);
   const isActiveRef = useRef(true);
   const cleanupRef = useRef<(() => void) | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -290,6 +290,11 @@ export default function RevenueScreen() {
             <AppText size="lg" weight="medium" color={colors.text}>📋 我的权益</AppText>
           </TouchableOpacity>
         </View>
+
+        {/* 说明文字 */}
+        <AppText size="sm" color={colors.textLighter} style={styles.tip}>
+          点击"开始"后将自动播放广告。每条广告播放完毕，手动关闭后会自动加载下一条，如此循环往复，持续累积你的权益。
+        </AppText>
       </View>
     </View>
   );
@@ -334,4 +339,5 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   controlBtnActive: { backgroundColor: colors.sage },
+  tip: { textAlign: 'center', marginTop: 12, paddingHorizontal: 8, lineHeight: 18 },
 });
