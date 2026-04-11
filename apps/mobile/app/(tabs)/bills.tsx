@@ -143,14 +143,22 @@ export default function RevenueScreen() {
 
     cleanupRef.current = cleanup;
 
-    // 超时保护：15 秒内没有任何回调，重置状态
+    // 超时保护：8 秒内没有任何回调，当作加载失败处理
     timeoutRef.current = setTimeout(() => {
       if (!settled) {
         settled = true;
         cleanup();
-        scheduleNext(2000);
+        setErrorCount((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            setAdState('error');
+          } else {
+            scheduleNext(3000);
+          }
+          return next;
+        });
       }
-    }, 15000);
+    }, 8000);
 
     rewarded.load();
   };
