@@ -78,7 +78,7 @@ export default function AdRewardsScreen() {
           <View style={styles.divider} />
           <AdRow
             number={4}
-            text="导出 CSV"
+            text="账单导出"
             desc="每条广告 +1 天，将记账记录导出为 CSV 文件"
           />
         </Card>
@@ -157,7 +157,7 @@ export default function AdRewardsScreen() {
           <View style={styles.ruleRow}>
             <AppText size="2xl" style={styles.ruleIcon}>📤</AppText>
             <View style={styles.ruleText}>
-              <AppText size="xl" weight="medium">导出 CSV</AppText>
+              <AppText size="xl" weight="medium">账单导出</AppText>
               <AppText size="base" color={colors.textLight}>
                 剩余 {getBalance('csv_export')} 天
               </AppText>

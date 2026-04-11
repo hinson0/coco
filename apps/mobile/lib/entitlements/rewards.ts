@@ -38,5 +38,5 @@ export const FEATURE_META: Record<FeatureKey, { label: string; icon: string }> =
   asr:           { label: '语音记账', icon: '🎤' },
   ocr:           { label: '小票识别', icon: '📸' },
   multi_account: { label: '多账户管理', icon: '💳' },
-  csv_export:    { label: '导出 CSV', icon: '📤' },
+  csv_export:    { label: '账单导出', icon: '📤' },
 };
