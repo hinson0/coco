@@ -259,7 +259,12 @@ export default function RevenueScreen() {
             下一条广告奖励
           </AppText>
           <AppText size="base" color={colors.textLight}>
-            {nextRewards.map(r => `${FEATURE_META[r.feature].icon} ${FEATURE_META[r.feature].label} +${r.amount} 天`).join(' · ')}
+            {nextRewards.map((r, i) => {
+              const meta = FEATURE_META[r.feature];
+              const text = `${meta.icon} ${meta.label} +${r.amount} 天`;
+              const isFirst = i === 0;
+              return (isFirst ? `【${text}】` : text) + (i < nextRewards.length - 1 ? ' → ' : '');
+            }).join('')}
           </AppText>
         </Card>
 
@@ -284,7 +289,7 @@ export default function RevenueScreen() {
         </View>
 
         {/* 说明文字 */}
-        <AppText size="base" color={colors.textLight} style={styles.tip}>
+        <AppText size="lg" color={colors.textLight} style={styles.tip}>
           点击"开始"后将自动播放广告。每条广告播放完毕，手动关闭后会自动加载下一条，如此循环往复，持续累积你的权益。
         </AppText>
       </View>
