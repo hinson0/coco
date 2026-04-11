@@ -105,10 +105,15 @@ function AppContent() {
     appOpenAd.load();
   }, []);
 
+  // 只在真正从后台恢复时弹开屏广告（非广告关闭导致的 active）
+  const wasBackgroundRef = useRef(false);
   useEffect(() => {
-    tryShowSplash();
+    tryShowSplash(); // 冷启动
     const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
+      if (nextState === "background") {
+        wasBackgroundRef.current = true;
+      } else if (nextState === "active" && wasBackgroundRef.current) {
+        wasBackgroundRef.current = false;
         tryShowSplash();
       }
     });
