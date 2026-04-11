@@ -1,263 +1,346 @@
-import { useState } from 'react';
-import { ScrollView, View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+// apps/mobile/app/(tabs)/bills.tsx
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useQuery } from '@tanstack/react-query';
-import type { Transaction, Category } from '@coco/shared';
-import { useLocalTransactions } from '../../hooks/useLocalTransactions';
-import { useLocalCategories } from '../../hooks/useLocalCategories';
-import { useOfflineContext } from '../../lib/offline-context';
-import { FilterBar, ALL_EXPENSE } from '../../components/bills/FilterBar';
-import { MonthStrip } from '../../components/bills/MonthStrip';
-import { DayGroup } from '../../components/shared/DayGroup';
-import { TransactionItem } from '../../components/shared/TransactionItem';
+import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RewardedAd, RewardedAdEventType, AdEventType, TestIds } from 'react-native-google-mobile-ads';
+import { useAdWatchCount, useEntitlements, useRecordAdWatch } from '../../hooks/useEntitlement';
+import { getRewardsForWatch, CYCLE_FEATURES, FEATURE_META } from '../../lib/entitlements/rewards';
 import { AppText } from '../../components/ui/AppText';
-import { colors, radii, shadows, getCategoryColor } from '../../constants/theme';
+import { Card } from '../../components/ui/Card';
+import { colors, radii, shadows } from '../../constants/theme';
 
-// ─── Helper: date label ──────────────────────────────────────────────────────
+// AdMob 激励视频广告位（__DEV__ 时使用测试 ID）
+const REWARDED_AD_ID = __DEV__ ? TestIds.REWARDED : 'ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy';
 
-function formatDayLabel(dateStr: string): { label: string; date: string } {
-  const d = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
+const isPaused = (state: AdState) => state === 'paused';
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+type AdState = 'loading' | 'playing' | 'paused' | 'error' | 'idle';
 
-  let label: string;
-  if (isSameDay(d, today)) {
-    label = '今天';
-  } else if (isSameDay(d, yesterday)) {
-    label = '昨天';
-  } else {
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    label = `${month}月${day}日`;
-  }
+export default function RevenueScreen() {
+  const insets = useSafeAreaInsets();
+  const [adState, setAdState] = useState<AdState>('paused');
+  const [errorCount, setErrorCount] = useState(0);
+  const isPausedRef = useRef(true);
+  const isActiveRef = useRef(true);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  const date = weekdays[d.getDay()];
+  const { data: watchCount = 0 } = useAdWatchCount();
+  const { data: entitlements = [] } = useEntitlements();
+  const { mutateAsync: recordWatch } = useRecordAdWatch();
 
-  return { label, date };
-}
+  // 用 ref 存 recordWatch 避免闭包过期
+  const recordWatchRef = useRef(recordWatch);
+  recordWatchRef.current = recordWatch;
 
-// ─── Helper: group transactions by date ─────────────────────────────────────
+  // 下一条广告的奖励
+  const nextRewards = getRewardsForWatch(watchCount + 1);
+  const nextCycleReward = nextRewards[0];
+  const nextMeta = FEATURE_META[nextCycleReward.feature];
 
-interface DayData {
-  readonly key: string;
-  readonly label: string;
-  readonly date: string;
-  readonly transactions: Transaction[];
-  readonly dayExpense: number;
-  readonly dayIncome: number;
-}
+  // 当前循环中的进度（2 个一循环：asr/ocr）
+  const posInCycle = watchCount % CYCLE_FEATURES.length;
 
-function groupByDay(transactions: readonly Transaction[]): DayData[] {
-  const map = new Map<string, Transaction[]>();
+  // 用 ref 保存 loadAndPlay，解决递归调用闭包过期问题
+  const loadAndPlayRef = useRef<() => void>(() => {});
 
-  for (const t of transactions) {
-    const key = t.occurred_at.slice(0, 10);
-    const existing = map.get(key);
-    if (existing) {
-      existing.push(t);
-    } else {
-      map.set(key, [t]);
+  loadAndPlayRef.current = () => {
+    if (isPausedRef.current || !isActiveRef.current) return;
+
+    // 清理上一轮
+    cleanupRef.current?.();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    setAdState('loading');
+
+    const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_ID);
+    let settled = false; // 防止重复处理
+
+    /** 只在未暂停时调度下一轮，否则回到暂停状态 */
+    function scheduleNext(delayMs: number) {
+      if (isPausedRef.current || !isActiveRef.current) {
+        setAdState(isPausedRef.current ? 'paused' : 'idle');
+        return;
+      }
+      setAdState('loading');
+      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), delayMs);
     }
-  }
 
-  const sorted = Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      if (settled) return;
+      if (isPausedRef.current || !isActiveRef.current) {
+        settled = true;
+        cleanup();
+        setAdState(isPausedRef.current ? 'paused' : 'idle');
+        return;
+      }
+      setAdState('playing');
+      rewarded.show().catch(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        scheduleNext(3000);
+      });
+    });
 
-  return sorted.map(([key, txns]) => {
-    const { label, date } = formatDayLabel(key);
-    const dayExpense = txns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const dayIncome = txns.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    return { key, label, date, transactions: txns, dayExpense, dayIncome };
-  });
-}
+    const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+      recordWatchRef.current({ slotId: REWARDED_AD_ID, durationSec: null });
+      setErrorCount(0);
+    });
 
-// ─── Helper: format money ─────────────────────────────────────────────────────
+    const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      scheduleNext(1000);
+    });
 
-function fmt(amount: number): string {
-  return `¥${Math.abs(amount).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
-}
+    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      setErrorCount((prev) => {
+        const next = prev + 1;
+        if (next >= 3) {
+          setAdState('error');
+        } else {
+          scheduleNext(3000);
+        }
+        return next;
+      });
+    });
 
-// ─── Helper: current month label ─────────────────────────────────────────────
+    function cleanup() {
+      unsubLoaded();
+      unsubEarned();
+      unsubClosed();
+      unsubError();
+      cleanupRef.current = null;
+    }
 
-function currentMonthLabel(): string {
-  const now = new Date();
-  return `${now.getFullYear()}年${now.getMonth() + 1}月`;
-}
+    cleanupRef.current = cleanup;
 
-// ─── Hook: current month stats from DB ───────────────────────────────────────
+    // 超时保护：8 秒内没有任何回调，当作加载失败处理
+    timeoutRef.current = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        setErrorCount((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+            setAdState('error');
+          } else {
+            scheduleNext(3000);
+          }
+          return next;
+        });
+      }
+    }, 8000);
 
-function useCurrentMonthStats(categoryId?: string) {
-  const { db, userId } = useOfflineContext();
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    rewarded.load();
+  };
 
-  return useQuery({
-    queryKey: ['transactions', 'month-stats', categoryId ?? 'all', userId],
-    queryFn: async () => {
-      if (!db || !userId) return { count: 0, expense: 0 };
-      const catFilter = categoryId ? ' AND category_id = ?' : '';
-      const params: (string | number)[] = [userId, monthStart, monthEnd];
-      if (categoryId) params.push(categoryId);
-      const row = await db.getFirstAsync<{ count: number; expense: number }>(
-        `SELECT COUNT(*) as count, COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense FROM transactions WHERE user_id = ? AND deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ?${catFilter}`,
-        ...params
-      );
-      return { count: row?.count ?? 0, expense: row?.expense ?? 0 };
-    },
-    enabled: !!db && !!userId,
-  });
-}
+  // 进入页面自动开始
+  useEffect(() => {
+    isActiveRef.current = true;
+    if (!isPausedRef.current) {
+      loadAndPlayRef.current();
+    }
+    return () => {
+      isActiveRef.current = false;
+      cleanupRef.current?.();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+  // 防止卡在 idle：未暂停时自动重新加载
+  useEffect(() => {
+    if (adState === 'idle' && !isPausedRef.current && isActiveRef.current) {
+      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 1000);
+    }
+  }, [adState]);
 
-export default function BillsScreen() {
-  const [activeFilter, setActiveFilter] = useState(ALL_EXPENSE);
+  // 用 ref 跟踪 adState，避免 AppState effect 频繁重挂
+  const adStateRef = useRef(adState);
+  adStateRef.current = adState;
 
-  const { data: txData, isLoading: txLoading } = useLocalTransactions();
-  const { data: categories = [] } = useLocalCategories();
+  // 后台/前台切换（只挂载一次）
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        isActiveRef.current = true;
+        if (!isPausedRef.current && adStateRef.current !== 'playing') {
+          loadAndPlayRef.current();
+        }
+      } else {
+        isActiveRef.current = false;
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
-  const allTransactions: readonly Transaction[] = txData?.data ?? [];
-
-  const catMap = new Map<string, Category>(categories.map(c => [c.id, c]));
-
-  // Filter transactions by active category
-  const filteredTransactions = activeFilter === ALL_EXPENSE
-    ? allTransactions
-    : allTransactions.filter(t => t.category_id === activeFilter);
-
-  const categoryId = activeFilter === ALL_EXPENSE ? undefined : activeFilter;
-  const { data: monthStats } = useCurrentMonthStats(categoryId);
-  const days = groupByDay(filteredTransactions);
+  const handlePauseResume = () => {
+    if (isPausedRef.current) {
+      isPausedRef.current = false;
+      loadAndPlayRef.current();
+    } else {
+      isPausedRef.current = true;
+      cleanupRef.current?.();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setAdState('paused');
+    }
+  };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <StatusBar style="dark" backgroundColor={colors.cream} />
 
-      {/* Fixed header */}
+      {/* Header */}
       <View style={styles.header}>
-        <AppText size="5xl" weight="bold" color={colors.text}>账单</AppText>
-        <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
-          <AppText size="xl">🔍</AppText>
-        </TouchableOpacity>
+        <AppText size="5xl" weight="bold" color={colors.text}>收益</AppText>
+        <View style={styles.headerRight}>
+          <AppText size="base" color={colors.textLight}>累计观看</AppText>
+          <View style={styles.countBadge}>
+            <AppText size="lg" weight="bold" color={colors.white}>{watchCount}</AppText>
+          </View>
+        </View>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Category filter chips */}
-        <FilterBar
-          categories={categories.map(c => ({ id: c.id, name: c.name }))}
-          activeId={activeFilter}
-          onSelect={setActiveFilter}
-        />
+      {/* 广告播放区域 */}
+      <View style={styles.adContainer}>
+        {adState === 'loading' && (
+          <View style={styles.adCenter}>
+            <AppText size="3xl">🎬</AppText>
+            <AppText size="xl" color={colors.textLight} style={styles.adText}>加载中...</AppText>
+          </View>
+        )}
+        {adState === 'playing' && (
+          <View style={styles.adCenter}>
+            <AppText size="3xl">▶️</AppText>
+            <AppText size="xl" color={colors.textLight} style={styles.adText}>广告播放中...</AppText>
+          </View>
+        )}
+        {adState === 'paused' && (
+          <View style={styles.adCenter}>
+            <AppText size="3xl">⏸️</AppText>
+            <AppText size="xl" color={colors.textLight} style={styles.adText}>已暂停</AppText>
+            <AppText size="base" color={colors.textLighter} style={styles.adText}>点击下方按钮继续</AppText>
+          </View>
+        )}
+        {adState === 'error' && (
+          <View style={styles.adCenter}>
+            <AppText size="3xl">😴</AppText>
+            <AppText size="xl" color={colors.textLight} style={styles.adText}>暂无广告，稍后再试</AppText>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              activeOpacity={0.7}
+              onPress={() => { setErrorCount(0); isPausedRef.current = false; loadAndPlayRef.current(); }}
+            >
+              <AppText size="lg" weight="medium" color={colors.sage}>重试</AppText>
+            </TouchableOpacity>
+          </View>
+        )}
+        {adState === 'idle' && (
+          <View style={styles.adCenter}>
+            <AppText size="3xl">🎬</AppText>
+            <AppText size="xl" color={colors.textLight} style={styles.adText}>
+              观看广告，免费解锁高级功能
+            </AppText>
+          </View>
+        )}
+      </View>
 
-        {/* Month summary strip */}
-        <MonthStrip
-          month={currentMonthLabel()}
-          count={monthStats?.count ?? 0}
-          total={fmt(monthStats?.expense ?? 0)}
-        />
-
-        {/* Transaction list */}
-        <View style={styles.txSection}>
-          {txLoading ? (
-            <ActivityIndicator color={colors.sage} style={styles.loader} />
-          ) : days.length === 0 ? (
-            <View style={styles.empty}>
-              <AppText color={colors.textLighter} size="lg">
-                {activeFilter !== ALL_EXPENSE ? '该分类暂无记录 🌿' : '还没有记录，快去记一笔吧 🌿'}
-              </AppText>
-            </View>
-          ) : (
-            days.map(day => {
-              const totalColor = day.dayExpense > 0 ? colors.coral : colors.sage;
-              const totalStr =
-                day.dayExpense > 0 && day.dayIncome > 0
-                  ? `-¥${day.dayExpense.toLocaleString()} / +¥${day.dayIncome.toLocaleString()}`
-                  : day.dayExpense > 0
-                  ? `-¥${day.dayExpense.toLocaleString()}`
-                  : `+¥${day.dayIncome.toLocaleString()}`;
-
+      {/* 下一个奖励进度 */}
+      <View style={styles.bottomSection}>
+        <Card style={styles.rewardCard}>
+          <AppText size="lg" weight="medium" color={colors.text} style={{ marginBottom: 8 }}>
+            下一条广告奖励
+          </AppText>
+          <View style={styles.rewardTags}>
+            {nextRewards.map((r, i) => {
+              const meta = FEATURE_META[r.feature];
+              const isFirst = i === 0;
               return (
-                <DayGroup
-                  key={day.key}
-                  label={day.label}
-                  date={day.date}
-                  total={totalStr}
-                  totalColor={totalColor}
-                >
-                  {day.transactions.map(txn => {
-                    const cat = catMap.get(txn.category_id);
-                    const catName = cat?.name ?? '其他';
-                    const catIcon = cat?.icon ?? '📦';
-                    const catColor = getCategoryColor(catName);
-
-                    return (
-                      <TransactionItem
-                        key={txn.id}
-                        transaction={txn}
-                        categoryIcon={catIcon}
-                        categoryName={catName}
-                        categoryColor={catColor}
-                      />
-                    );
-                  })}
-                </DayGroup>
+                <View key={r.feature} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {i > 0 && <AppText size="sm" color={colors.textLighter}> → </AppText>}
+                  <View style={isFirst ? styles.rewardTagActive : undefined}>
+                    <AppText size="sm" color={isFirst ? colors.sage : colors.textLight}>
+                      {meta.icon} {meta.label} +{r.amount}天
+                    </AppText>
+                  </View>
+                </View>
               );
-            })
-          )}
+            })}
+          </View>
+        </Card>
+
+        {/* 控制按钮 */}
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={[styles.controlBtn, isPaused(adState) && styles.controlBtnActive]}
+            activeOpacity={0.7}
+            onPress={handlePauseResume}
+          >
+            <AppText size="lg" weight="medium" color={isPaused(adState) ? colors.white : colors.text}>
+              {isPaused(adState) ? '▶ 开始' : '⏸ 暂停'}
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push('/ad-rewards')}
+          >
+            <AppText size="lg" weight="medium" color={colors.text}>📋 我的权益</AppText>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+
+        {/* 说明文字 */}
+        <AppText size="lg" color={colors.textLight} style={styles.tip}>
+          点击"开始"后将自动播放广告。每条广告播放完毕，手动关闭后会自动加载下一条，如此循环往复，持续累积你的权益。
+        </AppText>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.cream,
-  },
+  screen: { flex: 1, backgroundColor: colors.cream },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 12,
-    backgroundColor: colors.cream,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14,
   },
-  searchBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.md,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  countBadge: {
+    backgroundColor: colors.sage, borderRadius: radii.full,
+    paddingHorizontal: 10, paddingVertical: 2,
+  },
+  adContainer: {
+    flex: 1, marginHorizontal: 20, marginVertical: 12,
+    backgroundColor: colors.white, borderRadius: radii.xl,
     ...shadows.md,
+    justifyContent: 'center', alignItems: 'center',
   },
-  scroll: {
-    flex: 1,
+  adCenter: { alignItems: 'center', gap: 12 },
+  adText: { textAlign: 'center' },
+  retryBtn: {
+    marginTop: 8, paddingHorizontal: 20, paddingVertical: 8,
+    borderRadius: radii.md, borderWidth: 1, borderColor: colors.sage,
   },
-  scrollContent: {
-    paddingBottom: 100,
+  bottomSection: { paddingHorizontal: 20, paddingBottom: 100 },
+  rewardCard: { marginBottom: 12 },
+  rewardTags: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  rewardTagActive: {
+    backgroundColor: colors.sagePale, paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: radii.sm,
   },
-  txSection: {
-    paddingHorizontal: 20,
+  controls: { flexDirection: 'row', gap: 12 },
+  controlBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: radii.lg,
+    backgroundColor: colors.white, alignItems: 'center',
+    ...shadows.sm,
   },
-  loader: {
-    marginTop: 40,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingTop: 48,
-  },
+  controlBtnActive: { backgroundColor: colors.sage },
+  tip: { textAlign: 'center', marginTop: 16, paddingHorizontal: 12, lineHeight: 20 },
 });
