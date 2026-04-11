@@ -70,8 +70,8 @@ export function useCreateTransaction() {
       const id = Crypto.randomUUID();
       const now = new Date().toISOString();
       await db.runAsync(
-        `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, account_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, updated_at, account_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         id,
         userId,
         input.category_id,
@@ -83,6 +83,7 @@ export function useCreateTransaction() {
         input.raw_input ?? null,
         input.receipt_url ?? null,
         input.ai_confidence ?? null,
+        now,
         now,
         input.account_id ?? null
       );
@@ -111,6 +112,8 @@ export function useUpdateTransaction() {
       if (params.note !== undefined) { fields.push("note = ?"); values.push(params.note); }
       if (params.occurred_at !== undefined) { fields.push("occurred_at = ?"); values.push(params.occurred_at); }
       if (params.account_id !== undefined) { fields.push("account_id = ?"); values.push(params.account_id as any); }
+      fields.push("updated_at = ?");
+      values.push(new Date().toISOString());
       if (fields.length === 0) return;
       values.push(params.id);
       await db.runAsync(
@@ -134,7 +137,8 @@ export function useDeleteTransaction() {
     mutationFn: async (id: string) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
-        "UPDATE transactions SET deleted_at = ? WHERE id = ?",
+        "UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ?",
+        new Date().toISOString(),
         new Date().toISOString(),
         id
       );
