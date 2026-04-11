@@ -8,7 +8,7 @@ import {
   logAdWatch,
   getTotalRewardedWatchCount,
 } from '@/lib/entitlements/queries';
-import { getRewardForWatch } from '@/lib/entitlements/rewards';
+import { getRewardsForWatch } from '@/lib/entitlements/rewards';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
@@ -80,13 +80,15 @@ export function useRecordAdWatch() {
       // 2. 查询当前累计观看次数（包含刚插入的这条）
       const totalCount = await getTotalRewardedWatchCount(db);
 
-      // 3. 根据累计次数计算奖励
-      const reward = getRewardForWatch(totalCount);
+      // 3. 根据累计次数计算奖励（每条广告给多种权益）
+      const rewards = getRewardsForWatch(totalCount);
 
-      // 4. 增加权益余额
-      await addEntitlement(db, reward.feature, reward.amount);
+      // 4. 增加所有权益余额
+      for (const reward of rewards) {
+        await addEntitlement(db, reward.feature, reward.amount);
+      }
 
-      return { totalCount, reward };
+      return { totalCount, rewards };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ENTITLEMENT_KEY });
