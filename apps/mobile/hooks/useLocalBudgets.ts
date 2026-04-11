@@ -1,8 +1,12 @@
 // apps/mobile/hooks/useLocalBudgets.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
-import type { Budget, CreateBudgetInput, UpdateBudgetInput } from "@coco/shared";
+import type {
+  Budget,
+  CreateBudgetInput,
+  UpdateBudgetInput,
+} from "@coco/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Crypto from "expo-crypto";
 
 export function useLocalBudgets() {
   const { db, userId } = useOfflineContext();
@@ -11,7 +15,10 @@ export function useLocalBudgets() {
     queryKey: ["budgets", userId],
     queryFn: async (): Promise<readonly Budget[]> => {
       if (!db || !userId) return [];
-      return db.getAllAsync<Budget>("SELECT * FROM budgets WHERE user_id = ? ORDER BY start_date DESC", userId);
+      return db.getAllAsync<Budget>(
+        "SELECT * FROM budgets WHERE user_id = ? AND deleted_at IS NULL ORDER BY start_date DESC",
+        userId,
+      );
     },
     enabled: !!db && !!userId,
   });
@@ -33,7 +40,7 @@ export function useCreateBudget() {
         input.amount,
         input.period,
         input.start_date,
-        new Date().toISOString()
+        new Date().toISOString(),
       );
       return id;
     },
@@ -54,7 +61,7 @@ export function useUpdateBudget() {
         "UPDATE budgets SET amount = ?, updated_at = ? WHERE id = ?",
         params.amount,
         new Date().toISOString(),
-        params.id
+        params.id,
       );
     },
     onSuccess: () => {
@@ -70,7 +77,13 @@ export function useDeleteBudget() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!db) throw new Error("Database not initialized");
-      await db.runAsync("DELETE FROM budgets WHERE id = ?", id);
+      const now = new Date().toISOString();
+      await db.runAsync(
+        "UPDATE budgets SET deleted_at = ?, updated_at = ? WHERE id = ?",
+        now,
+        now,
+        id,
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["budgets"] });
@@ -86,8 +99,8 @@ export function useGlobalBudget() {
     queryFn: async (): Promise<Budget | null> => {
       if (!db || !userId) return null;
       return db.getFirstAsync<Budget>(
-        "SELECT * FROM budgets WHERE user_id = ? AND category_id IS NULL AND period = 'monthly' ORDER BY start_date DESC LIMIT 1",
-        userId
+        "SELECT * FROM budgets WHERE user_id = ? AND category_id IS NULL AND period = 'monthly' AND deleted_at IS NULL ORDER BY start_date DESC LIMIT 1",
+        userId,
       );
     },
     enabled: !!db && !!userId,
@@ -102,8 +115,13 @@ export function useCategoryBudgets() {
     queryFn: async (): Promise<readonly Budget[]> => {
       if (!db || !userId) return [];
       return db.getAllAsync<Budget>(
-        "SELECT * FROM budgets WHERE user_id = ? AND category_id IS NOT NULL AND period = 'monthly' ORDER BY start_date DESC",
-        userId
+        `SELECT * FROM budgets 
+        WHERE user_id = ? 
+        AND category_id IS NOT NULL 
+        AND deleted_at IS NULL 
+        AND period = 'monthly' 
+        ORDER BY start_date DESC`,
+        userId,
       );
     },
     enabled: !!db && !!userId,

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -14,9 +16,9 @@ class TransactionRow(BaseModel):
     source: str
     raw_input: str | None  # 用户的原始输入文本
     ai_confidence: float | None
-    created_at: str
-    updated_at: str
-    deleted_at: str | None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
     account_id: str | None
 
 
@@ -29,8 +31,8 @@ class CategoryRow(BaseModel):
     icon: str
     type: str  # 支出/收入
     is_default: int
-    deleted_at: str | None
-    updated_at: str
+    deleted_at: datetime | None
+    updated_at: datetime
 
 
 class BudgetRow(BaseModel):
@@ -42,7 +44,8 @@ class BudgetRow(BaseModel):
     amount: float
     period: str  #  月 年 周期的意思
     start_date: str
-    updated_at: str
+    updated_at: datetime
+    deleted_at: datetime | None
 
 
 class ChatMessageRow(BaseModel):
@@ -54,8 +57,9 @@ class ChatMessageRow(BaseModel):
     content_type: str
     content: str
     transaction_id: str | None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
     audio_uri: str | None
     duration_seconds: int | None
 
@@ -64,14 +68,14 @@ class AccountRow(BaseModel):
     """账号行记录"""
 
     id: str
-    user_id: str | None  # 为none时是指系统预制的分类.
+    user_id: str | None  # 为 None 时是系统预制的账户.
     name: str
     icon: str
     type: str
     initial_balance: float
-    created_at: str
-    updated_at: str
-    deleted_at: str | None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
 
 
 class UserProfileRow(BaseModel):
@@ -81,8 +85,8 @@ class UserProfileRow(BaseModel):
     nickname: str | None
     avatar_type: str
     avatar_value: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class SyncPushRequest(BaseModel):

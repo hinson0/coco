@@ -113,37 +113,66 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   // 重建索引：加入 user_id 以支持多用户同名分类
   await db.execAsync("DROP INDEX IF EXISTS idx_categories_name_type");
   await db.execAsync(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type, user_id) WHERE deleted_at IS NULL"
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type, user_id) WHERE deleted_at IS NULL",
   );
   // 语音消息字段
   await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
-  await addColumnIfNotExists(db, "chat_messages", "duration_seconds", "INTEGER");
+  await addColumnIfNotExists(
+    db,
+    "chat_messages",
+    "duration_seconds",
+    "INTEGER",
+  );
   // user_id 索引（多用户数据隔离）
-  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
-  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)");
-  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
-  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)");
-  await db.execAsync("CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)");
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)",
+  );
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)",
+  );
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)",
+  );
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id)",
+  );
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)",
+  );
   // 聊天消息按时间排序的索引，加速 ORDER BY created_at DESC LIMIT 查询
   await db.execAsync(
-    "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)"
+    "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)",
   );
 
   // ── 同步支持：给各表加 updated_at ──
   await addColumnIfNotExists(db, "transactions", "updated_at", "TEXT");
-  await db.execAsync(`UPDATE transactions SET updated_at = created_at WHERE updated_at IS NULL`);
+  await db.execAsync(
+    `UPDATE transactions SET updated_at = created_at WHERE updated_at IS NULL`,
+  );
 
   await addColumnIfNotExists(db, "categories", "updated_at", "TEXT");
-  await db.execAsync(`UPDATE categories SET updated_at = datetime('now') WHERE updated_at IS NULL`);
+  await db.execAsync(
+    `UPDATE categories SET updated_at = datetime('now') WHERE updated_at IS NULL`,
+  );
 
   await addColumnIfNotExists(db, "budgets", "updated_at", "TEXT");
-  await db.execAsync(`UPDATE budgets SET updated_at = datetime('now') WHERE updated_at IS NULL`);
+  await db.execAsync(
+    `UPDATE budgets SET updated_at = datetime('now') WHERE updated_at IS NULL`,
+  );
+
+  await addColumnIfNotExists(db, "budgets", "deleted_at", "TEXT");
 
   await addColumnIfNotExists(db, "chat_messages", "updated_at", "TEXT");
-  await db.execAsync(`UPDATE chat_messages SET updated_at = created_at WHERE updated_at IS NULL`);
+  await db.execAsync(
+    `UPDATE chat_messages SET updated_at = created_at WHERE updated_at IS NULL`,
+  );
+
+  await addColumnIfNotExists(db, "chat_messages", "deleted_at", "TEXT");
 
   await addColumnIfNotExists(db, "accounts", "updated_at", "TEXT");
-  await db.execAsync(`UPDATE accounts SET updated_at = created_at WHERE updated_at IS NULL`);
+  await db.execAsync(
+    `UPDATE accounts SET updated_at = created_at WHERE updated_at IS NULL`,
+  );
 
   // ── 同步水位线表 ──
   await db.execAsync(`
