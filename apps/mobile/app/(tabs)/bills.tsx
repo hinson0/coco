@@ -168,6 +168,13 @@ export default function RevenueScreen() {
     };
   }, []);
 
+  // 防止卡在 idle：未暂停时自动重新加载
+  useEffect(() => {
+    if (adState === 'idle' && !isPausedRef.current && isActiveRef.current) {
+      timeoutRef.current = setTimeout(() => loadAndPlayRef.current(), 1000);
+    }
+  }, [adState]);
+
   // 后台/前台切换
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
