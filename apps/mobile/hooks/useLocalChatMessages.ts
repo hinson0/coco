@@ -28,7 +28,7 @@ export function useLocalChatMessages(limit: number = CHAT_PAGE_SIZE) {
     queryFn: async (): Promise<readonly ChatMessage[]> => {
       if (!db || !userId) return [];
       const rows = await db.getAllAsync<ChatMessage>(
-        "SELECT * FROM chat_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        "SELECT * FROM chat_messages WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?",
         userId,
         limit,
       );
@@ -78,7 +78,11 @@ export function useDeleteChatMessage() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!db) throw new Error("Database not initialized");
-      await db.runAsync("DELETE FROM chat_messages WHERE id = ?", id);
+      const now = new Date().toISOString();
+      await db.runAsync(
+        "UPDATE chat_messages SET deleted_at = ?, updated_at = ? WHERE id = ?",
+        now, now, id
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
@@ -93,7 +97,11 @@ export function useClearChatMessages() {
   return useMutation({
     mutationFn: async () => {
       if (!db || !userId) throw new Error("Database not initialized");
-      await db.runAsync("DELETE FROM chat_messages WHERE user_id = ?", userId);
+      const now = new Date().toISOString();
+      await db.runAsync(
+        "UPDATE chat_messages SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND deleted_at IS NULL",
+        now, now, userId
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
