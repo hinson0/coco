@@ -8,6 +8,9 @@ on:
       - "packages/shared/**"
       - "pnpm-lock.yaml"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   check:
     # 质量检查 / 格式化 / 类型检查 / 单测
