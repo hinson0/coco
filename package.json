@@ -11,7 +11,10 @@
     "db:reset": "docker compose down -v && docker compose up -d && sleep 2 && pnpm db:migrate",
     "w": "node scripts/worktree-dev.mjs",
     "test": "pnpm --filter mobile test",
-    "test:scripts": "node --test scripts/__tests__/*.test.mjs"
+    "test:scripts": "node --test scripts/__tests__/*.test.mjs",
+    "cicd:frontend": "pnpm --filter mobile lint && pnpm --filter mobile format:check && pnpm --filter mobile typecheck && pnpm --filter @coco/shared lint && pnpm --filter mobile test",
+    "cicd:backend": "cd apps/backend && uv run ruff check . && uv run ruff format --check . && uv run pyright && SILICON_API_KEY=test TENCENT_SECRET_ID=test TENCENT_SECRET_KEY=test DATABASE_URL=postgresql+asyncpg://test:test@localhost:5432/test JWT_SECRET=test uv run pytest -x -q",
+    "cicd": "pnpm cicd:frontend && pnpm cicd:backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
