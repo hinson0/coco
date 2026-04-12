@@ -1,9 +1,0 @@
-{
-  "platforms": ["ios", "android"],
-  "ios": {
-    "modules": ["ExpoPangleModule"]
-  },
-  "android": {
-    "modules": ["expo.modules.pangle.ExpoPangleModule"]
-  }
-}
