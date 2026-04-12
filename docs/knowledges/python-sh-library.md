@@ -73,12 +73,12 @@ sh.docker.ps("-a")  # 子命令用属性访问
 
 ## 对比 subprocess
 
-| | `subprocess` | `sh` |
-|---|---|---|
-| 调用 | `subprocess.run(["git", "status"])` | `git.status()` |
-| 管道 | 手动连接 stdin/stdout | 函数嵌套 |
-| 输出 | 需 `.stdout.decode()` | 直接返回字符串 |
-| Windows | 支持 | 不支持 |
+|         | `subprocess`                        | `sh`           |
+| ------- | ----------------------------------- | -------------- |
+| 调用    | `subprocess.run(["git", "status"])` | `git.status()` |
+| 管道    | 手动连接 stdin/stdout               | 函数嵌套       |
+| 输出    | 需 `.stdout.decode()`               | 直接返回字符串 |
+| Windows | 支持                                | 不支持         |
 
 ## 参考
 
