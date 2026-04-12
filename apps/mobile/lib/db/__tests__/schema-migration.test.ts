@@ -2,8 +2,13 @@ import { openDatabaseAsync } from "expo-sqlite";
 import { createTables } from "../schema";
 
 describe("schema migration: updated_at + sync_watermarks", () => {
-  async function getColumns(db: Awaited<ReturnType<typeof openDatabaseAsync>>, table: string) {
-    const rows = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  async function getColumns(
+    db: Awaited<ReturnType<typeof openDatabaseAsync>>,
+    table: string,
+  ) {
+    const rows = await db.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(${table})`,
+    );
     return rows.map((r) => r.name);
   }
 
@@ -74,17 +79,17 @@ describe("schema migration: existing data gets updated_at default", () => {
     `);
     // 插入一条没有 updated_at 的旧数据
     await db.runAsync(
-      `INSERT INTO categories (id, name, icon, type) VALUES ('cat1', '餐饮', '🍔', 'expense')`
+      `INSERT INTO categories (id, name, icon, type) VALUES ('cat1', '餐饮', '🍔', 'expense')`,
     );
     await db.runAsync(
       `INSERT INTO transactions (id, category_id, amount, type, note, occurred_at, created_at)
-       VALUES ('tx1', 'cat1', 100, 'expense', '', '2026-01-01', '2026-01-01T10:00:00.000Z')`
+       VALUES ('tx1', 'cat1', 100, 'expense', '', '2026-01-01', '2026-01-01T10:00:00.000Z')`,
     );
     // 跑完整的 createTables（会触发 addColumnIfNotExists + UPDATE default）
     await createTables(db);
     // 验证 updated_at 被填充为 created_at
     const row = await db.getFirstAsync<{ updated_at: string }>(
-      "SELECT updated_at FROM transactions WHERE id = 'tx1'"
+      "SELECT updated_at FROM transactions WHERE id = 'tx1'",
     );
     expect(row?.updated_at).toBe("2026-01-01T10:00:00.000Z");
   });

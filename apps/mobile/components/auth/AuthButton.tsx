@@ -1,6 +1,11 @@
-import { Pressable, ActivityIndicator, StyleSheet, type PressableProps } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors, shadows } from '../../constants/theme';
+import {
+  Pressable,
+  ActivityIndicator,
+  StyleSheet,
+  type PressableProps,
+} from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, shadows } from "../../constants/theme";
 
 interface AuthButtonProps {
   readonly title: string;
@@ -18,7 +23,9 @@ export function AuthButton({ title, onPress, loading }: AuthButtonProps) {
       {loading ? (
         <ActivityIndicator color={colors.white} />
       ) : (
-        <AppText size="2xl" weight="semibold" color={colors.white}>{title}</AppText>
+        <AppText size="2xl" weight="semibold" color={colors.white}>
+          {title}
+        </AppText>
       )}
     </Pressable>
   );
@@ -29,8 +36,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sage,
     borderRadius: 12,
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.md,
   },
   buttonPressed: {

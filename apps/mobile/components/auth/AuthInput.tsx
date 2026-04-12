@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { TextInput, StyleSheet, type TextInputProps } from 'react-native';
-import { colors } from '../../constants/theme';
+import { useState } from "react";
+import { TextInput, StyleSheet, type TextInputProps } from "react-native";
+import { colors } from "../../constants/theme";
 
 interface AuthInputProps {
   readonly placeholder: string;
   readonly value: string;
   readonly onChangeText: (text: string) => void;
   readonly secureTextEntry?: boolean;
-  readonly keyboardType?: TextInputProps['keyboardType'];
-  readonly autoCapitalize?: TextInputProps['autoCapitalize'];
+  readonly keyboardType?: TextInputProps["keyboardType"];
+  readonly autoCapitalize?: TextInputProps["autoCapitalize"];
 }
 
 export function AuthInput({
@@ -17,7 +17,7 @@ export function AuthInput({
   onChangeText,
   secureTextEntry,
   keyboardType,
-  autoCapitalize = 'none',
+  autoCapitalize = "none",
 }: AuthInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 

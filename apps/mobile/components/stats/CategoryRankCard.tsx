@@ -1,16 +1,16 @@
-import { useState, useMemo, useCallback } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import { PieChart } from 'react-native-gifted-charts';
-import { Card } from '../ui/Card';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
-import type { CategoryStat, DailyDataPoint } from '../../utils/statsUtils';
-import type { Dimension } from './DailyTrendCard';
+import { useState, useMemo, useCallback } from "react";
+import { View, Pressable, StyleSheet } from "react-native";
+import { PieChart } from "react-native-gifted-charts";
+import { Card } from "../ui/Card";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
+import type { CategoryStat, DailyDataPoint } from "../../utils/statsUtils";
+import type { Dimension } from "./DailyTrendCard";
 
 const DIMENSION_LABELS: Record<Dimension, string> = {
-  expense: '支出',
-  income: '收入',
-  balance: '结余',
+  expense: "支出",
+  income: "收入",
+  balance: "结余",
 };
 
 const TAB_ACTIVE_COLORS: Record<Dimension, string> = {
@@ -31,8 +31,11 @@ interface CategoryRankCardProps {
 const MAX_BAR_WIDTH = 120;
 
 function formatAmount(n: number): string {
-  if (n === 0) return '—';
-  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (n === 0) return "—";
+  return n.toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function CategoryRankCard({
@@ -51,7 +54,7 @@ export function CategoryRankCard({
   };
 
   // ── 分类排行视图所需数据 ──
-  const data = dimension === 'expense' ? expenseByCategory : incomeByCategory;
+  const data = dimension === "expense" ? expenseByCategory : incomeByCategory;
   const maxAmt = data[0]?.amount ?? 1;
   const top = data[0];
   const visible = expanded ? data : data.slice(0, 3);
@@ -61,10 +64,7 @@ export function CategoryRankCard({
     [data],
   );
 
-  const legendData = useMemo(
-    () => data.filter((c) => c.percent > 0),
-    [data],
-  );
+  const legendData = useMemo(() => data.filter((c) => c.percent > 0), [data]);
 
   const centerLabel = useCallback(() => {
     if (!top) return null;
@@ -91,8 +91,8 @@ export function CategoryRankCard({
     return { expense, income, balance: income - expense };
   }, [dailyData]);
 
-  const isBalance = dimension === 'balance';
-  const title = isBalance ? '每日报表' : '分类排行榜';
+  const isBalance = dimension === "balance";
+  const title = isBalance ? "每日报表" : "分类排行榜";
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
@@ -100,16 +100,25 @@ export function CategoryRankCard({
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleAccent} />
-          <AppText size="xl" weight="semibold" color={colors.text}>{title}</AppText>
+          <AppText size="xl" weight="semibold" color={colors.text}>
+            {title}
+          </AppText>
         </View>
         <View style={styles.tabs}>
-          {(['expense', 'income', 'balance'] as const).map((d) => (
+          {(["expense", "income", "balance"] as const).map((d) => (
             <Pressable
               key={d}
               onPress={() => handleTabPress(d)}
-              style={[styles.tab, dimension === d && { backgroundColor: TAB_ACTIVE_COLORS[d] }]}
+              style={[
+                styles.tab,
+                dimension === d && { backgroundColor: TAB_ACTIVE_COLORS[d] },
+              ]}
             >
-              <AppText size="md" weight="semibold" color={dimension === d ? colors.white : colors.textLighter}>
+              <AppText
+                size="md"
+                weight="semibold"
+                color={dimension === d ? colors.white : colors.textLighter}
+              >
                 {DIMENSION_LABELS[d]}
               </AppText>
             </Pressable>
@@ -122,10 +131,38 @@ export function CategoryRankCard({
         <View>
           {/* 表头 */}
           <View style={[styles.tableRow, styles.tableHeader]}>
-            <AppText size="sm" weight="bold" color={colors.text} style={styles.colDate}>日期</AppText>
-            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>支出</AppText>
-            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>收入</AppText>
-            <AppText size="sm" weight="bold" color={colors.text} style={styles.colAmount}>结余</AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.text}
+              style={styles.colDate}
+            >
+              日期
+            </AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.text}
+              style={styles.colAmount}
+            >
+              支出
+            </AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.text}
+              style={styles.colAmount}
+            >
+              收入
+            </AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.text}
+              style={styles.colAmount}
+            >
+              结余
+            </AppText>
           </View>
 
           {/* 数据行 */}
@@ -136,13 +173,31 @@ export function CategoryRankCard({
                 <AppText size="sm" color={colors.text} style={styles.colDate}>
                   {d.date.slice(5)}
                 </AppText>
-                <AppText size="sm" color={d.expense > 0 ? colors.coral : colors.textLighter} style={styles.colAmount}>
+                <AppText
+                  size="sm"
+                  color={d.expense > 0 ? colors.coral : colors.textLighter}
+                  style={styles.colAmount}
+                >
                   {formatAmount(d.expense)}
                 </AppText>
-                <AppText size="sm" color={d.income > 0 ? colors.sage : colors.textLighter} style={styles.colAmount}>
+                <AppText
+                  size="sm"
+                  color={d.income > 0 ? colors.sage : colors.textLighter}
+                  style={styles.colAmount}
+                >
                   {formatAmount(d.income)}
                 </AppText>
-                <AppText size="sm" color={bal < 0 ? colors.coral : bal > 0 ? colors.sage : colors.textLighter} style={styles.colAmount}>
+                <AppText
+                  size="sm"
+                  color={
+                    bal < 0
+                      ? colors.coral
+                      : bal > 0
+                        ? colors.sage
+                        : colors.textLighter
+                  }
+                  style={styles.colAmount}
+                >
                   {formatAmount(bal)}
                 </AppText>
               </View>
@@ -151,17 +206,40 @@ export function CategoryRankCard({
 
           {/* 合计行 */}
           <View style={[styles.tableRow, styles.tableTotalRow]}>
-            <AppText size="sm" weight="bold" color={colors.text} style={styles.colDate}>合计</AppText>
-            <AppText size="sm" weight="bold" color={colors.coral} style={styles.colAmount}>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.text}
+              style={styles.colDate}
+            >
+              合计
+            </AppText>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.coral}
+              style={styles.colAmount}
+            >
               {formatAmount(totals.expense)}
             </AppText>
-            <AppText size="sm" weight="bold" color={colors.sage} style={styles.colAmount}>
+            <AppText
+              size="sm"
+              weight="bold"
+              color={colors.sage}
+              style={styles.colAmount}
+            >
               {formatAmount(totals.income)}
             </AppText>
             <AppText
               size="sm"
               weight="bold"
-              color={totals.balance < 0 ? colors.coral : totals.balance > 0 ? colors.sage : colors.text}
+              color={
+                totals.balance < 0
+                  ? colors.coral
+                  : totals.balance > 0
+                    ? colors.sage
+                    : colors.text
+              }
               style={styles.colAmount}
             >
               {formatAmount(totals.balance)}
@@ -191,13 +269,22 @@ export function CategoryRankCard({
           {/* Color legend */}
           {legendData.length > 0 && (
             <View style={styles.legend}>
-              {Array.from({ length: Math.ceil(legendData.length / 5) }, (_, row) =>
-                legendData.slice(row * 5, row * 5 + 5)
+              {Array.from(
+                { length: Math.ceil(legendData.length / 5) },
+                (_, row) => legendData.slice(row * 5, row * 5 + 5),
               ).map((rowItems, row) => (
                 <View key={`legend-row-${row}`} style={styles.legendRow}>
                   {rowItems.map((item) => (
-                    <View key={`legend-${item.name}-${dimension}`} style={styles.legendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                    <View
+                      key={`legend-${item.name}-${dimension}`}
+                      style={styles.legendItem}
+                    >
+                      <View
+                        style={[
+                          styles.legendDot,
+                          { backgroundColor: item.color },
+                        ]}
+                      />
                       <AppText size="sm" color={colors.textLight}>
                         {item.name} {item.percent}%
                       </AppText>
@@ -214,9 +301,15 @@ export function CategoryRankCard({
               <Pressable
                 key={`${item.name}-${dimension}`}
                 style={styles.rankRow}
-                onPress={() => item.categoryId && onCategoryPress?.(item.categoryId)}
+                onPress={() =>
+                  item.categoryId && onCategoryPress?.(item.categoryId)
+                }
               >
-                <AppText size="md" color={colors.textLighter} style={styles.rankNum}>
+                <AppText
+                  size="md"
+                  color={colors.textLighter}
+                  style={styles.rankNum}
+                >
                   {index + 1}
                 </AppText>
                 <AppText size="2xl" style={styles.emoji}>
@@ -244,9 +337,10 @@ export function CategoryRankCard({
                 <AppText
                   size="md"
                   weight="semibold"
-                  color={dimension === 'expense' ? colors.coral : colors.sage}
+                  color={dimension === "expense" ? colors.coral : colors.sage}
                 >
-                  {dimension === 'expense' ? '-' : '+'}¥{item.amount.toLocaleString('zh-CN', {
+                  {dimension === "expense" ? "-" : "+"}¥
+                  {item.amount.toLocaleString("zh-CN", {
                     maximumFractionDigits: 0,
                   })}
                 </AppText>
@@ -256,9 +350,12 @@ export function CategoryRankCard({
 
           {/* Expand toggle */}
           {data.length > 3 && (
-            <Pressable onPress={() => setExpanded(!expanded)} style={styles.expandBtn}>
+            <Pressable
+              onPress={() => setExpanded(!expanded)}
+              style={styles.expandBtn}
+            >
               <AppText size="sm" color={colors.textLighter}>
-                {expanded ? '↑ 收起' : '↓ 查看更多'}
+                {expanded ? "↑ 收起" : "↓ 查看更多"}
               </AppText>
             </Pressable>
           )}
@@ -270,14 +367,14 @@ export function CategoryRankCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   titleAccent: {
@@ -287,7 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.honey,
   },
   tabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 4,
   },
   tab: {
@@ -297,8 +394,8 @@ const styles = StyleSheet.create({
   },
   // ── 表格样式 ──
   tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 4,
   },
@@ -317,22 +414,22 @@ const styles = StyleSheet.create({
   },
   colDate: {
     width: 60,
-    textAlign: 'center',
+    textAlign: "center",
   },
   colAmount: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // ── 分类排行样式 ──
   donutWrap: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   centerLabel: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   empty: {
-    textAlign: 'center',
+    textAlign: "center",
     marginVertical: 20,
   },
   legend: {
@@ -340,13 +437,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 8,
   },
   legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   legendDot: {
@@ -358,17 +455,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   rankNum: {
     width: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emoji: {
     width: 28,
-    textAlign: 'center',
+    textAlign: "center",
   },
   info: {
     width: 56,
@@ -381,7 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   expandBtn: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
     paddingVertical: 4,
   },

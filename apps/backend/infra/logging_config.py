@@ -13,7 +13,7 @@ def setup_logging(env: str = "dev", level: str = "DEBUG") -> None:
     log_level = getattr(logging, level.upper(), logging.DEBUG)
 
     shared_processors = [
-        structlog.contextvars.merge_contextvars,   # 合并请求级 contextvars
+        structlog.contextvars.merge_contextvars,  # 合并请求级 contextvars
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f", utc=False),
         CallsiteParameterAdder([CallsiteParameter.MODULE]),
@@ -34,5 +34,9 @@ def setup_logging(env: str = "dev", level: str = "DEBUG") -> None:
 
     logging.basicConfig(level=log_level)
     # 屏蔽第三方库的 DEBUG 噪音日志
-    logging.getLogger("tencentcloud_sdk_common").propagate = False  # SDK 请求/响应体（含 base64）
-    logging.getLogger("urllib3").setLevel(logging.WARNING)          # HTTP 连接 DEBUG 日志
+    logging.getLogger(
+        "tencentcloud_sdk_common"
+    ).propagate = False  # SDK 请求/响应体（含 base64）
+    logging.getLogger("urllib3").setLevel(
+        logging.WARNING
+    )  # HTTP 连接 DEBUG 日志

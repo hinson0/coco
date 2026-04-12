@@ -1,8 +1,9 @@
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
+
 from infra.config import settings
 
 
@@ -70,7 +71,7 @@ async def classify_intent(text: str) -> str:
 
 
 async def extract_bill(text: str) -> dict | None:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     system = """从文字中提取记账信息，只返回 JSON。
         格式：{"amount": number, "category": string, "note": string, "occurred_at": string, "type": "expense"|"income"}
         分类选项：餐饮、交通、购物、娱乐、居住、医疗、教育、通讯、工资、理财、其他收入、其他支出
@@ -93,7 +94,7 @@ async def extract_bill(text: str) -> dict | None:
 
 async def extract_bill_from_receipt(raw_text: str) -> dict | None:
     """从小票 OCR 文本中提取记账信息（含逐行消费明细）"""
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     system = """从小票 OCR 文本中提取记账信息，只返回 JSON。
   格式：{"amount": number, "category": string, "note": string, "type": "expense"|"income", "occurred_at": string}
 
@@ -131,7 +132,7 @@ async def generate_sql(text: str) -> str:
     只返回 SQL，不要其他文字。
     user prompt：f"当前时间（UTC）：{now}\n问题：{text}"
     """
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     system = """
        将用户的问题转为 PostgreSQL SELECT 查询。
         表结构：

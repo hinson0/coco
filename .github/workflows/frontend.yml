@@ -1,0 +1,57 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared/**"
+      - "pnpm-lock.yaml"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  check:
+    # 质量检查 / 格式化 / 类型检查 / 单测
+    name: Lint / Format / Typecheck / Test
+
+    # 泡在ubuntu上
+    runs-on: ubuntu-latest
+
+    # 按照这个步骤来走.是串行的.fail-fst
+    steps:
+      # 拉代码
+      - uses: actions/checkout@v4
+
+      # 安装pnpm(自动从packageManager字段读版本)
+      - uses: pnpm/action-setup@v4
+
+      # 装nodejs+启用pnpm缓存
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # 让 CI 缓存 pnpm store，第二次跑会快很多。
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 代码质量
+      - name: ESLint
+        run: pnpm --filter mobile lint
+
+      # 代码格式化
+      - name: Prettier
+        run: pnpm --filter mobile format:check
+
+      # 类型安全
+      - name: TypeScript
+        run: pnpm --filter mobile typecheck
+
+      # 类型安全
+      - name: Shared TypeScript
+        run: pnpm --filter @coco/shared lint
+
+      # 单测
+      - name: Jest
+        run: pnpm --filter mobile test

@@ -3,11 +3,14 @@
   "main": "expo-router/entry",
   "version": "1.1.0",
   "scripts": {
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
     "dev": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "test": "jest"
+    "web": "expo start --web"
   },
   "dependencies": {
     "@coco/shared": "workspace:*",
@@ -53,15 +56,21 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
     "@types/uuid": "^11.0.0",
     "better-sqlite3": "^12.8.0",
+    "eslint": "^10.2.0",
+    "eslint-plugin-react": "^7.37.5",
     "expo-haptics": "^55.0.11",
+    "globals": "^17.5.0",
     "jest": "^29.7.0",
+    "prettier": "^3.8.2",
     "ts-jest": "^29.4.6",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.58.1"
   },
   "jest": {
     "preset": "ts-jest",

@@ -1,4 +1,4 @@
-import type { Transaction, Category } from '@coco/shared';
+import type { Transaction, Category } from "@coco/shared";
 
 export interface InsightContext {
   readonly currentMonth: readonly Transaction[];
@@ -10,11 +10,17 @@ export interface InsightContext {
   readonly daysElapsed: number;
 }
 
-export type InsightType = 'health' | 'category-change' | 'anomaly' | 'pace' | 'frequency' | 'saving';
+export type InsightType =
+  | "health"
+  | "category-change"
+  | "anomaly"
+  | "pace"
+  | "frequency"
+  | "saving";
 
 export interface InsightBadge {
   readonly text: string;
-  readonly direction: 'up' | 'down' | 'neutral';
+  readonly direction: "up" | "down" | "neutral";
 }
 
 export interface InsightNavigation {
@@ -33,4 +39,6 @@ export interface InsightItem {
   readonly meta?: Record<string, any>;
 }
 
-export type InsightRule = (ctx: InsightContext) => InsightItem | InsightItem[] | null;
+export type InsightRule = (
+  ctx: InsightContext,
+) => InsightItem | InsightItem[] | null;

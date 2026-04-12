@@ -1,11 +1,11 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
-import { Alert, Linking } from 'react-native';
+import { useRef, useCallback, useState, useEffect } from "react";
+import { Alert, Linking } from "react-native";
 import {
   useAudioRecorder,
   RecordingPresets,
   requestRecordingPermissionsAsync,
-} from 'expo-audio';
-import * as FileSystem from 'expo-file-system/legacy';
+} from "expo-audio";
+import * as FileSystem from "expo-file-system/legacy";
 
 const MAX_DURATION_MS = 60_000;
 
@@ -71,14 +71,10 @@ export function useVoiceRecorder() {
   const startRecording = useCallback(async (): Promise<boolean> => {
     const { granted } = await requestRecordingPermissionsAsync();
     if (!granted) {
-      Alert.alert(
-        '需要麦克风权限',
-        '请在系统设置中允许 Coco 访问麦克风',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => Linking.openSettings() },
-        ],
-      );
+      Alert.alert("需要麦克风权限", "请在系统设置中允许 Coco 访问麦克风", [
+        { text: "取消", style: "cancel" },
+        { text: "去设置", onPress: () => Linking.openSettings() },
+      ]);
       return false;
     }
 
@@ -98,12 +94,18 @@ export function useVoiceRecorder() {
     return true;
   }, [recorder, clearTimer, setRecordingFlag]);
 
-  const stopRecording = useCallback(async (): Promise<{ base64: string; durationSeconds: number } | null> => {
+  const stopRecording = useCallback(async (): Promise<{
+    base64: string;
+    durationSeconds: number;
+  } | null> => {
     clearTimer();
     // 读 ref 而非 state，避免闭包过期
     if (!isRecordingRef.current) return null;
 
-    const durationSeconds = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
+    const durationSeconds = Math.max(
+      1,
+      Math.round((Date.now() - startTimeRef.current) / 1000),
+    );
     await recorder.stop();
     setRecordingFlag(false);
 
@@ -122,5 +124,11 @@ export function useVoiceRecorder() {
     }
   }, [recorder, clearTimer, setRecordingFlag]);
 
-  return { isRecording, metering, startRecording, stopRecording, cancelRecording };
+  return {
+    isRecording,
+    metering,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  };
 }

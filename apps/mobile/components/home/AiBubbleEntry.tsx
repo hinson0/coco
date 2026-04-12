@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { AppText } from '../ui/AppText';
-import { colors, radii, shadows } from '../../constants/theme';
+import { useEffect, useRef } from "react";
+import { View, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { AppText } from "../ui/AppText";
+import { colors, radii, shadows } from "../../constants/theme";
 
 function TypingDots() {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -15,8 +15,16 @@ function TypingDots() {
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(anim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
           Animated.delay(600),
         ]),
       );
@@ -60,9 +68,9 @@ export function AiBubbleEntry() {
 
   return (
     <View style={styles.wrapper}>
-      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/')}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/")}>
         <LinearGradient
-          colors={[colors.sagePale, '#edf6f0']}
+          colors={[colors.sagePale, "#edf6f0"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.bubble}
@@ -85,7 +93,11 @@ export function AiBubbleEntry() {
           {/* Fake input area */}
           <View style={styles.inputArea}>
             <TypingDots />
-            <AppText size="lg" color={colors.textLighter} style={styles.inputHint}>
+            <AppText
+              size="lg"
+              color={colors.textLighter}
+              style={styles.inputHint}
+            >
               说点什么，或者记一笔…
             </AppText>
           </View>
@@ -107,8 +119,8 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginBottom: 12,
   },
@@ -117,8 +129,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: radii.md,
     backgroundColor: colors.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: colors.sage,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -129,17 +141,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inputArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: "rgba(255,255,255,0.7)",
     borderRadius: radii.lg,
   },
   dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 3,
   },
   dot: {

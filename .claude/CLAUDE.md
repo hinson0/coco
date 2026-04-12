@@ -6,6 +6,7 @@ Monorepo (pnpm workspace)：
 - `apps/backend` — Python FastAPI 后端（ASR、OCR、文本记账），包管理用 `uv`
 - `packages/shared` — 共享类型、规则引擎（`parse()`）
 - `apps/backend/alembic/` — 数据库迁移（Alembic + PostgreSQL）
+- `docs/ecc/` — ECC 工作流产出文档（PRD、plans）
 
 # 常用命令
 
@@ -51,6 +52,11 @@ brainstorming → writing-plans → executing-plans
 
 - `executing-plans` 全部 Task 完成后，**必须**调用 `superpowers:requesting-code-review`
 - Learning 模式不是跳过 code review 和测试的理由
+
+## ECC 工作流文档路径
+
+- PRD 文档：`docs/ecc/prds/`
+- 实现计划：`docs/ecc/plans/`（由 `/prp-plan` 生成）
 
 # UI 规范（必须遵守）
 

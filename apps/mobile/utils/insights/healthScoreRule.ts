@@ -1,12 +1,14 @@
 // apps/mobile/utils/insights/healthScoreRule.ts
-import type { InsightContext, InsightItem } from './types';
+import type { InsightContext, InsightItem } from "./types";
 
-function calcSavingsRate(transactions: readonly { type: string; amount: number }[]): number {
+function calcSavingsRate(
+  transactions: readonly { type: string; amount: number }[],
+): number {
   let income = 0;
   let expense = 0;
   for (const tx of transactions) {
-    if (tx.type === 'income') income += Number(tx.amount);
-    else if (tx.type === 'expense') expense += Number(tx.amount);
+    if (tx.type === "income") income += Number(tx.amount);
+    else if (tx.type === "expense") expense += Number(tx.amount);
   }
   if (income <= 0) return 0;
   return Math.max(0, (income - expense) / income);
@@ -17,7 +19,7 @@ function savingsRateScore(rate: number): number {
 }
 
 function paceScore(ctx: InsightContext): number {
-  const expenses = ctx.currentMonth.filter(tx => tx.type === 'expense');
+  const expenses = ctx.currentMonth.filter((tx) => tx.type === "expense");
   if (expenses.length === 0) return 100;
 
   const totalExpense = expenses.reduce((s, tx) => s + Number(tx.amount), 0);
@@ -30,27 +32,33 @@ function paceScore(ctx: InsightContext): number {
   return Math.min(100, Math.max(0, (1 - deviation / 0.3) * 100));
 }
 
-function anomalyCount(transactions: readonly { type: string; amount: number }[]): number {
-  const expenses = transactions.filter(tx => tx.type === 'expense').map(tx => Number(tx.amount));
+function anomalyCount(
+  transactions: readonly { type: string; amount: number }[],
+): number {
+  const expenses = transactions
+    .filter((tx) => tx.type === "expense")
+    .map((tx) => Number(tx.amount));
   if (expenses.length < 3) return 0;
 
   const sorted = [...expenses].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  const median =
+    sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 
   const mean = expenses.reduce((s, v) => s + v, 0) / expenses.length;
-  const variance = expenses.reduce((s, v) => s + (v - mean) ** 2, 0) / expenses.length;
+  const variance =
+    expenses.reduce((s, v) => s + (v - mean) ** 2, 0) / expenses.length;
   const stdDev = Math.sqrt(variance);
 
   const threshold = median + 2 * stdDev;
-  return expenses.filter(a => a > threshold && a >= 500).length;
+  return expenses.filter((a) => a > threshold && a >= 500).length;
 }
 
 function getLevel(score: number): string {
-  if (score <= 40) return '差';
-  if (score <= 60) return '一般';
-  if (score <= 80) return '良好';
-  return '优秀';
+  if (score <= 40) return "差";
+  if (score <= 60) return "一般";
+  if (score <= 80) return "良好";
+  return "优秀";
 }
 
 export function healthScoreRule(ctx: InsightContext): InsightItem {
@@ -63,9 +71,10 @@ export function healthScoreRule(ctx: InsightContext): InsightItem {
   const score = Math.round(srScore * 0.6 + pScore * 0.2 + aScore * 0.2);
   const level = getLevel(score);
 
-  const prevSavingsRate = ctx.previousMonth.length > 0
-    ? calcSavingsRate(ctx.previousMonth)
-    : undefined;
+  const prevSavingsRate =
+    ctx.previousMonth.length > 0
+      ? calcSavingsRate(ctx.previousMonth)
+      : undefined;
 
   const ratePercent = Math.round(savingsRate * 100);
   let desc = `本月结余率 ${ratePercent}%`;
@@ -76,17 +85,22 @@ export function healthScoreRule(ctx: InsightContext): InsightItem {
     else desc += `，与上月持平`;
   }
 
-  const emoji = score > 80 ? '🌟' : score > 60 ? '👍' : score > 40 ? '📊' : '⚠️';
+  const emoji =
+    score > 80 ? "🌟" : score > 60 ? "👍" : score > 40 ? "📊" : "⚠️";
 
-  const badge = prevSavingsRate !== undefined
-    ? {
-        text: `${savingsRate >= prevSavingsRate ? '↑' : '↓'} ${Math.abs(Math.round((savingsRate - prevSavingsRate) * 100))}%`,
-        direction: savingsRate >= prevSavingsRate ? 'up' as const : 'down' as const,
-      }
-    : undefined;
+  const badge =
+    prevSavingsRate !== undefined
+      ? {
+          text: `${savingsRate >= prevSavingsRate ? "↑" : "↓"} ${Math.abs(Math.round((savingsRate - prevSavingsRate) * 100))}%`,
+          direction:
+            savingsRate >= prevSavingsRate
+              ? ("up" as const)
+              : ("down" as const),
+        }
+      : undefined;
 
   return {
-    type: 'health',
+    type: "health",
     priority: 1,
     emoji,
     title: `收支健康度 · ${level}`,

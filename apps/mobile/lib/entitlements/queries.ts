@@ -1,6 +1,6 @@
 // apps/mobile/lib/entitlements/queries.ts
-import type * as SQLite from 'expo-sqlite';
-import type { FeatureKey } from './rewards';
+import type * as SQLite from "expo-sqlite";
+import type { FeatureKey } from "./rewards";
 
 export interface EntitlementRow {
   feature: FeatureKey;
@@ -15,7 +15,7 @@ export async function getEntitlement(
   feature: FeatureKey,
 ): Promise<EntitlementRow> {
   const row = await db.getFirstAsync<EntitlementRow>(
-    'SELECT feature, balance, total_earned, last_decay_at FROM entitlements WHERE feature = ?',
+    "SELECT feature, balance, total_earned, last_decay_at FROM entitlements WHERE feature = ?",
     feature,
   );
   return row ?? { feature, balance: 0, total_earned: 0, last_decay_at: null };
@@ -26,7 +26,7 @@ export async function getAllEntitlements(
   db: SQLite.SQLiteDatabase,
 ): Promise<EntitlementRow[]> {
   const rows = await db.getAllAsync<EntitlementRow>(
-    'SELECT feature, balance, total_earned, last_decay_at FROM entitlements ORDER BY feature',
+    "SELECT feature, balance, total_earned, last_decay_at FROM entitlements ORDER BY feature",
   );
   return rows;
 }
@@ -55,12 +55,12 @@ export async function consumeEntitlement(
   feature: FeatureKey,
 ): Promise<number> {
   const result = await db.runAsync(
-    'UPDATE entitlements SET balance = balance - 1 WHERE feature = ? AND balance > 0',
+    "UPDATE entitlements SET balance = balance - 1 WHERE feature = ? AND balance > 0",
     feature,
   );
   if (result.changes === 0) return -1;
   const row = await db.getFirstAsync<{ balance: number }>(
-    'SELECT balance FROM entitlements WHERE feature = ?',
+    "SELECT balance FROM entitlements WHERE feature = ?",
     feature,
   );
   return row?.balance ?? -1;
@@ -75,7 +75,7 @@ export async function applyDecay(
 ): Promise<void> {
   if (decayAmount <= 0) return;
   await db.runAsync(
-    'UPDATE entitlements SET balance = MAX(balance - ?, 0), last_decay_at = ? WHERE feature = ?',
+    "UPDATE entitlements SET balance = MAX(balance - ?, 0), last_decay_at = ? WHERE feature = ?",
     decayAmount,
     now,
     feature,
@@ -85,12 +85,12 @@ export async function applyDecay(
 /** 记录广告观看日志 */
 export async function logAdWatch(
   db: SQLite.SQLiteDatabase,
-  adType: 'rewarded_video' | 'splash',
+  adType: "rewarded_video" | "splash",
   slotId: string | null,
   durationSec: number | null,
 ): Promise<void> {
   await db.runAsync(
-    'INSERT INTO ad_watch_logs (watched_at, ad_type, slot_id, duration_sec) VALUES (?, ?, ?, ?)',
+    "INSERT INTO ad_watch_logs (watched_at, ad_type, slot_id, duration_sec) VALUES (?, ?, ?, ?)",
     new Date().toISOString(),
     adType,
     slotId,

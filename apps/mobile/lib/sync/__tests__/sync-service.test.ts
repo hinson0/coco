@@ -24,21 +24,23 @@ describe("push()", () => {
   it("sends transaction data to /sync/push", async () => {
     const db = await makeDb();
     await db.runAsync(
-      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T12:00:00.000Z')`
+      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T12:00:00.000Z')`,
     );
     await db.runAsync(
       `INSERT INTO transactions
         (id, user_id, category_id, amount, type, note, occurred_at, source, created_at, updated_at)
-       VALUES ('tx1', 'u1', 'cat1', 100.0, 'expense', '午饭', '2026-04-09T12:00:00.000Z', 'manual', '2026-04-09T12:00:00.000Z', '2026-04-09T12:00:00.000Z')`
+       VALUES ('tx1', 'u1', 'cat1', 100.0, 'expense', '午饭', '2026-04-09T12:00:00.000Z', 'manual', '2026-04-09T12:00:00.000Z', '2026-04-09T12:00:00.000Z')`,
     );
 
     await push(db, "u1");
 
     expect(mockApiFetch).toHaveBeenCalledWith(
       "/sync/push",
-      expect.objectContaining({ method: "POST" })
+      expect.objectContaining({ method: "POST" }),
     );
-    const callBody = JSON.parse((mockApiFetch.mock.calls[0][1] as RequestInit).body as string);
+    const callBody = JSON.parse(
+      (mockApiFetch.mock.calls[0][1] as RequestInit).body as string,
+    );
     expect(callBody.transactions).toHaveLength(1);
     expect(callBody.transactions[0].id).toBe("tx1");
   });
@@ -55,20 +57,22 @@ describe("push()", () => {
   it("does not send records older than last_push_at", async () => {
     const db = await makeDb();
     await db.runAsync(
-      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('transactions', '2026-04-09T13:00:00.000Z')`
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('transactions', '2026-04-09T13:00:00.000Z')`,
     );
     await db.runAsync(
-      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T10:00:00.000Z')`
+      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T10:00:00.000Z')`,
     );
     await db.runAsync(
       `INSERT INTO transactions
         (id, user_id, category_id, amount, type, note, occurred_at, source, created_at, updated_at)
-       VALUES ('tx-old', 'u1', 'cat1', 50.0, 'expense', '', '2026-04-09T10:00:00.000Z', 'manual', '2026-04-09T10:00:00.000Z', '2026-04-09T10:00:00.000Z')`
+       VALUES ('tx-old', 'u1', 'cat1', 50.0, 'expense', '', '2026-04-09T10:00:00.000Z', 'manual', '2026-04-09T10:00:00.000Z', '2026-04-09T10:00:00.000Z')`,
     );
 
     await push(db, "u1");
 
-    const callBody = JSON.parse((mockApiFetch.mock.calls[0][1] as RequestInit).body as string);
+    const callBody = JSON.parse(
+      (mockApiFetch.mock.calls[0][1] as RequestInit).body as string,
+    );
     expect(callBody.transactions).toHaveLength(0);
   });
 
@@ -78,7 +82,9 @@ describe("push()", () => {
     await push(db, "u1");
 
     expect(mockApiFetch).toHaveBeenCalledTimes(1);
-    const callBody = JSON.parse((mockApiFetch.mock.calls[0][1] as RequestInit).body as string);
+    const callBody = JSON.parse(
+      (mockApiFetch.mock.calls[0][1] as RequestInit).body as string,
+    );
     expect(callBody.transactions).toHaveLength(0);
     expect(callBody.categories).toHaveLength(0);
   });
@@ -102,21 +108,36 @@ describe("pull()", () => {
     const db = await makeDb();
     // 先插入 category（transactions 的 FK 依赖）
     await db.runAsync(
-      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T10:00:00.000Z')`
+      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T10:00:00.000Z')`,
     );
     mockApiFetch.mockResolvedValueOnce({
       ...emptyPayload,
       transactions: [
-        { id: "tx1", user_id: "u1", category_id: "cat1", amount: 100, type: "expense", note: "午饭",
-          occurred_at: "2026-04-09T12:00:00.000Z", source: "manual", raw_input: null, receipt_url: null,
-          ai_confidence: null, created_at: "2026-04-09T12:00:00.000Z", updated_at: "2026-04-09T12:00:00.000Z",
-          deleted_at: null, account_id: null },
+        {
+          id: "tx1",
+          user_id: "u1",
+          category_id: "cat1",
+          amount: 100,
+          type: "expense",
+          note: "午饭",
+          occurred_at: "2026-04-09T12:00:00.000Z",
+          source: "manual",
+          raw_input: null,
+          receipt_url: null,
+          ai_confidence: null,
+          created_at: "2026-04-09T12:00:00.000Z",
+          updated_at: "2026-04-09T12:00:00.000Z",
+          deleted_at: null,
+          account_id: null,
+        },
       ],
     });
 
     await pull(db, "u1");
 
-    const tx = await db.getFirstAsync<{ id: string }>("SELECT id FROM transactions WHERE id = 'tx1'");
+    const tx = await db.getFirstAsync<{ id: string }>(
+      "SELECT id FROM transactions WHERE id = 'tx1'",
+    );
     expect(tx).not.toBeNull();
   });
 
@@ -124,19 +145,29 @@ describe("pull()", () => {
     const db = await makeDb();
     await db.runAsync(
       `INSERT INTO categories (id, user_id, name, icon, type, is_default, updated_at)
-       VALUES ('cat1', 'u1', '老名字', '🍔', 'expense', 0, '2026-04-09T08:00:00.000Z')`
+       VALUES ('cat1', 'u1', '老名字', '🍔', 'expense', 0, '2026-04-09T08:00:00.000Z')`,
     );
     mockApiFetch.mockResolvedValueOnce({
       ...emptyPayload,
       categories: [
-        { id: "cat1", user_id: "u1", name: "新名字", icon: "🍕", type: "expense", is_default: 0,
-          deleted_at: null, updated_at: "2026-04-09T10:00:00.000Z" },
+        {
+          id: "cat1",
+          user_id: "u1",
+          name: "新名字",
+          icon: "🍕",
+          type: "expense",
+          is_default: 0,
+          deleted_at: null,
+          updated_at: "2026-04-09T10:00:00.000Z",
+        },
       ],
     });
 
     await pull(db, "u1");
 
-    const cat = await db.getFirstAsync<{ name: string }>("SELECT name FROM categories WHERE id = 'cat1'");
+    const cat = await db.getFirstAsync<{ name: string }>(
+      "SELECT name FROM categories WHERE id = 'cat1'",
+    );
     expect(cat?.name).toBe("新名字");
   });
 
@@ -144,19 +175,29 @@ describe("pull()", () => {
     const db = await makeDb();
     await db.runAsync(
       `INSERT INTO categories (id, user_id, name, icon, type, is_default, updated_at)
-       VALUES ('cat1', 'u1', '本地名字', '🍔', 'expense', 0, '2026-04-09T12:00:00.000Z')`
+       VALUES ('cat1', 'u1', '本地名字', '🍔', 'expense', 0, '2026-04-09T12:00:00.000Z')`,
     );
     mockApiFetch.mockResolvedValueOnce({
       ...emptyPayload,
       categories: [
-        { id: "cat1", user_id: "u1", name: "远端名字", icon: "🍕", type: "expense", is_default: 0,
-          deleted_at: null, updated_at: "2026-04-09T08:00:00.000Z" },
+        {
+          id: "cat1",
+          user_id: "u1",
+          name: "远端名字",
+          icon: "🍕",
+          type: "expense",
+          is_default: 0,
+          deleted_at: null,
+          updated_at: "2026-04-09T08:00:00.000Z",
+        },
       ],
     });
 
     await pull(db, "u1");
 
-    const cat = await db.getFirstAsync<{ name: string }>("SELECT name FROM categories WHERE id = 'cat1'");
+    const cat = await db.getFirstAsync<{ name: string }>(
+      "SELECT name FROM categories WHERE id = 'cat1'",
+    );
     expect(cat?.name).toBe("本地名字");
   });
 

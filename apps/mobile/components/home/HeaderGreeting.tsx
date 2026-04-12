@@ -1,20 +1,33 @@
-import { View, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppText } from '../ui/AppText';
-import { colors, radii, shadows } from '../../constants/theme';
+import { View, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { AppText } from "../ui/AppText";
+import { colors, radii, shadows } from "../../constants/theme";
 
-const CN_MONTH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
-const CN_DAY_TENS = ['', '十', '二十', '三十'];
-const CN_DAY_UNITS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-const CN_WEEKDAY = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-const WEATHER_EMOJI = ['☀️', '🌤️', '⛅', '🌦️', '🌧️', '❄️'];
+const CN_MONTH = [
+  "一",
+  "二",
+  "三",
+  "四",
+  "五",
+  "六",
+  "七",
+  "八",
+  "九",
+  "十",
+  "十一",
+  "十二",
+];
+const CN_DAY_TENS = ["", "十", "二十", "三十"];
+const CN_DAY_UNITS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+const CN_WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const WEATHER_EMOJI = ["☀️", "🌤️", "⛅", "🌦️", "🌧️", "❄️"];
 
 function cnDay(d: number): string {
   if (d <= 10) return CN_DAY_UNITS[d];
-  if (d < 20) return '十' + CN_DAY_UNITS[d - 10];
+  if (d < 20) return "十" + CN_DAY_UNITS[d - 10];
   const tens = Math.floor(d / 10);
   const units = d % 10;
-  return CN_DAY_TENS[tens] + (units > 0 ? CN_DAY_UNITS[units] : '');
+  return CN_DAY_TENS[tens] + (units > 0 ? CN_DAY_UNITS[units] : "");
 }
 
 function getChineseDate(): string {
@@ -36,7 +49,12 @@ export function HeaderGreeting() {
         <AppText size="lg" color={colors.textLighter} style={styles.date}>
           {dateStr}
         </AppText>
-        <AppText size="6xl" weight="bold" color={colors.text} style={styles.title}>
+        <AppText
+          size="6xl"
+          weight="bold"
+          color={colors.text}
+          style={styles.title}
+        >
           棉花记
         </AppText>
       </View>
@@ -54,9 +72,9 @@ export function HeaderGreeting() {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 20,
@@ -74,8 +92,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.md,
   },
   avatarEmoji: {

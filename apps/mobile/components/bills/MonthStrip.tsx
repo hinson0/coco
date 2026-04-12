@@ -1,6 +1,6 @@
-import { View, StyleSheet } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors, radii, shadows } from '../../constants/theme';
+import { View, StyleSheet } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, radii, shadows } from "../../constants/theme";
 
 interface MonthStripProps {
   readonly month: string;
@@ -33,9 +33,9 @@ export function MonthStrip({ month, count, total }: MonthStripProps) {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.white,
     borderRadius: radii.md,
     paddingHorizontal: 16,
@@ -45,8 +45,8 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   left: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   badge: {
