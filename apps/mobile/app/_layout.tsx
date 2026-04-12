@@ -6,7 +6,7 @@ import { Stack, router } from "expo-router";
 import type * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
-import { AppOpenAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
+import { init as initMangoAd, showSplashAd } from "expo-mango-ad";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 
@@ -29,10 +29,10 @@ try {
   });
 } catch {}
 
-// AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
-const APP_OPEN_AD_ID = __DEV__
-  ? TestIds.APP_OPEN
-  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
+// 芒果聚合广告配置
+// TODO: 替换为芒果后台获取的真实 ID
+const MANGO_APP_ID = __DEV__ ? "test_app_id" : "YOUR_MANGO_APP_ID";
+const SPLASH_SLOT_ID = __DEV__ ? "test_splash_slot" : "YOUR_SPLASH_SLOT_ID";
 const SPLASH_MIN_INTERVAL_MS = 30_000;
 
 const queryClient = new QueryClient({
@@ -78,32 +78,25 @@ function AppContent() {
   //   if (!loading && !isAuthenticated) router.replace("/(auth)/login");
   // }, [isAuthenticated, loading]);
 
-  // === AdMob 开屏广告 ===
+  // === 芒果聚合广告：SDK 初始化 + 开屏广告 ===
+  const mangoInitRef = useRef(false);
   const lastSplashTime = useRef(0);
 
-  const tryShowSplash = useCallback(() => {
+  const tryShowSplash = useCallback(async () => {
     // TODO: Pro 用户检查
     const now = Date.now();
     if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
     lastSplashTime.current = now;
 
-    const appOpenAd = AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
-    function cleanupAll() {
-      unsubLoaded();
-      unsubError();
-      unsubClosed();
+    try {
+      if (!mangoInitRef.current) {
+        await initMangoAd({ appId: MANGO_APP_ID });
+        mangoInitRef.current = true;
+      }
+      await showSplashAd(SPLASH_SLOT_ID);
+    } catch {
+      // 开屏广告加载失败静默忽略，不影响用户进入 App
     }
-    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-      cleanupAll();
-      appOpenAd.show();
-    });
-    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
-      cleanupAll();
-    });
-    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-      cleanupAll();
-    });
-    appOpenAd.load();
   }, []);
 
   // 只在真正从后台恢复时弹开屏广告（非广告关闭导致的 active）
