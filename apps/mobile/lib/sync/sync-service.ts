@@ -7,7 +7,7 @@ import {
   type SyncTable,
 } from "./watermarks";
 
-type Row = Record<string, unknown>;
+type Row = Record<string, SQLite.SQLiteBindValue>;
 
 const SYNC_TABLES: SyncTable[] = [
   "user_profiles",
