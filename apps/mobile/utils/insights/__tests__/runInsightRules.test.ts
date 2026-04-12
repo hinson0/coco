@@ -34,10 +34,9 @@ function makeTx(type: "income" | "expense", amount: number, categoryId = "c1") {
 }
 
 describe("runInsightRules", () => {
-  it("空数据时至少返回健康度卡片", () => {
+  it("空数据时不返回健康度卡片", () => {
     const results = runInsightRules(makeCtx());
-    expect(results.length).toBeGreaterThanOrEqual(1);
-    expect(results[0].type).toBe("health");
+    expect(results.length).toBe(0);
   });
 
   it("结果按 priority 升序排列", () => {
