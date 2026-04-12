@@ -140,16 +140,10 @@ function main() {
     const mobileDir = resolve(wtDir, "apps/mobile");
     const backendDir = resolve(wtDir, "apps/backend");
 
-    const mobilePkgPath = resolve(mobileDir, "package.json");
-    const originalPkg = readFileSync(mobilePkgPath, "utf-8");
-    const pkg = JSON.parse(originalPkg);
-    const originalPkgName = pkg.name;
-    pkg.name = wtName;
-    writeFileSync(mobilePkgPath, JSON.stringify(pkg, null, 2) + "\n");
-
     const appJsonPath = resolve(mobileDir, "app.json");
     const originalAppJson = readFileSync(appJsonPath, "utf-8");
     const appJson = JSON.parse(originalAppJson);
+    const originalPkgName = appJson.expo.name;
     appJson.expo.name = wtName;
     writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + "\n");
 
@@ -157,7 +151,6 @@ function main() {
 
     // 恢复函数
     restoreFn = () => {
-      writeFileSync(mobilePkgPath, originalPkg);
       writeFileSync(appJsonPath, originalAppJson);
       console.log(`\n📛 mobile name 已恢复: ${originalPkgName}`);
     };

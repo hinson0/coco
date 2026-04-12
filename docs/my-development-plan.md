@@ -1,7 +1,7 @@
 # todo-list
 
 - ~TODO 预算设置有bug.先添加分类预算,总预算就跟着第一个分类预算走了.
-- TODO CI/CD
+- TODO 布置CI/CD
 - TODO 接下来给coco-ai的功能做个收尾,主要涉及:
   - ~TODO sync
   - ad

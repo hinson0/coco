@@ -5,7 +5,7 @@
     <td>
       <b>姓名：</b> 杨志兵 <b>性别：</b> 男<br>
       <b>学历：</b> 本科 <b>出生年月：</b> 1987年1月<br>
-      <b>民族：</b> 汉 <b>籍贯：</b> 江西抚州 <b>现居住地：</b> 杭州余杭区<br>
+      <b>民族：</b> 汉 <b>籍贯：</b> 江西抚州 
       <b>Phone：</b> 13907941239 <b>E-mail：</b> 356745844@qq.com
     </td>
     <td width="120">
@@ -20,17 +20,32 @@
 
 - 15 年软件开发经验，历经 PHP 后端、全栈开发到 AI 应用的技术演进，先后在完美世界、小米、天猫等公司参与大型项目开发。具备独立从 0 到 1构建产品的能力，擅长将 AI 能力融入产品设计，熟练运用 AI 辅助开发工具提升工程效率。有创业经历，对产品运营和商业闭环有实际认知。
 - 是一名具有产品思维的开发工程师，深刻理解"技术是为了业务服务的"这句话的意义。
+- 如今AI Coding的时代，手写代码已经不是主要核心，如何编排agent以及对齐agent跟着项目走，才是核心。
+  "AI时代，技术的广度已经变得容易，技术的深度更加具备价值。使用好AI Coding，并把它当成核心生产力，将会取代仍在手写代码，或者不拥抱AI Coding的Programmer"
 
 ---
 
 ## 专业技能
+
+**AI Agent 驱动开发（Claude Code CLI）**
+
+从 IDE 补全到 Agent 驱动开发，经历四个阶段演进：VSCode Copilot → Trae → Cursor → **Claude Code（Max订阅，当前主力）**
+
+- **Claude Code 深度使用者**，熟悉 claude-code-official 官方大部分 skill，熟练运用 **Superpowers**、**Everything Claude Code (ECC)**、**GSD** 等主流社区工作流插件
+- 熟练掌握 Agent 模式完整开发流程：
+  - 持续迭代 **CLAUDE.md**（AGENTS.md），熟练编写 skill / subagent / hook / command 及插件开发与分发
+  - **全链路工作流：** brainstorming → writing-plans → executing-plans，编码前完成需求澄清、方案设计与 spec 评审
+  - **TDD 驱动：** 每个 Task 先写测试再写实现
+  - **质量闭环：** requesting-code-review 代码审查 + verification-before-completion 验证后提交
+  - **并行开发：** git worktree 隔离分支 + dispatching-parallel-agents 并行推进独立任务
+- **自研 smart-claude-code-plugins 插件**，实现自动化 commit/push/PR 与版本管理、statusline 部署、会话日志跟踪、特殊文件保护；集成 Context7 MCP 获取最新框架文档
 
 **后端开发**
 
 - 熟练掌握 Python FastAPI 框架，熟悉 RESTful API 设计、SQLAlchemy ORM、Alembic 数据库迁移
 - 熟悉 PostgreSQL 数据库，掌握索引优化、数据建模；熟练编写 SQL
 - 有 PHP 后端开发经验（小米、天猫、完美世界），熟悉 MVC 架构与大规模服务设计
-- 有 Nodejs 后端开发经验 (阿里天猫)
+- 有 Nodejs 后端开发经验
 
 **DevOps & 工程化**
 
@@ -43,31 +58,6 @@
 - 了解 React Native (Expo)、TypeScript、React 19，具备从零构建跨平台移动应用的能力
 - 了解 expo-router、Zustand、React Query、expo-sqlite 等 Expo 生态技术栈
 - 熟悉 Web 前端开发（HTML / CSS / JavaScript），有 Next.js 项目开发经验
-
----
-
-## AI 辅助开发
-
-**心得体会:**
-
-> 如今AI Coding的时代，手写代码已经不是主要核心，如何编排agent以及对齐agent跟着项目走，才是核心。
->
-> "AI时代，技术的广度已经变得容易，技术的深度更加具备价值。使用好AI Coding，并把它当成核心生产力，将会取代仍在手写代码，或者不拥抱AI Coding的Programmer"
-
-从 IDE 内置补全到 AI Agent 驱动开发，经历四个阶段的工具演进：
-
-VSCode + Copilot（Pro订阅）→ Trae（国际版 Pro订阅）→ Cursor（Pro+订阅）→ Claude Code（Max订阅）
-
-- 早期使用 VSCode Copilot 进行行级/函数级代码补全，后迁移至 Trae 和 Cursor 体验 AI 对话式编程，逐步将 AI 从"补全工具"转变为"协作对象"
-- 最终深度使用 Claude Code CLI 作为主力开发工具，熟练掌握其 Agent 模式下的完整开发流程：
-  - 具备持续迭代 **CLAUDE.md**（AGENTS.md）的能力，熟练掌握 skill/subagent/hook/command 编写以及插件开发与分发
-  - **Superpowers 技能体系：** 熟练运用 brainstorming → writing-plans → executing-plans 全链路，在编码前完成需求澄清、方案设计、spec
-    文档编写与评审，确保实现与设计对齐
-  - **TDD 驱动：** 结合 test-driven-development 技能，在每个 Task 中先写测试再写实现
-  - **质量闭环：** 开发完成后调用 requesting-code-review 进行代码审查，通过 verification-before-completion 确认测试通过后再提交
-  - **并行开发：** 使用 git worktree 隔离功能分支，结合 dispatching-parallel-agents 并行推进独立任务
-  - **插件开发：** 自研 smart-claude-code-plugins 插件，实现自动化 commit/push/PR 与版本管理、statusline 一键部署、会话日志跟踪、特殊文件保护；集成 Context7 MCP 获取最新框架文档
-  - **插件经验：** 熟悉 claude-code-official 官方 skill，熟练使用 superpowers/gsd/everything-claude-code/claude-mem 等社区插件
 
 ---
 
