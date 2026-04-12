@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
+import { Pressable, StyleSheet } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
 
 interface SuggestionChipProps {
   readonly label: string;
@@ -14,7 +14,11 @@ export function SuggestionChip({ label, onPress }: SuggestionChipProps) {
       style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
     >
       {({ pressed }) => (
-        <AppText size="md" weight="medium" color={pressed ? colors.white : colors.sage}>
+        <AppText
+          size="md"
+          weight="medium"
+          color={pressed ? colors.white : colors.sage}
+        >
           {label}
         </AppText>
       )}

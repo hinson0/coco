@@ -1,2 +1,4 @@
 import { View } from "react-native";
-export default function AIPlaceholder() { return <View />; }
+export default function AIPlaceholder() {
+  return <View />;
+}

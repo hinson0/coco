@@ -70,7 +70,11 @@ const NUM_SECTIONS = 5;
 const END_SPACING = 4;
 const TOOLTIP_WIDTH = 120;
 
-export function DailyTrendCard({ dailyData, dimension, onDimensionChange }: DailyTrendCardProps) {
+export function DailyTrendCard({
+  dailyData,
+  dimension,
+  onDimensionChange,
+}: DailyTrendCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
@@ -199,7 +203,8 @@ export function DailyTrendCard({ dailyData, dimension, onDimensionChange }: Dail
               style={[
                 styles.stripLine,
                 {
-                  left: selectedIndex * (BAR_WIDTH + barSpacing) + BAR_WIDTH / 2,
+                  left:
+                    selectedIndex * (BAR_WIDTH + barSpacing) + BAR_WIDTH / 2,
                   height: positiveHeight + sectionsBelow * pxPerSection,
                 },
               ]}

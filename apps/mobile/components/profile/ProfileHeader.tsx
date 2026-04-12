@@ -1,8 +1,8 @@
-import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppText } from '../ui/AppText';
-import { colors, shadows } from '../../constants/theme';
-import type { AvatarType } from '@coco/shared';
+import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { AppText } from "../ui/AppText";
+import { colors, shadows } from "../../constants/theme";
+import type { AvatarType } from "@coco/shared";
 
 interface ProfileHeaderProps {
   readonly name: string;
@@ -13,7 +13,14 @@ interface ProfileHeaderProps {
   readonly onSettingsPress?: () => void;
 }
 
-export function ProfileHeader({ name, daysCount, avatarType = 'emoji', avatarValue = '🌿', onAvatarPress, onSettingsPress }: ProfileHeaderProps) {
+export function ProfileHeader({
+  name,
+  daysCount,
+  avatarType = "emoji",
+  avatarValue = "🌿",
+  onAvatarPress,
+  onSettingsPress,
+}: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.8}>
@@ -23,14 +30,16 @@ export function ProfileHeader({ name, daysCount, avatarType = 'emoji', avatarVal
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          {avatarType === 'image' ? (
+          {avatarType === "image" ? (
             <Image source={{ uri: avatarValue }} style={styles.avatarImage} />
           ) : (
             <AppText size="3xl">{avatarValue}</AppText>
           )}
         </LinearGradient>
       </TouchableOpacity>
-      <AppText size="4xl" weight="bold" style={styles.name}>{name}</AppText>
+      <AppText size="4xl" weight="bold" style={styles.name}>
+        {name}
+      </AppText>
       <AppText size="md" color={colors.textLighter} style={styles.subtitle}>
         已记账 {daysCount} 天
       </AppText>
@@ -40,32 +49,32 @@ export function ProfileHeader({ name, daysCount, avatarType = 'emoji', avatarVal
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 54,
     paddingHorizontal: 24,
     paddingBottom: 24,
     backgroundColor: colors.cream,
   },
   settingsBtn: {
-    position: 'absolute',
+    position: "absolute",
     top: 54,
     right: 24,
     width: 36,
     height: 36,
     borderRadius: 12,
     backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.md,
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   avatarImage: {
     width: 72,
@@ -73,10 +82,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   name: {
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

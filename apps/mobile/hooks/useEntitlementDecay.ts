@@ -1,13 +1,18 @@
-import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import { useOfflineContext } from '@/lib/offline-context';
-import { getEntitlement, applyDecay } from '@/lib/entitlements/queries';
-import { calculateDailyDecay } from '@/lib/entitlements/decay';
-import type { FeatureKey } from '@/lib/entitlements/rewards';
-import { ENTITLEMENT_KEY } from './useEntitlement';
+import { useEffect, useRef } from "react";
+import { AppState } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOfflineContext } from "@/lib/offline-context";
+import { getEntitlement, applyDecay } from "@/lib/entitlements/queries";
+import { calculateDailyDecay } from "@/lib/entitlements/decay";
+import type { FeatureKey } from "@/lib/entitlements/rewards";
+import { ENTITLEMENT_KEY } from "./useEntitlement";
 
-const ALL_FEATURES: FeatureKey[] = ['asr', 'ocr', 'multi_account', 'csv_export'];
+const ALL_FEATURES: FeatureKey[] = [
+  "asr",
+  "ocr",
+  "multi_account",
+  "csv_export",
+];
 
 /**
  * 在 App 启动和从后台恢复时，检查并执行所有权益的每日衰减。
@@ -61,8 +66,8 @@ export function useEntitlementDecay() {
 
   // 后台恢复时执行（只挂载一次）
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
         runDecay();
       }
     });

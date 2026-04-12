@@ -1,9 +1,9 @@
-import { View, StyleSheet } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
-import { HealthScoreCard } from './HealthScoreCard';
-import { InsightCard } from './InsightCard';
-import type { InsightItem } from '../../utils/insights/types';
+import { View, StyleSheet } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
+import { HealthScoreCard } from "./HealthScoreCard";
+import { InsightCard } from "./InsightCard";
+import type { InsightItem } from "../../utils/insights/types";
 
 interface TrendInsightRowProps {
   readonly items: InsightItem[];
@@ -12,8 +12,8 @@ interface TrendInsightRowProps {
 export function TrendInsightRow({ items }: TrendInsightRowProps) {
   if (items.length === 0) return null;
 
-  const healthItem = items.find(i => i.type === 'health');
-  const otherItems = items.filter(i => i.type !== 'health');
+  const healthItem = items.find((i) => i.type === "health");
+  const otherItems = items.filter((i) => i.type !== "health");
   const onlyHealth = otherItems.length === 0;
 
   return (
@@ -28,12 +28,16 @@ export function TrendInsightRow({ items }: TrendInsightRowProps) {
       {healthItem ? <HealthScoreCard item={healthItem} /> : null}
 
       {onlyHealth ? (
-        <AppText size="base" color={colors.textLighter} style={styles.emptyText}>
+        <AppText
+          size="base"
+          color={colors.textLighter}
+          style={styles.emptyText}
+        >
           本月消费表现不错，暂无需要关注的问题 👍
         </AppText>
       ) : null}
 
-      {otherItems.map(item => (
+      {otherItems.map((item) => (
         <InsightCard key={`${item.type}-${item.priority}`} item={item} />
       ))}
     </View>
@@ -45,8 +49,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 2,
   },
@@ -57,7 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.honey,
   },
   emptyText: {
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: 12,
   },
 });

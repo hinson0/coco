@@ -2,8 +2,17 @@ import { Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 
-const EXPENSE_ORDER = ['购物', '餐饮', '交通', '娱乐', '居住', '医疗', '教育', '其他支出'];
-const HIDDEN_CATEGORIES = new Set(['通讯']);
+const EXPENSE_ORDER = [
+  "购物",
+  "餐饮",
+  "交通",
+  "娱乐",
+  "居住",
+  "医疗",
+  "教育",
+  "其他支出",
+];
+const HIDDEN_CATEGORIES = new Set(["通讯"]);
 
 interface Props {
   readonly selectedId: string | null;
@@ -17,10 +26,13 @@ export function CategoryPicker({ selectedId, onSelect, type }: Props) {
   const categories = allCategories
     .filter((c: any) => c.type === type && !HIDDEN_CATEGORIES.has(c.name))
     .sort((a: any, b: any) => {
-      if (type !== 'expense') return 0;
+      if (type !== "expense") return 0;
       const ai = EXPENSE_ORDER.indexOf(a.name);
       const bi = EXPENSE_ORDER.indexOf(b.name);
-      return (ai === -1 ? EXPENSE_ORDER.length - 1 : ai) - (bi === -1 ? EXPENSE_ORDER.length - 1 : bi);
+      return (
+        (ai === -1 ? EXPENSE_ORDER.length - 1 : ai) -
+        (bi === -1 ? EXPENSE_ORDER.length - 1 : bi)
+      );
     });
 
   return (
@@ -38,12 +50,18 @@ export function CategoryPicker({ selectedId, onSelect, type }: Props) {
           activeOpacity={0.7}
         >
           <Text style={styles.icon}>{cat.icon}</Text>
-          <Text style={[styles.name, selectedId === cat.id && styles.nameActive]}>{cat.name}</Text>
+          <Text
+            style={[styles.name, selectedId === cat.id && styles.nameActive]}
+          >
+            {cat.name}
+          </Text>
         </TouchableOpacity>
       ))}
       <TouchableOpacity
         style={styles.addItem}
-        onPress={() => router.push({ pathname: "/category-manage", params: { type } })}
+        onPress={() =>
+          router.push({ pathname: "/category-manage", params: { type } })
+        }
         activeOpacity={0.7}
       >
         <Text style={styles.addIcon}>+</Text>

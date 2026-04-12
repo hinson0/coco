@@ -1,15 +1,21 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, type ViewStyle } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors, radii, spacing, shadows } from '../../constants/theme';
-import type { ChatMessage, Transaction, Category } from '@coco/shared';
-import { VoiceBubble } from './VoiceBubble';
-import { OcrBubble } from './OcrBubble';
-import { RecordCard } from './RecordCard';
+import React from "react";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  type ViewStyle,
+} from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, radii, spacing, shadows } from "../../constants/theme";
+import type { ChatMessage, Transaction, Category } from "@coco/shared";
+import { VoiceBubble } from "./VoiceBubble";
+import { OcrBubble } from "./OcrBubble";
+import { RecordCard } from "./RecordCard";
 
 interface ChatBubbleProps {
   readonly message: ChatMessage;
-  readonly status?: 'pending' | 'failed';
+  readonly status?: "pending" | "failed";
   readonly onDelete?: (messageId: string) => void;
   readonly onRetry?: () => void;
   readonly transaction?: Transaction;
@@ -23,8 +29,8 @@ interface ChatBubbleProps {
 
 function formatTime(isoString: string): string {
   const date = new Date(isoString);
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
@@ -47,22 +53,35 @@ function handleLongPress(messageId: string, onDelete?: (id: string) => void) {
 function FailedIndicator({ onRetry }: { readonly onRetry?: () => void }) {
   return (
     <TouchableOpacity onPress={onRetry} style={styles.failedIcon}>
-      <AppText size="base" color="#E74C3C">⚠</AppText>
+      <AppText size="base" color="#E74C3C">
+        ⚠
+      </AppText>
     </TouchableOpacity>
   );
 }
 
-export const ChatBubble = React.memo(function ChatBubble({ message, status, onDelete, onRetry, transaction, categories, onEditRecord, isPlaying, onPlay, onResendOcr }: ChatBubbleProps) {
+export const ChatBubble = React.memo(function ChatBubble({
+  message,
+  status,
+  onDelete,
+  onRetry,
+  transaction,
+  categories,
+  onEditRecord,
+  isPlaying,
+  onPlay,
+  onResendOcr,
+}: ChatBubbleProps) {
   const { role, content_type, content, created_at } = message;
   const time = formatTime(created_at);
-  const isUser = role === 'user';
-  const isPending = status === 'pending';
-  const isFailed = status === 'failed';
+  const isUser = role === "user";
+  const isPending = status === "pending";
+  const isFailed = status === "failed";
 
   // ── User messages: [failed?] [bubble] [avatar] ──
   if (isUser) {
     const bubbleContent = (() => {
-      if (content_type === 'audio') {
+      if (content_type === "audio") {
         return (
           <VoiceBubble
             role="user"
@@ -72,12 +91,14 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
           />
         );
       }
-      if (content_type === 'image') {
+      if (content_type === "image") {
         return <OcrBubble imageUri={content || undefined} />;
       }
       return (
         <View style={[styles.bubble, styles.bubbleUser]}>
-          <AppText size="xl" color={colors.white}>{content}</AppText>
+          <AppText size="xl" color={colors.white}>
+            {content}
+          </AppText>
         </View>
       );
     })();
@@ -92,11 +113,23 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
             onLongPress={() => handleLongPress(message.id, onDelete)}
           >
             {bubbleContent}
-            <AppText size="sm" color={colors.textLighter} style={styles.timeRight}>{time}</AppText>
+            <AppText
+              size="sm"
+              color={colors.textLighter}
+              style={styles.timeRight}
+            >
+              {time}
+            </AppText>
           </TouchableOpacity>
-          {content_type === 'image' && onResendOcr && (
-            <TouchableOpacity onPress={() => onResendOcr(message.id)} style={styles.resendOcrBtn} activeOpacity={0.7}>
-              <AppText size="sm" color={colors.white}>↩ 重新识别</AppText>
+          {content_type === "image" && onResendOcr && (
+            <TouchableOpacity
+              onPress={() => onResendOcr(message.id)}
+              style={styles.resendOcrBtn}
+              activeOpacity={0.7}
+            >
+              <AppText size="sm" color={colors.white}>
+                ↩ 重新识别
+              </AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -108,7 +141,7 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
   // ── Assistant messages: [avatar] [bubble] ──
 
   // bill_card
-  if (content_type === 'bill_card') {
+  if (content_type === "bill_card") {
     let parsedTransaction: Transaction | undefined = transaction;
     if (!parsedTransaction) {
       try {
@@ -117,9 +150,10 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
         parsedTransaction = undefined;
       }
     }
-    const matchedCategory = parsedTransaction && categories
-      ? categories.find((c) => c.id === parsedTransaction.category_id)
-      : undefined;
+    const matchedCategory =
+      parsedTransaction && categories
+        ? categories.find((c) => c.id === parsedTransaction.category_id)
+        : undefined;
 
     return (
       <View style={[styles.rowAssistant, styles.rowCard]}>
@@ -139,10 +173,14 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
             />
           ) : (
             <View style={[styles.bubble, styles.bubbleAssistant]}>
-              <AppText size="xl" color={colors.text}>{content}</AppText>
+              <AppText size="xl" color={colors.text}>
+                {content}
+              </AppText>
             </View>
           )}
-          <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
+          <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>
+            {time}
+          </AppText>
         </TouchableOpacity>
       </View>
     );
@@ -158,9 +196,13 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
         onLongPress={() => handleLongPress(message.id, onDelete)}
       >
         <View style={[styles.bubble, styles.bubbleAssistant]}>
-          <AppText size="xl" color={colors.text}>{content}</AppText>
+          <AppText size="xl" color={colors.text}>
+            {content}
+          </AppText>
         </View>
-        <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>{time}</AppText>
+        <AppText size="sm" color={colors.textLighter} style={styles.timeLeft}>
+          {time}
+        </AppText>
       </TouchableOpacity>
     </View>
   );
@@ -169,19 +211,19 @@ export const ChatBubble = React.memo(function ChatBubble({ message, status, onDe
 const styles = StyleSheet.create({
   // Row layouts — horizontal, avatar beside bubble
   rowUser: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    alignSelf: 'flex-end',
-    maxWidth: '85%',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    alignSelf: "flex-end",
+    maxWidth: "85%",
   },
   rowAssistant: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    alignSelf: 'flex-start',
-    maxWidth: '85%',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    alignSelf: "flex-start",
+    maxWidth: "85%",
   },
   rowCard: {
-    width: '90%',
+    width: "90%",
   },
 
   // Avatars
@@ -190,8 +232,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radii.sm,
     backgroundColor: colors.sagePale,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.md,
     marginTop: 2,
   },
@@ -200,8 +242,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radii.sm,
     backgroundColor: colors.creamDark,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: spacing.md,
     marginTop: 2,
   },
@@ -234,18 +276,18 @@ const styles = StyleSheet.create({
   },
   timeRight: {
     marginTop: spacing.xs,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     paddingRight: spacing.xs,
   },
 
   // Failed / pending
   failedIcon: {
     marginRight: spacing.xs,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   userBubbleCol: {
     flexShrink: 1,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   resendOcrBtn: {
     marginTop: spacing.xs,
@@ -253,7 +295,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radii.xl,
     backgroundColor: colors.sage,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
   pendingOpacity: {
     opacity: 0.6,

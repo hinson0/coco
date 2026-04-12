@@ -1,20 +1,16 @@
-import { useCallback } from 'react';
-import { Alert, Linking } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { useCallback } from "react";
+import { Alert, Linking } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 export function useCamera() {
   const pickImage = useCallback(async (): Promise<string | null> => {
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!granted) {
-      Alert.alert(
-        '需要相机权限',
-        '请在系统设置中允许 Coco 访问相机',
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '去设置', onPress: () => Linking.openSettings() },
-        ],
-      );
+      Alert.alert("需要相机权限", "请在系统设置中允许 Coco 访问相机", [
+        { text: "取消", style: "cancel" },
+        { text: "去设置", onPress: () => Linking.openSettings() },
+      ]);
       return null;
     }
 

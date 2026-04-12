@@ -81,7 +81,9 @@ export function useDeleteChatMessage() {
       const now = new Date().toISOString();
       await db.runAsync(
         "UPDATE chat_messages SET deleted_at = ?, updated_at = ? WHERE id = ?",
-        now, now, id
+        now,
+        now,
+        id,
       );
     },
     onSuccess: () => {
@@ -100,7 +102,9 @@ export function useClearChatMessages() {
       const now = new Date().toISOString();
       await db.runAsync(
         "UPDATE chat_messages SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND deleted_at IS NULL",
-        now, now, userId
+        now,
+        now,
+        userId,
       );
     },
     onSuccess: () => {

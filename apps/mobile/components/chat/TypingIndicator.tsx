@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,9 +7,9 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
-} from 'react-native-reanimated';
-import { AppText } from '../ui/AppText';
-import { colors, radii, spacing, shadows } from '../../constants/theme';
+} from "react-native-reanimated";
+import { AppText } from "../ui/AppText";
+import { colors, radii, spacing, shadows } from "../../constants/theme";
 
 const DOT_DELAY = 150;
 
@@ -70,22 +70,22 @@ export function TypingIndicator() {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: spacing.md,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   avatar: {
     width: 28,
     height: 28,
     borderRadius: radii.sm,
     backgroundColor: colors.sagePale,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   bubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     backgroundColor: colors.white,
     borderRadius: radii.lg,

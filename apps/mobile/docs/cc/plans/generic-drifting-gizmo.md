@@ -31,6 +31,7 @@ const queryClient = new QueryClient({
 ```
 
 **效果：**
+
 - 第二次及以后进入 AI 页，所有查询（chat-messages、categories、transactions 等）立即从缓存返回，**零重新查询**
 - 消除 mount 期间的后台 re-fetch，减少 JS 线程竞争，动画更流畅
 - 覆盖全应用所有本地 SQLite 查询 hook
@@ -43,8 +44,8 @@ const queryClient = new QueryClient({
 
 ## 涉及文件
 
-| 文件 | 改动 |
-|------|------|
+| 文件              | 改动                                                          |
+| ----------------- | ------------------------------------------------------------- |
 | `app/_layout.tsx` | QueryClient 添加 `defaultOptions.queries.staleTime: Infinity` |
 
 ---

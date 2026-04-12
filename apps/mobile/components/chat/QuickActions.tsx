@@ -1,6 +1,6 @@
-import { ScrollView, Pressable, StyleSheet } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors, spacing } from '../../constants/theme';
+import { ScrollView, Pressable, StyleSheet } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, spacing } from "../../constants/theme";
 
 interface QuickAction {
   readonly icon: string;
@@ -9,10 +9,10 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: readonly QuickAction[] = [
-  { icon: '📅', label: '本周报告', text: '本周报告' },
-  { icon: '📈', label: '月度趋势', text: '本月趋势' },
-  { icon: '💰', label: '今日花费', text: '今天花了多少' },
-  { icon: '🏷️', label: '分类统计', text: '各分类支出统计' },
+  { icon: "📅", label: "本周报告", text: "本周报告" },
+  { icon: "📈", label: "月度趋势", text: "本月趋势" },
+  { icon: "💰", label: "今日花费", text: "今天花了多少" },
+  { icon: "🏷️", label: "分类统计", text: "各分类支出统计" },
 ];
 
 interface QuickActionsProps {
@@ -36,7 +36,9 @@ export function QuickActions({ visible, onSelect }: QuickActionsProps) {
           style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
         >
           <AppText size="md">{action.icon}</AppText>
-          <AppText size="md" color={colors.text}>{action.label}</AppText>
+          <AppText size="md" color={colors.text}>
+            {action.label}
+          </AppText>
         </Pressable>
       ))}
     </ScrollView>
@@ -45,14 +47,14 @@ export function QuickActions({ visible, onSelect }: QuickActionsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
   item: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     backgroundColor: colors.cream,
     borderWidth: 1,

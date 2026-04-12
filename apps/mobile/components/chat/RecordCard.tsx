@@ -1,10 +1,10 @@
-import { View, StyleSheet, Pressable, Alert } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { Badge } from '../ui/Badge';
-import { colors, radii, spacing } from '../../constants/theme';
-import { formatAmount } from '../../lib/format';
-import { MAJOR_AMOUNT_THRESHOLD } from '@coco/shared';
-import type { Transaction } from '@coco/shared';
+import { View, StyleSheet, Pressable, Alert } from "react-native";
+import { AppText } from "../ui/AppText";
+import { Badge } from "../ui/Badge";
+import { colors, radii, spacing } from "../../constants/theme";
+import { formatAmount } from "../../lib/format";
+import { MAJOR_AMOUNT_THRESHOLD } from "@coco/shared";
+import type { Transaction } from "@coco/shared";
 
 interface RecordCardProps {
   readonly transaction: Transaction;
@@ -16,11 +16,17 @@ interface RecordCardProps {
 
 function formatDate(isoString: string): string {
   const d = new Date(isoString);
-  return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`;
+  return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日`;
 }
 
-export function RecordCard({ transaction, categoryName, categoryIcon, onEdit, onDelete }: RecordCardProps) {
-  const isExpense = transaction.type === 'expense';
+export function RecordCard({
+  transaction,
+  categoryName,
+  categoryIcon,
+  onEdit,
+  onDelete,
+}: RecordCardProps) {
+  const isExpense = transaction.type === "expense";
   const amountStr = formatAmount(transaction.amount, transaction.type);
   const isMajor = isExpense && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
@@ -29,17 +35,19 @@ export function RecordCard({ transaction, categoryName, categoryIcon, onEdit, on
       {/* Top row: icon + category/note + amount */}
       <View style={styles.topRow}>
         <View style={styles.iconBox}>
-          <AppText size="xl">{categoryIcon ?? '📦'}</AppText>
+          <AppText size="xl">{categoryIcon ?? "📦"}</AppText>
         </View>
         <View style={styles.info}>
           <View style={styles.categoryRow}>
             <AppText size="lg" weight="semibold" color={colors.text}>
-              {categoryName ?? '未知'}
+              {categoryName ?? "未知"}
             </AppText>
             {isMajor ? <Badge text="大宗" variant="pro" /> : null}
           </View>
           {transaction.note ? (
-            <AppText size="base" color={colors.textLighter}>{transaction.note}</AppText>
+            <AppText size="base" color={colors.textLighter}>
+              {transaction.note}
+            </AppText>
           ) : null}
         </View>
         <AppText
@@ -69,15 +77,23 @@ export function RecordCard({ transaction, categoryName, categoryIcon, onEdit, on
                 { text: "删除", style: "destructive", onPress: onDelete },
               ]);
             }}
-            style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              pressed && styles.btnPressed,
+            ]}
           >
             <AppText size="base">🗑</AppText>
           </Pressable>
           <Pressable
             onPress={onEdit}
-            style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              pressed && styles.btnPressed,
+            ]}
           >
-            <AppText size="base" color={colors.textLight}>✏ 编辑</AppText>
+            <AppText size="base" color={colors.textLight}>
+              ✏ 编辑
+            </AppText>
           </Pressable>
         </View>
       </View>
@@ -97,16 +113,16 @@ const styles = StyleSheet.create({
 
   // Top: [icon] [category/note] [amount]
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   iconBox: {
     width: 40,
     height: 40,
     borderRadius: radii.md,
     backgroundColor: colors.cream,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.lg,
   },
   info: {
@@ -114,8 +130,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
 
@@ -127,13 +143,13 @@ const styles = StyleSheet.create({
 
   // Bottom: [date] [trash] [edit]
   bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.lg,
   },
   actionBtn: {
