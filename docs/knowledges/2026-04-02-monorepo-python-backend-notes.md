@@ -8,16 +8,16 @@
 
 根目录只放**对整个 monorepo 生效**的配置，其余跟着代码走。
 
-| 文件 | 放根目录？ | 原则 |
-|------|-----------|------|
-| `pnpm-workspace.yaml` | ✅ | monorepo 核心，必须在根目录 |
-| `package.json` | ✅ | 工作区入口，只放跨包脚本和 packageManager |
-| `.npmrc` | ✅ | pnpm 全局行为配置（如 native build 白名单） |
-| `.gitignore` | ✅ | 覆盖整个仓库 |
-| `.prettierrc` | ❌ | 跟着用它的子包走，通过软链接共享 |
-| `tsconfig.json` | ❌ | 各包差异大时各自独立，不强求统一基础 |
-| `eslint.config.js` | ❌ | 跟着代码走，放在 `apps/mobile/` |
-| `turbo.json` | ❌（如不用 Turbo） | 没有 `turbo run` 脚本时是死文件 |
+| 文件                  | 放根目录？         | 原则                                        |
+| --------------------- | ------------------ | ------------------------------------------- |
+| `pnpm-workspace.yaml` | ✅                 | monorepo 核心，必须在根目录                 |
+| `package.json`        | ✅                 | 工作区入口，只放跨包脚本和 packageManager   |
+| `.npmrc`              | ✅                 | pnpm 全局行为配置（如 native build 白名单） |
+| `.gitignore`          | ✅                 | 覆盖整个仓库                                |
+| `.prettierrc`         | ❌                 | 跟着用它的子包走，通过软链接共享            |
+| `tsconfig.json`       | ❌                 | 各包差异大时各自独立，不强求统一基础        |
+| `eslint.config.js`    | ❌                 | 跟着代码走，放在 `apps/mobile/`             |
+| `turbo.json`          | ❌（如不用 Turbo） | 没有 `turbo run` 脚本时是死文件             |
 
 ---
 
@@ -60,11 +60,11 @@ config.py   环境变量集中管理，用 pydantic-settings 自动读取并校�
 
 ### `schemas/` vs `models/` 的区别
 
-| | `schemas/` | `models/` |
-|--|-----------|-----------|
-| 用途 | HTTP 边界（请求/响应格式） | 数据库边界（表结构映射） |
-| 库 | Pydantic | SQLAlchemy |
-| 场景 | FastAPI 自动校验参数、生成文档 | ORM 查询数据库 |
+|      | `schemas/`                     | `models/`                |
+| ---- | ------------------------------ | ------------------------ |
+| 用途 | HTTP 边界（请求/响应格式）     | 数据库边界（表结构映射） |
+| 库   | Pydantic                       | SQLAlchemy               |
+| 场景 | FastAPI 自动校验参数、生成文档 | ORM 查询数据库           |
 
 一个请求完整路径：`HTTP 请求 → schemas 校验 → services 业务逻辑 → models 查数据库 → schemas 序列化 → HTTP 响应`
 
@@ -74,7 +74,7 @@ config.py   环境变量集中管理，用 pydantic-settings 自动读取并校�
 
 ```yaml
 volumes:
-  - ./apps/backend:/app   # 把本地目录挂载到容器内
+  - ./apps/backend:/app # 把本地目录挂载到容器内
 ```
 
 挂载后，本地修改文件 → 容器内立即看到变化。配合 `uvicorn --reload`，保存代码即生效，不需要重新 `docker build`。
@@ -107,9 +107,9 @@ Supabase Edge Functions 网关要求每个请求带 `apikey` header，值为 `SU
 
 ## 8. pnpm 常用命令对照
 
-| 操作 | pnpm | npm |
-|------|------|-----|
-| 安装依赖 | `pnpm install` | `npm install` |
-| 运行脚本 | `pnpm dev` | `npm run dev` |
+| 操作           | pnpm                             | npm                            |
+| -------------- | -------------------------------- | ------------------------------ |
+| 安装依赖       | `pnpm install`                   | `npm install`                  |
+| 运行脚本       | `pnpm dev`                       | `npm run dev`                  |
 | 向子包添加依赖 | `pnpm add <pkg> --filter mobile` | `npm add <pkg> -w apps/mobile` |
-| 运行子包脚本 | `pnpm --filter mobile test` | `npm run test -w apps/mobile` |
+| 运行子包脚本   | `pnpm --filter mobile test`      | `npm run test -w apps/mobile`  |
