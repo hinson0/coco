@@ -20,6 +20,14 @@ jobs:
       run:
         working-directory: apps/backend
 
+    env:
+      # CI 测试用占位值（非真实密钥）
+      SILICON_API_KEY: "test-placeholder"
+      TENCENT_SECRET_ID: "test-placeholder"
+      TENCENT_SECRET_KEY: "test-placeholder"
+      DATABASE_URL: "postgresql+asyncpg://test:test@localhost:5432/test"
+      JWT_SECRET: "test-ci-secret"
+
     steps:
       # 拉取代码
       - uses: actions/checkout@v4
