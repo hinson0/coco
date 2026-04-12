@@ -136,7 +136,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
                 (:id, :user_id, :role, :content_type, :content, :transaction_id,
                  :created_at, :updated_at, :deleted_at, :audio_uri, :duration_seconds)
             ON CONFLICT (id) DO UPDATE SET
-                content = EXCLUDED.content, updated_at = EXCLUDED.updated_at, 
+                content = EXCLUDED.content, updated_at = EXCLUDED.updated_at,
                 deleted_at = EXCLUDED.deleted_at,
                 transaction_id = EXCLUDED.transaction_id
             WHERE EXCLUDED.updated_at > chat_messages.updated_at
