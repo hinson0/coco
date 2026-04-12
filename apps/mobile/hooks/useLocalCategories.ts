@@ -1,8 +1,8 @@
 // 分类数据的本地 CRUD hook（查询、新增、编辑、软删除）
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
 import type { Category, CreateCategoryInput } from "@coco/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Crypto from "expo-crypto";
 
 export function useLocalCategories() {
   const { db, userId } = useOfflineContext();
@@ -10,14 +10,20 @@ export function useLocalCategories() {
   return useQuery({
     queryKey: ["categories", userId],
     queryFn: async (): Promise<readonly Category[]> => {
+      // db 或 userId 不存在时返回空数组
+      /**
+       * 那就存在一种可能性,当用户登录时就应该有user id啊
+       */
       if (!db || !userId) return [];
+
+      //
       const rows = await db.getAllAsync<Category>(
         "SELECT * FROM categories WHERE deleted_at IS NULL AND (user_id = ? OR (user_id IS NULL AND is_default = 1)) ORDER BY type, name",
-        userId
+        userId,
       );
       return rows.map((r) => ({ ...r, is_default: Boolean(r.is_default) }));
     },
-    enabled: !!db && !!userId,
+    enabled: !!db && !!userId, // 只有 db 和 userId 都就绪时才执行查询，避免无效请求
   });
 }
 
@@ -36,7 +42,7 @@ export function useCreateCategory() {
         input.name,
         input.icon,
         input.type,
-        new Date().toISOString()
+        new Date().toISOString(),
       );
       return id;
     },
@@ -51,14 +57,18 @@ export function useUpdateCategory() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { readonly id: string; readonly name: string; readonly icon: string }) => {
+    mutationFn: async (params: {
+      readonly id: string;
+      readonly name: string;
+      readonly icon: string;
+    }) => {
       if (!db) throw new Error("Database not initialized");
       await db.runAsync(
         "UPDATE categories SET name = ?, icon = ?, updated_at = ? WHERE id = ?",
         params.name,
         params.icon,
         new Date().toISOString(),
-        params.id
+        params.id,
       );
     },
     onSuccess: () => {
@@ -78,7 +88,7 @@ export function useDeleteCategory() {
         "UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND is_default = 0",
         new Date().toISOString(),
         new Date().toISOString(),
-        id
+        id,
       );
     },
     onSuccess: () => {
