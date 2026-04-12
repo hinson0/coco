@@ -1,10 +1,18 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TextInput, Pressable, StyleSheet, PanResponder, Keyboard, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { AppText } from '../ui/AppText';
-import { QuickActions } from './QuickActions';
-import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
-import { colors, radii, spacing, shadows } from '../../constants/theme';
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  View,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  PanResponder,
+  Keyboard,
+  Platform,
+} from "react-native";
+import * as Haptics from "expo-haptics";
+import { AppText } from "../ui/AppText";
+import { QuickActions } from "./QuickActions";
+import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
+import { colors, radii, spacing, shadows } from "../../constants/theme";
 
 // ─── 长按阈值（ms） ───
 const LONG_PRESS_DELAY = 300;
@@ -12,7 +20,7 @@ const LONG_PRESS_DELAY = 300;
 const CANCEL_THRESHOLD = 50;
 
 // ─── 录音状态 ───
-type RecordingState = 'idle' | 'recording' | 'cancelling';
+type RecordingState = "idle" | "recording" | "cancelling";
 
 export type { RecordingState };
 
@@ -28,16 +36,22 @@ interface ChatInputBarProps {
 }
 
 export function ChatInputBar({
-  onSendText, onCamera, onVoice, onQuickAction,
-  recordingState, onRecordingStateChange, onMeteringChange,
+  onSendText,
+  onCamera,
+  onVoice,
+  onQuickAction,
+  recordingState,
+  onRecordingStateChange,
+  onMeteringChange,
 }: ChatInputBarProps) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [plusExpanded, setPlusExpanded] = useState(false);
   const [focused, setFocused] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const hasText = text.trim().length > 0;
   const inputRef = useRef<TextInput>(null);
-  const { startRecording, stopRecording, cancelRecording, metering } = useVoiceRecorder();
+  const { startRecording, stopRecording, cancelRecording, metering } =
+    useVoiceRecorder();
 
   // 将 metering 值回传给父组件
   useEffect(() => {
@@ -45,7 +59,7 @@ export function ChatInputBar({
   }, [metering, onMeteringChange]);
 
   // useRef 镜像 recordingState，PanResponder 回调中读 ref 避免闭包陷阱
-  const recordingStateRef = useRef<RecordingState>('idle');
+  const recordingStateRef = useRef<RecordingState>("idle");
   function setRecordingStateSync(s: RecordingState) {
     recordingStateRef.current = s;
     onRecordingStateChange(s);
@@ -65,7 +79,7 @@ export function ChatInputBar({
     const trimmed = text.trim();
     if (!trimmed) return;
     onSendText(trimmed);
-    setText('');
+    setText("");
   }
 
   // ─── + 按钮 ───
@@ -81,8 +95,8 @@ export function ChatInputBar({
   // ─── 切换语音/文字模式 ───
   function toggleVoiceMode() {
     // 正在录音时先取消，避免资源泄漏
-    if (recordingStateRef.current !== 'idle') {
-      setRecordingStateSync('idle');
+    if (recordingStateRef.current !== "idle") {
+      setRecordingStateSync("idle");
       cancelRecording();
     }
     setVoiceMode((prev) => {
@@ -105,27 +119,27 @@ export function ChatInputBar({
       onPanResponderGrant: async (_evt, gestureState) => {
         startYRef.current = gestureState.y0;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        setRecordingStateSync('recording');
+        setRecordingStateSync("recording");
         const started = await startRecording();
         if (!started) {
-          setRecordingStateSync('idle');
+          setRecordingStateSync("idle");
         }
       },
       onPanResponderMove: (_evt, gestureState) => {
-        if (recordingStateRef.current === 'idle') return;
+        if (recordingStateRef.current === "idle") return;
         const dy = startYRef.current - gestureState.moveY;
         if (dy > CANCEL_THRESHOLD) {
-          setRecordingStateSync('cancelling');
+          setRecordingStateSync("cancelling");
         } else {
-          setRecordingStateSync('recording');
+          setRecordingStateSync("recording");
         }
       },
       onPanResponderRelease: async () => {
         const current = recordingStateRef.current;
-        setRecordingStateSync('idle');
-        if (current === 'cancelling') {
+        setRecordingStateSync("idle");
+        if (current === "cancelling") {
           await cancelRecording();
-        } else if (current === 'recording') {
+        } else if (current === "recording") {
           const result = await stopRecording();
           if (result) {
             onVoiceRef.current(result.base64, result.durationSeconds);
@@ -133,8 +147,8 @@ export function ChatInputBar({
         }
       },
       onPanResponderTerminate: async () => {
-        if (recordingStateRef.current !== 'idle') {
-          setRecordingStateSync('idle');
+        if (recordingStateRef.current !== "idle") {
+          setRecordingStateSync("idle");
           await cancelRecording();
         }
       },
@@ -147,7 +161,8 @@ export function ChatInputBar({
 
   // 键盘隐藏时失焦，让手势层重新出现
   useEffect(() => {
-    const event = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const event =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const sub = Keyboard.addListener(event, () => {
       inputRef.current?.blur();
     });
@@ -167,20 +182,20 @@ export function ChatInputBar({
         longPressTimerRef.current = setTimeout(async () => {
           didTriggerVoiceRef.current = true;
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          setRecordingStateSync('recording');
+          setRecordingStateSync("recording");
           const started = await startRecording();
           if (!started) {
-            setRecordingStateSync('idle');
+            setRecordingStateSync("idle");
           }
         }, LONG_PRESS_DELAY);
       },
       onPanResponderMove: (_evt, gestureState) => {
-        if (recordingStateRef.current === 'idle') return;
+        if (recordingStateRef.current === "idle") return;
         const dy = startYRef.current - gestureState.moveY;
         if (dy > CANCEL_THRESHOLD) {
-          setRecordingStateSync('cancelling');
+          setRecordingStateSync("cancelling");
         } else {
-          setRecordingStateSync('recording');
+          setRecordingStateSync("recording");
         }
       },
       onPanResponderRelease: async () => {
@@ -197,10 +212,10 @@ export function ChatInputBar({
         }
 
         const current = recordingStateRef.current;
-        setRecordingStateSync('idle');
-        if (current === 'cancelling') {
+        setRecordingStateSync("idle");
+        if (current === "cancelling") {
           await cancelRecording();
-        } else if (current === 'recording') {
+        } else if (current === "recording") {
           const result = await stopRecording();
           if (result) {
             onVoiceRef.current(result.base64, result.durationSeconds);
@@ -213,7 +228,7 @@ export function ChatInputBar({
           longPressTimerRef.current = null;
         }
         if (didTriggerVoiceRef.current) {
-          setRecordingStateSync('idle');
+          setRecordingStateSync("idle");
           await cancelRecording();
         }
       },
@@ -226,7 +241,13 @@ export function ChatInputBar({
 
       <View style={styles.container}>
         {/* 📷 相机按钮 */}
-        <Pressable onPress={onCamera} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
+        <Pressable
+          onPress={onCamera}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            pressed && styles.btnPressed,
+          ]}
+        >
           <AppText size="2xl">📷</AppText>
         </Pressable>
 
@@ -234,7 +255,10 @@ export function ChatInputBar({
         <View style={styles.inputWrapper}>
           {voiceMode ? (
             /* 按住说话按钮 */
-            <View style={styles.holdToTalkBtn} {...voicePanResponder.panHandlers}>
+            <View
+              style={styles.holdToTalkBtn}
+              {...voicePanResponder.panHandlers}
+            >
               <AppText size="md" weight="medium" color={colors.textLight}>
                 按住说话
               </AppText>
@@ -255,7 +279,10 @@ export function ChatInputBar({
               />
               {/* 未聚焦且无文字时，盖一层手势层拦截点击/长按 */}
               {!focused && !hasText && (
-                <View style={styles.gestureOverlay} {...panResponder.panHandlers} />
+                <View
+                  style={styles.gestureOverlay}
+                  {...panResponder.panHandlers}
+                />
               )}
             </>
           )}
@@ -263,17 +290,40 @@ export function ChatInputBar({
 
         {hasText ? (
           /* 有文字 → 发送按钮 */
-          <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.sendBtn, pressed && styles.btnPressed]}>
-            <AppText size="lg" weight="bold" color={colors.white}>↑</AppText>
+          <Pressable
+            onPress={handleSubmit}
+            style={({ pressed }) => [
+              styles.sendBtn,
+              pressed && styles.btnPressed,
+            ]}
+          >
+            <AppText size="lg" weight="bold" color={colors.white}>
+              ↑
+            </AppText>
           </Pressable>
         ) : (
           /* 无文字 → 🎤/⌨️ 切换 + ➕ */
           <>
-            <Pressable onPress={toggleVoiceMode} style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}>
-              <AppText size="xl">{voiceMode ? '⌨️' : '🎤'}</AppText>
+            <Pressable
+              onPress={toggleVoiceMode}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && styles.btnPressed,
+              ]}
+            >
+              <AppText size="xl">{voiceMode ? "⌨️" : "🎤"}</AppText>
             </Pressable>
-            <Pressable onPress={handlePlus} style={({ pressed }) => [styles.iconBtn, styles.plusBtn, pressed && styles.btnPressed]}>
-              <AppText size="4xl" weight="regular" color={colors.white}>+</AppText>
+            <Pressable
+              onPress={handlePlus}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                styles.plusBtn,
+                pressed && styles.btnPressed,
+              ]}
+            >
+              <AppText size="4xl" weight="regular" color={colors.white}>
+                +
+              </AppText>
             </Pressable>
           </>
         )}
@@ -285,8 +335,8 @@ export function ChatInputBar({
 // ─── Styles ───
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
@@ -296,16 +346,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   sendBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   plusBtn: {
     backgroundColor: colors.sage,
@@ -316,10 +366,10 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   gestureOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -343,7 +393,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.creamDeeper,
     borderRadius: radii.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

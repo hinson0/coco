@@ -211,22 +211,19 @@ export default function ChatScreen() {
     [deleteMutation],
   );
 
-  const handleEditRecord = useCallback(
-    (messageId: string) => {
-      const msg = messagesRef.current.find((m) => m.id === messageId);
-      if (!msg || msg.content_type !== "bill_card") return;
-      try {
-        const tx = JSON.parse(msg.content) as Transaction;
-        router.push({
-          pathname: "/manual-entry",
-          params: { txData: JSON.stringify(tx), msgId: msg.id },
-        });
-      } catch {
-        /* ignore parse errors */
-      }
-    },
-    [],
-  );
+  const handleEditRecord = useCallback((messageId: string) => {
+    const msg = messagesRef.current.find((m) => m.id === messageId);
+    if (!msg || msg.content_type !== "bill_card") return;
+    try {
+      const tx = JSON.parse(msg.content) as Transaction;
+      router.push({
+        pathname: "/manual-entry",
+        params: { txData: JSON.stringify(tx), msgId: msg.id },
+      });
+    } catch {
+      /* ignore parse errors */
+    }
+  }, []);
 
   const handleResendOcr = useCallback(
     async (messageId: string) => {
@@ -314,7 +311,15 @@ export default function ChatScreen() {
         </View>
       );
     },
-    [categories, handleDelete, handleEditRecord, handleResendOcr, handlePlayAudio, playingId, failedOcrIds],
+    [
+      categories,
+      handleDelete,
+      handleEditRecord,
+      handleResendOcr,
+      handlePlayAudio,
+      playingId,
+      failedOcrIds,
+    ],
   );
 
   return (

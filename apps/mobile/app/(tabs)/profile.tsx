@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { AiAssistantCard } from "../../components/profile/AiAssistantCard";
 import { ExportSheet } from "../../components/profile/ExportSheet";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
@@ -21,7 +27,8 @@ function useProfileStats() {
   return useQuery({
     queryKey: ["transactions", "stats", userId],
     queryFn: async () => {
-      if (!db || !userId) return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
+      if (!db || !userId)
+        return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
 
       const now = new Date();
       const monthStart = new Date(

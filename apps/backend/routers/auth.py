@@ -4,12 +4,18 @@ import bcrypt
 import jwt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from infra.config import settings
 from infra.database import get_db
 from infra.security import create_access_token, create_refresh_token
-from schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 
 log = structlog.get_logger()
 router = APIRouter(prefix="/auth", tags=["auth"])

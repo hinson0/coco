@@ -3,6 +3,9 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends
+from sqlalchemy import text as sql_text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from infra.database import get_db
 from infra.security import get_current_user
 from schemas.chat import (
@@ -21,8 +24,6 @@ from services.silicon import (
     summarize_result,
 )
 from services.tencent import recognize_speech
-from sqlalchemy import text as sql_text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 log = structlog.get_logger()
 
@@ -49,14 +50,18 @@ async def chat(
         if body.audioBase64:
             asr_text = recognize_speech(audio_base64=body.audioBase64)
             if not asr_text:
-                return ChatResponse(data=ChatTextData(content="没听清，要不再说一次？"))
+                return ChatResponse(
+                    data=ChatTextData(content="没听清，要不再说一次？")
+                )
             text_input = asr_text
         else:
             assert body.text is not None, "文本输入不能为空"
             text_input = body.text
 
         intent = await classify_intent(text_input)
-        log.info("chat.intent", intent=intent, has_audio=body.audioBase64 is not None)
+        log.info(
+            "chat.intent", intent=intent, has_audio=body.audioBase64 is not None
+        )
 
         if intent == "record":
             bill = await extract_bill(text_input)
@@ -65,7 +70,9 @@ async def chat(
                     amount=float(bill["amount"]),
                     category=str(bill.get("category", "其他支出")),
                     note=bill.get("note") or "",
-                    type="income" if bill.get("type") == "income" else "expense",
+                    type="income"
+                    if bill.get("type") == "income"
+                    else "expense",
                     occurred_at=bill.get("occurred_at", ""),
                 )
                 return ChatResponse(
@@ -105,10 +112,16 @@ async def chat(
                     )
                 )
 
-            summary = await summarize_result(question=text_input, rows=query_result)
-            return ChatResponse(data=ChatNlData(content=summary, asrText=asr_text))
+            summary = await summarize_result(
+                question=text_input, rows=query_result
+            )
+            return ChatResponse(
+                data=ChatNlData(content=summary, asrText=asr_text)
+            )
         else:
             reply = await chat_reply(text_input)
-            return ChatResponse(data=ChatTextData(content=reply, asrText=asr_text))
+            return ChatResponse(
+                data=ChatTextData(content=reply, asrText=asr_text)
+            )
     except Exception:
         return ChatResponse(data=ChatTextData(content="处理失败，请稍后再试。"))

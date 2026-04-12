@@ -1,8 +1,8 @@
-import { View, type ViewStyle } from 'react-native';
-import { AppText } from './AppText';
-import { colors } from '../../constants/theme';
+import { View, type ViewStyle } from "react-native";
+import { AppText } from "./AppText";
+import { colors } from "../../constants/theme";
 
-export type BadgeVariant = 'ai' | 'new' | 'pro';
+export type BadgeVariant = "ai" | "new" | "pro";
 
 const variantStyles: Record<BadgeVariant, { bg: string; text: string }> = {
   ai: { bg: colors.sage, text: colors.white },
@@ -25,7 +25,9 @@ export function Badge({ text, variant }: BadgeProps) {
   };
   return (
     <View style={style}>
-      <AppText size="xs" weight="bold" color={v.text}>{text}</AppText>
+      <AppText size="xs" weight="bold" color={v.text}>
+        {text}
+      </AppText>
     </View>
   );
 }

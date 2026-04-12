@@ -1,6 +1,6 @@
-import { ScrollView, Pressable, StyleSheet } from 'react-native';
-import { AppText } from '../ui/AppText';
-import { colors, spacing } from '../../constants/theme';
+import { ScrollView, Pressable, StyleSheet } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, spacing } from "../../constants/theme";
 
 interface ToolItem {
   readonly icon: string;
@@ -8,8 +8,8 @@ interface ToolItem {
 }
 
 const TOOLS: ToolItem[] = [
-  { icon: '✏️', label: '手动记账' },
-  { icon: '📊', label: '月度报告' },
+  { icon: "✏️", label: "手动记账" },
+  { icon: "📊", label: "月度报告" },
 ];
 
 interface ChatToolBarProps {
@@ -30,7 +30,9 @@ export function ChatToolBar({ onSelectTool }: ChatToolBarProps) {
           style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
         >
           <AppText size="md">{tool.icon}</AppText>
-          <AppText size="md" color={colors.text} style={styles.label}>{tool.label}</AppText>
+          <AppText size="md" color={colors.text} style={styles.label}>
+            {tool.label}
+          </AppText>
         </Pressable>
       ))}
     </ScrollView>
@@ -39,14 +41,14 @@ export function ChatToolBar({ onSelectTool }: ChatToolBarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
   item: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     backgroundColor: colors.cream,
     borderWidth: 1,

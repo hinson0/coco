@@ -1,10 +1,10 @@
-import type { InsightContext, InsightItem } from './types';
-import { healthScoreRule } from './healthScoreRule';
-import { categoryChangeRule } from './categoryChangeRule';
-import { anomalyRule } from './anomalyRule';
-import { paceRule } from './paceRule';
-import { frequencyRule } from './frequencyRule';
-import { savingRule } from './savingRule';
+import type { InsightContext, InsightItem } from "./types";
+import { healthScoreRule } from "./healthScoreRule";
+import { categoryChangeRule } from "./categoryChangeRule";
+import { anomalyRule } from "./anomalyRule";
+import { paceRule } from "./paceRule";
+import { frequencyRule } from "./frequencyRule";
+import { savingRule } from "./savingRule";
 
 export function runInsightRules(ctx: InsightContext): InsightItem[] {
   const results: InsightItem[] = [];

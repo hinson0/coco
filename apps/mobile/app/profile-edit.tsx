@@ -1,12 +1,25 @@
 // 用户资料编辑页面 — 修改头像和昵称
 import { useState, useEffect } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ActivityIndicator, Keyboard } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+  ActivityIndicator,
+  Keyboard,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProfile, useUpdateProfile, useEnsureProfile } from "../hooks/useLocalProfile";
+import {
+  useProfile,
+  useUpdateProfile,
+  useEnsureProfile,
+} from "../hooks/useLocalProfile";
 import { EmojiPicker } from "../components/shared/EmojiPicker";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
@@ -19,7 +32,9 @@ export default function ProfileEditScreen() {
   const { mutateAsync: updateProfile } = useUpdateProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
 
-  useEffect(() => { ensureProfile(); }, []);
+  useEffect(() => {
+    ensureProfile();
+  }, []);
 
   const [nickname, setNickname] = useState("");
   const [avatarType, setAvatarType] = useState<AvatarType>("emoji");
@@ -29,9 +44,16 @@ export default function ProfileEditScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -88,10 +110,16 @@ export default function ProfileEditScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
-        <AppText size="2xl" weight="semibold">编辑资料</AppText>
+        <AppText size="2xl" weight="semibold">
+          编辑资料
+        </AppText>
         <View style={{ width: 36 }} />
       </View>
 
@@ -111,12 +139,20 @@ export default function ProfileEditScreen() {
             )}
           </LinearGradient>
         </TouchableOpacity>
-        <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>点击更换头像</AppText>
+        <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>
+          点击更换头像
+        </AppText>
       </View>
 
       {/* Nickname input */}
       <View style={styles.fieldCard}>
-        <AppText size="md" color={colors.textLighter} style={{ marginBottom: 6 }}>昵称</AppText>
+        <AppText
+          size="md"
+          color={colors.textLighter}
+          style={{ marginBottom: 6 }}
+        >
+          昵称
+        </AppText>
         <TextInput
           style={styles.input}
           value={nickname}
@@ -125,7 +161,11 @@ export default function ProfileEditScreen() {
           placeholderTextColor={colors.textLighter}
           maxLength={20}
         />
-        <AppText size="sm" color={colors.textLighter} style={{ marginTop: 4, textAlign: "right" }}>
+        <AppText
+          size="sm"
+          color={colors.textLighter}
+          style={{ marginTop: 4, textAlign: "right" }}
+        >
           {nickname.length}/20
         </AppText>
       </View>
@@ -134,11 +174,22 @@ export default function ProfileEditScreen() {
 
       <EmojiPicker
         visible={showEmojiPicker}
-        onSelect={(emoji) => { setAvatarType("emoji"); setAvatarValue(emoji); }}
+        onSelect={(emoji) => {
+          setAvatarType("emoji");
+          setAvatarValue(emoji);
+        }}
         onClose={() => setShowEmojiPicker(false)}
       />
 
-      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
           onPress={handleSave}
@@ -148,7 +199,9 @@ export default function ProfileEditScreen() {
           {submitting ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
+            <AppText size="2xl" weight="semibold" color={colors.white}>
+              保存
+            </AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -168,18 +221,28 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.creamDark,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarSection: { alignItems: "center", paddingVertical: 32 },
   avatar: {
-    width: 88, height: 88, borderRadius: 28,
-    alignItems: "center", justifyContent: "center", overflow: "hidden",
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   avatarImage: { width: 88, height: 88, borderRadius: 28 },
   fieldCard: {
-    marginHorizontal: spacing.xxl, backgroundColor: colors.cream,
-    borderRadius: radii.md, padding: spacing.xl,
+    marginHorizontal: spacing.xxl,
+    backgroundColor: colors.cream,
+    borderRadius: radii.md,
+    padding: spacing.xl,
   },
   input: { fontSize: 16, color: colors.text, fontWeight: "500" },
   bottomBar: {

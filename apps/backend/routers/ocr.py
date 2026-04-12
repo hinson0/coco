@@ -1,6 +1,13 @@
 import structlog
 from fastapi import APIRouter
-from schemas.ocr import OcrBillData, OcrErrorData, OcrRequest, OcrResponse, Transaction
+
+from schemas.ocr import (
+    OcrBillData,
+    OcrErrorData,
+    OcrRequest,
+    OcrResponse,
+    Transaction,
+)
 from services.silicon import extract_bill_from_receipt
 from services.tencent import recognize_receipt
 
@@ -15,7 +22,9 @@ async def record_ocr(body: OcrRequest):
     if not ocr_text.strip():
         log.warning("ocr.empty")
         return OcrResponse(
-            data=OcrErrorData(message="无法识别小票内容，请确保图片清晰后重试。")
+            data=OcrErrorData(
+                message="无法识别小票内容，请确保图片清晰后重试。"
+            )
         )
 
     bill = await extract_bill_from_receipt(ocr_text)
@@ -27,8 +36,14 @@ async def record_ocr(body: OcrRequest):
             type="income" if bill.get("type") == "income" else "expense",
             occurred_at=bill.get("occurred_at", ""),
         )
-        log.info("ocr.parsed", amount=transaction.amount, category=transaction.category)
+        log.info(
+            "ocr.parsed",
+            amount=transaction.amount,
+            category=transaction.category,
+        )
         return OcrResponse(data=OcrBillData(transaction=transaction))
 
     log.info("ocr.silicon_fail", ocr_text_len=len(ocr_text.encode()))
-    return OcrResponse(data=OcrErrorData(message="无法识别小票内容，请手动记账。"))
+    return OcrResponse(
+        data=OcrErrorData(message="无法识别小票内容，请手动记账。")
+    )

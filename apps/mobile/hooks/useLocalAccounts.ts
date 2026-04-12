@@ -3,7 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
-import type { Account, CreateAccountInput, UpdateAccountInput } from "@coco/shared";
+import type {
+  Account,
+  CreateAccountInput,
+  UpdateAccountInput,
+} from "@coco/shared";
 
 export function useAccounts() {
   const { db, userId } = useOfflineContext();
@@ -14,7 +18,7 @@ export function useAccounts() {
       if (!db || !userId) return [];
       return db.getAllAsync<Account>(
         "SELECT * FROM accounts WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC",
-        userId
+        userId,
       );
     },
     enabled: !!db && !!userId,
@@ -31,19 +35,21 @@ export function useAccountBalance(accountId: string | undefined) {
 
       const account = await db.getFirstAsync<Account>(
         "SELECT * FROM accounts WHERE id = ?",
-        accountId
+        accountId,
       );
       if (!account) return 0;
 
       const income = await db.getFirstAsync<{ total: number }>(
         "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'income' AND deleted_at IS NULL",
-        accountId
+        accountId,
       );
       const expense = await db.getFirstAsync<{ total: number }>(
         "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'expense' AND deleted_at IS NULL",
-        accountId
+        accountId,
       );
-      return account.initial_balance + (income?.total ?? 0) - (expense?.total ?? 0);
+      return (
+        account.initial_balance + (income?.total ?? 0) - (expense?.total ?? 0)
+      );
     },
     enabled: !!db && !!accountId && !!userId,
   });
@@ -59,20 +65,23 @@ export function useTotalAssets() {
 
       const accounts = await db.getAllAsync<Account>(
         "SELECT * FROM accounts WHERE user_id = ? AND deleted_at IS NULL",
-        userId
+        userId,
       );
 
       let total = 0;
       for (const account of accounts) {
         const income = await db.getFirstAsync<{ total: number }>(
           "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'income' AND deleted_at IS NULL",
-          account.id
+          account.id,
         );
         const expense = await db.getFirstAsync<{ total: number }>(
           "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE account_id = ? AND type = 'expense' AND deleted_at IS NULL",
-          account.id
+          account.id,
         );
-        total += account.initial_balance + (income?.total ?? 0) - (expense?.total ?? 0);
+        total +=
+          account.initial_balance +
+          (income?.total ?? 0) -
+          (expense?.total ?? 0);
       }
       return total;
     },
@@ -98,7 +107,7 @@ export function useCreateAccount() {
         input.type,
         input.initial_balance,
         now,
-        now
+        now,
       );
       return id;
     },
@@ -114,21 +123,35 @@ export function useUpdateAccount() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: UpdateAccountInput & { readonly id: string }) => {
+    mutationFn: async (
+      params: UpdateAccountInput & { readonly id: string },
+    ) => {
       if (!db) throw new Error("Database not initialized");
       const fields: string[] = [];
       const values: (string | number)[] = [];
-      if (params.name !== undefined) { fields.push("name = ?"); values.push(params.name); }
-      if (params.icon !== undefined) { fields.push("icon = ?"); values.push(params.icon); }
-      if (params.type !== undefined) { fields.push("type = ?"); values.push(params.type); }
-      if (params.initial_balance !== undefined) { fields.push("initial_balance = ?"); values.push(params.initial_balance); }
+      if (params.name !== undefined) {
+        fields.push("name = ?");
+        values.push(params.name);
+      }
+      if (params.icon !== undefined) {
+        fields.push("icon = ?");
+        values.push(params.icon);
+      }
+      if (params.type !== undefined) {
+        fields.push("type = ?");
+        values.push(params.type);
+      }
+      if (params.initial_balance !== undefined) {
+        fields.push("initial_balance = ?");
+        values.push(params.initial_balance);
+      }
       fields.push("updated_at = ?");
       values.push(new Date().toISOString());
       if (fields.length === 0) return;
       values.push(params.id);
       await db.runAsync(
         `UPDATE accounts SET ${fields.join(", ")} WHERE id = ?`,
-        ...values
+        ...values,
       );
     },
     onSuccess: () => {
@@ -150,7 +173,7 @@ export function useDeleteAccount() {
         "UPDATE accounts SET deleted_at = ?, updated_at = ? WHERE id = ?",
         new Date().toISOString(),
         new Date().toISOString(),
-        id
+        id,
       );
     },
     onSuccess: () => {

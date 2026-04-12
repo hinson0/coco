@@ -1,5 +1,5 @@
-import { useRef, useCallback, useState } from 'react';
-import { createAudioPlayer } from 'expo-audio';
+import { useRef, useCallback, useState } from "react";
+import { createAudioPlayer } from "expo-audio";
 
 export function useAudioPlayer() {
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -17,31 +17,34 @@ export function useAudioPlayer() {
     }
   }, []);
 
-  const play = useCallback((messageId: string, uri: string) => {
-    if (playingId === messageId) {
-      // 点击正在播放的 → 停止
-      cleanup();
-      setPlayingId(null);
-      return;
-    }
-
-    // 停止旧的
-    cleanup();
-
-    // 播放新的
-    const player = createAudioPlayer({ uri });
-    playerRef.current = player;
-    player.play();
-    setPlayingId(messageId);
-
-    // 播放结束后清除状态
-    checkIntervalRef.current = setInterval(() => {
-      if (player.currentTime >= player.duration && player.duration > 0) {
+  const play = useCallback(
+    (messageId: string, uri: string) => {
+      if (playingId === messageId) {
+        // 点击正在播放的 → 停止
         cleanup();
         setPlayingId(null);
+        return;
       }
-    }, 300);
-  }, [playingId, cleanup]);
+
+      // 停止旧的
+      cleanup();
+
+      // 播放新的
+      const player = createAudioPlayer({ uri });
+      playerRef.current = player;
+      player.play();
+      setPlayingId(messageId);
+
+      // 播放结束后清除状态
+      checkIntervalRef.current = setInterval(() => {
+        if (player.currentTime >= player.duration && player.duration > 0) {
+          cleanup();
+          setPlayingId(null);
+        }
+      }, 300);
+    },
+    [playingId, cleanup],
+  );
 
   const stop = useCallback(() => {
     cleanup();

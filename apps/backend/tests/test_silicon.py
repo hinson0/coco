@@ -1,4 +1,5 @@
 import pytest
+
 from routers.chat import is_safe_sql
 from services.silicon import extract_json, extract_sql
 
