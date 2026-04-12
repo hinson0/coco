@@ -56,7 +56,7 @@ def test_register_duplicate_email():
         "/auth/register", json={"email": "a@b.com", "password": "secret"}
     )
     assert resp.status_code == 400
-    assert "already registered" in resp.json()["detail"]
+    assert "邮箱已经注册过了" in resp.json()["detail"]
 
 
 # ── /auth/refresh ─────────────────────────────────────
