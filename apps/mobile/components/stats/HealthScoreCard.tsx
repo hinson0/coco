@@ -1,10 +1,10 @@
 // apps/mobile/components/stats/HealthScoreCard.tsx
-import { View, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { Card } from '../ui/Card';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
-import type { InsightItem } from '../../utils/insights/types';
+import { View, StyleSheet } from "react-native";
+import Svg, { Circle } from "react-native-svg";
+import { Card } from "../ui/Card";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
+import type { InsightItem } from "../../utils/insights/types";
 
 interface HealthScoreCardProps {
   readonly item: InsightItem;
@@ -22,7 +22,7 @@ function scoreColor(score: number): string {
 
 export function HealthScoreCard({ item }: HealthScoreCardProps) {
   const score = (item.meta?.score as number) ?? 0;
-  const level = (item.meta?.level as string) ?? '';
+  const level = (item.meta?.level as string) ?? "";
   const strokeDashoffset = CIRCUMFERENCE * (1 - score / 100);
   const color = scoreColor(score);
 
@@ -31,10 +31,21 @@ export function HealthScoreCard({ item }: HealthScoreCardProps) {
       <View style={styles.row}>
         <View style={styles.ringWrap}>
           <Svg width={80} height={80} viewBox="0 0 80 80" style={styles.svg}>
-            <Circle cx={40} cy={40} r={RADIUS} fill="none" stroke={colors.creamDark} strokeWidth={6} />
             <Circle
-              cx={40} cy={40} r={RADIUS}
-              fill="none" stroke={color} strokeWidth={6}
+              cx={40}
+              cy={40}
+              r={RADIUS}
+              fill="none"
+              stroke={colors.creamDark}
+              strokeWidth={6}
+            />
+            <Circle
+              cx={40}
+              cy={40}
+              r={RADIUS}
+              fill="none"
+              stroke={color}
+              strokeWidth={6}
               strokeLinecap="round"
               strokeDasharray={`${CIRCUMFERENCE}`}
               strokeDashoffset={strokeDashoffset}
@@ -42,8 +53,12 @@ export function HealthScoreCard({ item }: HealthScoreCardProps) {
             />
           </Svg>
           <View style={styles.scoreCenter}>
-            <AppText size="5xl" weight="bold" color={color}>{score}</AppText>
-            <AppText size="xs" color={colors.textLighter}>健康分</AppText>
+            <AppText size="5xl" weight="bold" color={color}>
+              {score}
+            </AppText>
+            <AppText size="xs" color={colors.textLighter}>
+              健康分
+            </AppText>
           </View>
         </View>
         <View style={styles.info}>
@@ -54,8 +69,21 @@ export function HealthScoreCard({ item }: HealthScoreCardProps) {
             {item.desc}
           </AppText>
           {item.badge ? (
-            <View style={[styles.badge, item.badge.direction === 'up' ? styles.badgeDown : styles.badgeUp]}>
-              <AppText size="sm" weight="semibold" color={item.badge.direction === 'up' ? colors.coral : colors.sage}>
+            <View
+              style={[
+                styles.badge,
+                item.badge.direction === "up"
+                  ? styles.badgeDown
+                  : styles.badgeUp,
+              ]}
+            >
+              <AppText
+                size="sm"
+                weight="semibold"
+                color={
+                  item.badge.direction === "up" ? colors.coral : colors.sage
+                }
+              >
                 {item.badge.text}
               </AppText>
             </View>
@@ -68,21 +96,21 @@ export function HealthScoreCard({ item }: HealthScoreCardProps) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   ringWrap: {
     width: 80,
     height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   svg: {
-    position: 'absolute',
+    position: "absolute",
   },
   scoreCenter: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   info: {
     flex: 1,
@@ -92,7 +120,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   badge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 6,

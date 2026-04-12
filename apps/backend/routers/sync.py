@@ -2,14 +2,15 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from infra.database import get_db
 from infra.security import get_current_user
 from schemas.sync import (
     SyncPullResponse,
     SyncPushRequest,
 )
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -163,7 +164,9 @@ async def sync_pull(user_id: UserId, db: Db) -> SyncPullResponse:
     )
     categories = rows(
         await db.execute(
-            text("SELECT * FROM categories WHERE user_id = :uid OR user_id IS NULL"),
+            text(
+                "SELECT * FROM categories WHERE user_id = :uid OR user_id IS NULL"
+            ),
             {"uid": user_id},
         )
     )

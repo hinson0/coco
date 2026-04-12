@@ -1,5 +1,17 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from "react-native";
 import { CategoryPicker } from "./CategoryPicker";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 import { useCreateTransaction } from "../hooks/useLocalTransactions";
@@ -23,19 +35,31 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const { mutateAsync: addMessage } = useAddChatMessage();
   const { data: categories = [] } = useLocalCategories();
 
-  const DEFAULT_NAMES: Record<string, string> = { expense: '购物', income: '工资' };
+  const DEFAULT_NAMES: Record<string, string> = {
+    expense: "购物",
+    income: "工资",
+  };
 
   useEffect(() => {
     const defaultName = DEFAULT_NAMES[type];
-    const match = categories.find((c: any) => c.type === type && c.name === defaultName);
+    const match = categories.find(
+      (c: any) => c.type === type && c.name === defaultName,
+    );
     if (match) setCategoryId(match.id);
   }, [type, categories]);
 
@@ -71,8 +95,24 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
         source: "manual",
       });
 
-      await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
-      await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
+      await addMessage({
+        role: "user",
+        content_type: "text",
+        content: `手动记账: ${note || categoryName} ¥${numAmount}`,
+      });
+      await addMessage({
+        role: "assistant",
+        content_type: "bill_card",
+        content: JSON.stringify({
+          id: txId,
+          amount: numAmount,
+          type,
+          note,
+          category_id: categoryId,
+          occurred_at: date.toISOString(),
+        }),
+        transaction_id: txId,
+      });
 
       onSuccess?.({ id: txId, amount: numAmount, type, note });
       onClose();
@@ -90,7 +130,11 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
         <View style={styles.sheet}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose}>
@@ -98,42 +142,118 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
             </TouchableOpacity>
             <Text style={styles.title}>手动记账</Text>
             <TouchableOpacity onPress={handleSubmit} disabled={submitting}>
-              <Text style={[styles.save, submitting && { opacity: 0.5 }]}>保存</Text>
+              <Text style={[styles.save, submitting && { opacity: 0.5 }]}>
+                保存
+              </Text>
             </TouchableOpacity>
           </View>
-          <ScrollView ref={scrollRef} style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? 20 : 10 }}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.body}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingBottom: keyboardHeight > 0 ? 20 : 10,
+            }}
+          >
             {/* Type toggle */}
             <View style={styles.typeRow}>
-              <TouchableOpacity style={[styles.typeBtn, type === "expense" && styles.typeBtnActive]} onPress={() => setType("expense")}>
-                <Text style={[styles.typeText, type === "expense" && styles.typeTextActive]}>支出</Text>
+              <TouchableOpacity
+                style={[
+                  styles.typeBtn,
+                  type === "expense" && styles.typeBtnActive,
+                ]}
+                onPress={() => setType("expense")}
+              >
+                <Text
+                  style={[
+                    styles.typeText,
+                    type === "expense" && styles.typeTextActive,
+                  ]}
+                >
+                  支出
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.typeBtn, type === "income" && styles.typeBtnIncome]} onPress={() => setType("income")}>
-                <Text style={[styles.typeText, type === "income" && styles.typeTextActive]}>收入</Text>
+              <TouchableOpacity
+                style={[
+                  styles.typeBtn,
+                  type === "income" && styles.typeBtnIncome,
+                ]}
+                onPress={() => setType("income")}
+              >
+                <Text
+                  style={[
+                    styles.typeText,
+                    type === "income" && styles.typeTextActive,
+                  ]}
+                >
+                  收入
+                </Text>
               </TouchableOpacity>
             </View>
             {/* Amount */}
-            <TextInput ref={amountRef} style={styles.amountInput} value={amount} onChangeText={setAmount} placeholder="0.00" placeholderTextColor="#cbd5e1" keyboardType="decimal-pad" />
+            <TextInput
+              ref={amountRef}
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0.00"
+              placeholderTextColor="#cbd5e1"
+              keyboardType="decimal-pad"
+            />
             {/* Category Picker */}
-            <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
+            <CategoryPicker
+              selectedId={categoryId}
+              onSelect={setCategoryId}
+              type={type}
+            />
             {/* Date quick select */}
             <View style={{ marginTop: 16 }}>
-              <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>选择日期</Text>
+              <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>
+                选择日期
+              </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {[0, -1, -2].map((offset) => {
                   const d = new Date();
                   d.setDate(d.getDate() + offset);
-                  const label = offset === 0 ? "今天" : offset === -1 ? "昨天" : "前天";
+                  const label =
+                    offset === 0 ? "今天" : offset === -1 ? "昨天" : "前天";
                   const isSelected = date.toDateString() === d.toDateString();
                   return (
-                    <TouchableOpacity key={offset} style={[styles.typeBtn, isSelected && styles.typeBtnActive]} onPress={() => setDate(d)}>
-                      <Text style={[styles.typeText, isSelected && styles.typeTextActive]}>{label}</Text>
+                    <TouchableOpacity
+                      key={offset}
+                      style={[
+                        styles.typeBtn,
+                        isSelected && styles.typeBtnActive,
+                      ]}
+                      onPress={() => setDate(d)}
+                    >
+                      <Text
+                        style={[
+                          styles.typeText,
+                          isSelected && styles.typeTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
             {/* Note */}
-            <TextInput style={styles.noteInput} value={note} onChangeText={setNote} placeholder="添加备注..." placeholderTextColor="#cbd5e1" onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)} />
+            <TextInput
+              style={styles.noteInput}
+              value={note}
+              onChangeText={setNote}
+              placeholder="添加备注..."
+              placeholderTextColor="#cbd5e1"
+              onFocus={() =>
+                setTimeout(
+                  () => scrollRef.current?.scrollToEnd({ animated: true }),
+                  300,
+                )
+              }
+            />
           </ScrollView>
         </View>
       </View>
@@ -142,19 +262,57 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
   cancel: { color: "#94a3b8", fontSize: 16 },
   title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
   save: { color: "#2D9B83", fontSize: 16, fontWeight: "600" },
   body: { padding: 16 },
   typeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  typeBtn: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: "#F0F2F5", alignItems: "center" },
+  typeBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#F0F2F5",
+    alignItems: "center",
+  },
   typeBtnActive: { backgroundColor: "#DC2626" },
   typeBtnIncome: { backgroundColor: "#059669" },
   typeText: { color: "#64748b", fontSize: 14, fontWeight: "600" },
   typeTextActive: { color: "#fff" },
-  amountInput: { fontSize: 36, fontWeight: "700", color: "#1e293b", textAlign: "left", marginBottom: 20, padding: 16, backgroundColor: "#F0F2F5", borderRadius: 12 },
-  noteInput: { backgroundColor: "#F0F2F5", color: "#1e293b", padding: 14, borderRadius: 12, fontSize: 14, marginTop: 16 },
+  amountInput: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: "#1e293b",
+    textAlign: "left",
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: "#F0F2F5",
+    borderRadius: 12,
+  },
+  noteInput: {
+    backgroundColor: "#F0F2F5",
+    color: "#1e293b",
+    padding: 14,
+    borderRadius: 12,
+    fontSize: 14,
+    marginTop: 16,
+  },
 });

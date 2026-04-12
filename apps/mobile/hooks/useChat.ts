@@ -40,7 +40,9 @@ type ChatResponse = {
 export function useChat() {
   const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
-  const { mutateAsync: addMessage } = useAddChatMessage({ skipInvalidate: true });
+  const { mutateAsync: addMessage } = useAddChatMessage({
+    skipInvalidate: true,
+  });
   const { mutateAsync: createTransaction } = useCreateTransaction();
   const [isLoading, setLoading] = useState(false);
 

@@ -1,7 +1,9 @@
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+
 from infra.database import get_db
 from main import app
 
@@ -61,16 +63,17 @@ def test_register_duplicate_email():
 
 
 def test_refresh_with_valid_refresh_token():
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     import jwt
+
     from infra.config import settings
 
     refresh_token = jwt.encode(
         {
             "sub": "user-uuid",
             "type": "refresh",
-            "exp": datetime.now(timezone.utc) + timedelta(days=30),
+            "exp": datetime.now(UTC) + timedelta(days=30),
         },
         settings.jwt_secret,
         algorithm="HS256",
@@ -84,16 +87,17 @@ def test_refresh_with_valid_refresh_token():
 
 
 def test_refresh_with_access_token_fails():
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     import jwt
+
     from infra.config import settings
 
     access_token = jwt.encode(
         {
             "sub": "user-uuid",
             "type": "access",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
         },
         settings.jwt_secret,
         algorithm="HS256",
@@ -121,7 +125,9 @@ def test_login_wrong_password():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.post("/auth/login", json={"email": "a@b.com", "password": "wrong"})
+    resp = client.post(
+        "/auth/login", json={"email": "a@b.com", "password": "wrong"}
+    )
     assert resp.status_code == 401
 
 
@@ -143,7 +149,9 @@ def test_login_success_returns_tokens():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.post("/auth/login", json={"email": "a@b.com", "password": "secret"})
+    resp = client.post(
+        "/auth/login", json={"email": "a@b.com", "password": "secret"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data

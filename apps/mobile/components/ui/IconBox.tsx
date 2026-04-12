@@ -1,6 +1,6 @@
-import { View, type ViewStyle } from 'react-native';
-import { AppText } from './AppText';
-import { categoryColors, radii } from '../../constants/theme';
+import { View, type ViewStyle } from "react-native";
+import { AppText } from "./AppText";
+import { categoryColors, radii } from "../../constants/theme";
 
 interface IconBoxProps {
   readonly emoji: string;
@@ -13,8 +13,8 @@ export function IconBox({ emoji, colorName }: IconBoxProps) {
     height: 40,
     borderRadius: radii.md,
     backgroundColor: categoryColors[colorName].bg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   };
   return (
     <View style={style}>

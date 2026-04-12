@@ -2,6 +2,7 @@ import json
 
 import pytest
 import structlog
+
 from infra.logging_config import setup_logging
 
 

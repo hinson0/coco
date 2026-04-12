@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+
 from infra.database import get_db
 from infra.security import get_current_user
 from main import app
@@ -24,7 +25,11 @@ def override_auth_and_db():
 
 
 # ── record 意图 ───────────────────────────────────────
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="record")
+@patch(
+    "routers.chat.classify_intent",
+    new_callable=AsyncMock,
+    return_value="record",
+)
 @patch(
     "routers.chat.extract_bill",
     new_callable=AsyncMock,
@@ -45,7 +50,11 @@ def test_chat_record_success(mock_bill, mock_intent):
     assert data["transaction"]["category"] == "餐饮"
 
 
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="record")
+@patch(
+    "routers.chat.classify_intent",
+    new_callable=AsyncMock,
+    return_value="record",
+)
 @patch("routers.chat.extract_bill", new_callable=AsyncMock, return_value=None)
 def test_chat_record_fail(mock_bill, mock_intent):
     resp = client.post("/chat", json={"text": "随便说说"})
@@ -56,7 +65,9 @@ def test_chat_record_fail(mock_bill, mock_intent):
 
 
 # ── chat 意图 ─────────────────────────────────────────
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="chat")
+@patch(
+    "routers.chat.classify_intent", new_callable=AsyncMock, return_value="chat"
+)
 @patch(
     "routers.chat.chat_reply",
     new_callable=AsyncMock,
@@ -71,7 +82,9 @@ def test_chat_casual(mock_reply, mock_intent):
 
 
 # ── is_safe_sql 安全校验 ──────────────────────────────
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="query")
+@patch(
+    "routers.chat.classify_intent", new_callable=AsyncMock, return_value="query"
+)
 @patch(
     "routers.chat.generate_sql",
     new_callable=AsyncMock,
@@ -86,7 +99,11 @@ def test_chat_query_unsafe_sql(mock_sql, mock_intent):
 
 
 # ── 语音输入 ──────────────────────────────────────────
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="record")
+@patch(
+    "routers.chat.classify_intent",
+    new_callable=AsyncMock,
+    return_value="record",
+)
 @patch(
     "routers.chat.extract_bill",
     new_callable=AsyncMock,
@@ -123,7 +140,9 @@ def test_chat_no_text_no_audio():
 
 
 # ── query 意图返回 nl_result ─────────────────────────
-@patch("routers.chat.classify_intent", new_callable=AsyncMock, return_value="query")
+@patch(
+    "routers.chat.classify_intent", new_callable=AsyncMock, return_value="query"
+)
 @patch(
     "routers.chat.generate_sql",
     new_callable=AsyncMock,

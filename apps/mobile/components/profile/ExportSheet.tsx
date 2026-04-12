@@ -172,7 +172,12 @@ export function ExportSheet({ visible, onClose }: ExportSheetProps) {
           activeOpacity={1}
           onPress={onClose}
         />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
+        <View
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(insets.bottom, 16) + 24 },
+          ]}
+        >
           {/* 标题栏 */}
           <View style={styles.header}>
             <AppText size="2xl" weight="semibold">

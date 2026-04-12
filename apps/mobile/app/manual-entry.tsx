@@ -1,11 +1,27 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Keyboard, ActivityIndicator, Platform, Image, type ImageSourcePropType } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Keyboard,
+  ActivityIndicator,
+  Platform,
+  Image,
+  type ImageSourcePropType,
+} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { useLocalCategories } from "../hooks/useLocalCategories";
-import { useCreateTransaction, useUpdateTransaction } from "../hooks/useLocalTransactions";
+import {
+  useCreateTransaction,
+  useUpdateTransaction,
+} from "../hooks/useLocalTransactions";
 import { useAccounts } from "../hooks/useLocalAccounts";
 import { useAddChatMessage } from "../hooks/useLocalChatMessages";
 import { useOfflineContext } from "../lib/offline-context";
@@ -27,7 +43,9 @@ function formatDateLabel(d: Date): string {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   const isSame = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
   const base = `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
   if (isSame(d, today)) return `${base}  今天`;
@@ -37,14 +55,23 @@ function formatDateLabel(d: Date): string {
 
 function isToday(d: Date): boolean {
   const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ManualEntryScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ txId?: string; txData?: string; msgId?: string; ocrNote?: string }>();
+  const params = useLocalSearchParams<{
+    txId?: string;
+    txData?: string;
+    msgId?: string;
+    ocrNote?: string;
+  }>();
   const { db } = useOfflineContext();
   const qc = useQueryClient();
   const { data: categories = [] } = useLocalCategories();
@@ -69,12 +96,22 @@ export default function ManualEntryScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
-  const DEFAULT_NAMES: Record<string, string> = { expense: "购物", income: "工资" };
+  const DEFAULT_NAMES: Record<string, string> = {
+    expense: "购物",
+    income: "工资",
+  };
 
   useEffect(() => {
     if (transaction) {
@@ -85,14 +122,18 @@ export default function ManualEntryScreen() {
       setAccountId(transaction.account_id ?? null);
       setDate(new Date(transaction.occurred_at));
     } else {
-      const match = categories.find((c: any) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"]);
+      const match = categories.find(
+        (c: any) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"],
+      );
       if (match) setCategoryId(match.id);
     }
   }, [transaction?.id, categories.length]);
 
   useEffect(() => {
     if (!isEdit) {
-      const match = categories.find((c: any) => c.type === type && c.name === DEFAULT_NAMES[type]);
+      const match = categories.find(
+        (c: any) => c.type === type && c.name === DEFAULT_NAMES[type],
+      );
       if (match) setCategoryId(match.id);
     }
   }, [type, categories, isEdit]);
@@ -132,16 +173,59 @@ export default function ManualEntryScreen() {
       const categoryName = category?.name ?? "其他";
 
       if (isEdit) {
-        await updateTransaction({ id: transaction.id, amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, account_id: accountId });
+        await updateTransaction({
+          id: transaction.id,
+          amount: numAmount,
+          note,
+          type,
+          occurred_at: date.toISOString(),
+          category_id: categoryId,
+          account_id: accountId,
+        });
         if (db && params.msgId) {
-          const newContent = JSON.stringify({ id: transaction.id, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() });
-          await db.runAsync("UPDATE chat_messages SET content = ? WHERE id = ?", newContent, params.msgId);
+          const newContent = JSON.stringify({
+            id: transaction.id,
+            amount: numAmount,
+            type,
+            note,
+            category_id: categoryId,
+            occurred_at: date.toISOString(),
+          });
+          await db.runAsync(
+            "UPDATE chat_messages SET content = ? WHERE id = ?",
+            newContent,
+            params.msgId,
+          );
           qc.invalidateQueries({ queryKey: ["chat-messages"] });
         }
       } else {
-        const txId = await createTransaction({ amount: numAmount, note, type, occurred_at: date.toISOString(), category_id: categoryId, source: "manual", account_id: accountId });
-        await addMessage({ role: "user", content_type: "text", content: `手动记账: ${note || categoryName} ¥${numAmount}` });
-        await addMessage({ role: "assistant", content_type: "bill_card", content: JSON.stringify({ id: txId, amount: numAmount, type, note, category_id: categoryId, occurred_at: date.toISOString() }), transaction_id: txId });
+        const txId = await createTransaction({
+          amount: numAmount,
+          note,
+          type,
+          occurred_at: date.toISOString(),
+          category_id: categoryId,
+          source: "manual",
+          account_id: accountId,
+        });
+        await addMessage({
+          role: "user",
+          content_type: "text",
+          content: `手动记账: ${note || categoryName} ¥${numAmount}`,
+        });
+        await addMessage({
+          role: "assistant",
+          content_type: "bill_card",
+          content: JSON.stringify({
+            id: txId,
+            amount: numAmount,
+            type,
+            note,
+            category_id: categoryId,
+            occurred_at: date.toISOString(),
+          }),
+          transaction_id: txId,
+        });
       }
       router.back();
     } catch {
@@ -151,13 +235,18 @@ export default function ManualEntryScreen() {
     }
   };
 
-  const bottomPadding = keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom;
+  const bottomPadding =
+    keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{isEdit ? "修改记账" : "手动记账"}</Text>
@@ -175,18 +264,35 @@ export default function ManualEntryScreen() {
         {/* Type toggle */}
         <View style={styles.typeRow}>
           <TouchableOpacity
-            style={[styles.typeBtn, type === "expense" && styles.typeBtnExpense]}
+            style={[
+              styles.typeBtn,
+              type === "expense" && styles.typeBtnExpense,
+            ]}
             onPress={() => setType("expense")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.typeText, type === "expense" && styles.typeTextActive]}>支出</Text>
+            <Text
+              style={[
+                styles.typeText,
+                type === "expense" && styles.typeTextActive,
+              ]}
+            >
+              支出
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.typeBtn, type === "income" && styles.typeBtnIncome]}
             onPress={() => setType("income")}
             activeOpacity={0.7}
           >
-            <Text style={[styles.typeText, type === "income" && styles.typeTextActive]}>收入</Text>
+            <Text
+              style={[
+                styles.typeText,
+                type === "income" && styles.typeTextActive,
+              ]}
+            >
+              收入
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -205,33 +311,69 @@ export default function ManualEntryScreen() {
         </View>
 
         {/* Category Picker */}
-        <CategoryPicker selectedId={categoryId} onSelect={setCategoryId} type={type} />
+        <CategoryPicker
+          selectedId={categoryId}
+          onSelect={setCategoryId}
+          type={type}
+        />
 
         {/* Account selector */}
         {accounts.length > 0 && (
           <View style={styles.accountSection}>
-            <AppText size="md" color={colors.textLighter} style={{ marginBottom: 8 }}>账户（可选）</AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <AppText
+              size="md"
+              color={colors.textLighter}
+              style={{ marginBottom: 8 }}
+            >
+              账户（可选）
+            </AppText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
               <TouchableOpacity
-                style={[styles.accountChip, accountId === null && styles.accountChipActive]}
+                style={[
+                  styles.accountChip,
+                  accountId === null && styles.accountChipActive,
+                ]}
                 onPress={() => setAccountId(null)}
                 activeOpacity={0.7}
               >
-                <AppText size="md" weight="medium" color={accountId === null ? colors.white : colors.textLight}>不选择</AppText>
+                <AppText
+                  size="md"
+                  weight="medium"
+                  color={accountId === null ? colors.white : colors.textLight}
+                >
+                  不选择
+                </AppText>
               </TouchableOpacity>
               {accounts.map((a) => (
                 <TouchableOpacity
                   key={a.id}
-                  style={[styles.accountChip, accountId === a.id && styles.accountChipActive]}
+                  style={[
+                    styles.accountChip,
+                    accountId === a.id && styles.accountChipActive,
+                  ]}
                   onPress={() => setAccountId(a.id)}
                   activeOpacity={0.7}
                 >
                   {BRAND_ICON_MAP[a.icon] ? (
-                    <Image source={BRAND_ICON_MAP[a.icon]} style={{ width: 16, height: 16 }} resizeMode="contain" />
+                    <Image
+                      source={BRAND_ICON_MAP[a.icon]}
+                      style={{ width: 16, height: 16 }}
+                      resizeMode="contain"
+                    />
                   ) : (
                     <AppText style={{ fontSize: 16 }}>{a.icon}</AppText>
                   )}
-                  <AppText size="md" weight="medium" color={accountId === a.id ? colors.white : colors.text}>{a.name}</AppText>
+                  <AppText
+                    size="md"
+                    weight="medium"
+                    color={accountId === a.id ? colors.white : colors.text}
+                  >
+                    {a.name}
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -240,10 +382,18 @@ export default function ManualEntryScreen() {
 
         {/* Date selector — arrows + tappable center */}
         <View style={styles.dateCard}>
-          <TouchableOpacity onPress={() => shiftDate(-1)} style={styles.dateArrowBtn} activeOpacity={0.6}>
+          <TouchableOpacity
+            onPress={() => shiftDate(-1)}
+            style={styles.dateArrowBtn}
+            activeOpacity={0.6}
+          >
             <Text style={styles.dateArrow}>‹</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateLabelArea} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={styles.dateLabelArea}
+            activeOpacity={0.7}
+          >
             <Text style={styles.dateIcon}>📅</Text>
             <Text style={styles.dateText}>{formatDateLabel(date)}</Text>
           </TouchableOpacity>
@@ -253,7 +403,9 @@ export default function ManualEntryScreen() {
             activeOpacity={isToday(date) ? 1 : 0.6}
             disabled={isToday(date)}
           >
-            <Text style={[styles.dateArrow, isToday(date) && { opacity: 0.3 }]}>›</Text>
+            <Text style={[styles.dateArrow, isToday(date) && { opacity: 0.3 }]}>
+              ›
+            </Text>
           </TouchableOpacity>
         </View>
         {showDatePicker && (
@@ -267,7 +419,11 @@ export default function ManualEntryScreen() {
           />
         )}
         {showDatePicker && Platform.OS === "ios" && (
-          <TouchableOpacity style={styles.dateConfirmBtn} onPress={() => setShowDatePicker(false)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.dateConfirmBtn}
+            onPress={() => setShowDatePicker(false)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.dateConfirmText}>确定</Text>
           </TouchableOpacity>
         )}
@@ -283,7 +439,12 @@ export default function ManualEntryScreen() {
           textAlignVertical="top"
           returnKeyType="default"
           blurOnSubmit={false}
-          onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
+          onFocus={() =>
+            setTimeout(
+              () => scrollRef.current?.scrollToEnd({ animated: true }),
+              300,
+            )
+          }
         />
       </ScrollView>
 
@@ -298,7 +459,9 @@ export default function ManualEntryScreen() {
           {submitting ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <Text style={styles.saveBtnText}>{isEdit ? "保存修改" : "保存"}</Text>
+            <Text style={styles.saveBtnText}>
+              {isEdit ? "保存修改" : "保存"}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -494,9 +657,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   accountChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: radii.md, backgroundColor: colors.cream,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radii.md,
+    backgroundColor: colors.cream,
   },
   accountChipActive: {
     backgroundColor: colors.sage,

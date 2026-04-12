@@ -1,8 +1,7 @@
-import type { Transaction } from '@coco/shared';
-
+import type { Transaction } from "@coco/shared";
 
 export interface DailyDataPoint {
-  date: string;   // "YYYY-MM-DD"
+  date: string; // "YYYY-MM-DD"
   expense: number;
   income: number;
 }
@@ -22,24 +21,24 @@ export interface RankedTransaction {
   categoryEmoji: string;
   categoryName: string;
   amount: number;
-  date: string;   // "YYYY-MM-DD"
+  date: string; // "YYYY-MM-DD"
   note?: string;
 }
 
-type Dimension = 'expense' | 'income' | 'balance';
+type Dimension = "expense" | "income" | "balance";
 
 /** "2026年03月" — month padded to 2 digits */
 export function formatMonthLabelPadded(date: Date): string {
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${date.getFullYear()}年${mm}月`;
 }
 
 /** "2026年03月01日—2026年03月31日" */
 export function buildDateRangeLabel(date: Date): string {
   const y = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const lastDay = new Date(y, date.getMonth() + 1, 0).getDate();
-  const dd = String(lastDay).padStart(2, '0');
+  const dd = String(lastDay).padStart(2, "0");
   return `${y}年${mm}月01日—${y}年${mm}月${dd}日`;
 }
 
@@ -51,9 +50,9 @@ export function buildDateRangeLabel(date: Date): string {
  */
 export function computeDaysElapsed(referenceDate: Date): number {
   const today = new Date();
-  const refYear  = referenceDate.getFullYear();
+  const refYear = referenceDate.getFullYear();
   const refMonth = referenceDate.getMonth();
-  const todayYear  = today.getFullYear();
+  const todayYear = today.getFullYear();
   const todayMonth = today.getMonth();
 
   const daysInMonth = new Date(refYear, refMonth + 1, 0).getDate();
@@ -78,8 +77,8 @@ export function buildDailyData(
 
   const map: Record<string, DailyDataPoint> = {};
   for (let d = 1; d <= daysInMonth; d++) {
-    const mm = String(month + 1).padStart(2, '0');
-    const dd = String(d).padStart(2, '0');
+    const mm = String(month + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
     const key = `${year}-${mm}-${dd}`;
     map[key] = { date: key, expense: 0, income: 0 };
   }
@@ -88,8 +87,8 @@ export function buildDailyData(
     const key = tx.occurred_at.slice(0, 10);
     if (!map[key]) continue;
     const amount = Number(tx.amount);
-    if (tx.type === 'expense') map[key].expense += amount;
-    else if (tx.type === 'income') map[key].income += amount;
+    if (tx.type === "expense") map[key].expense += amount;
+    else if (tx.type === "income") map[key].income += amount;
   }
 
   return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
@@ -101,17 +100,33 @@ export function buildDailyData(
  */
 export function buildCategoryStats(
   transactions: readonly Transaction[],
-  type: 'expense' | 'income',
+  type: "expense" | "income",
   categoryMap: Record<string, { id: string; name: string; icon: string }>,
   palette: readonly string[],
 ): CategoryStat[] {
-  const map: Record<string, { categoryId: string | null; emoji: string; name: string; amount: number; count: number }> = {};
+  const map: Record<
+    string,
+    {
+      categoryId: string | null;
+      emoji: string;
+      name: string;
+      amount: number;
+      count: number;
+    }
+  > = {};
 
   for (const tx of transactions) {
     if (tx.type !== type) continue;
     const cat = categoryMap[tx.category_id];
-    const key = cat?.name ?? '其他';
-    if (!map[key]) map[key] = { categoryId: cat?.id ?? null, emoji: cat?.icon ?? '📦', name: key, amount: 0, count: 0 };
+    const key = cat?.name ?? "其他";
+    if (!map[key])
+      map[key] = {
+        categoryId: cat?.id ?? null,
+        emoji: cat?.icon ?? "📦",
+        name: key,
+        amount: 0,
+        count: 0,
+      };
     map[key].amount += Number(tx.amount);
     map[key].count += 1;
   }
@@ -129,7 +144,7 @@ export function buildCategoryStats(
 /** Sort transactions by amount descending */
 export function buildTransactionRank(
   transactions: readonly Transaction[],
-  type: 'expense' | 'income',
+  type: "expense" | "income",
   categoryMap: Record<string, { id: string; name: string; icon: string }>,
 ): RankedTransaction[] {
   return transactions
@@ -139,8 +154,8 @@ export function buildTransactionRank(
       const cat = categoryMap[tx.category_id];
       return {
         id: tx.id,
-        categoryEmoji: cat?.icon ?? '📦',
-        categoryName: cat?.name ?? '其他',
+        categoryEmoji: cat?.icon ?? "📦",
+        categoryName: cat?.name ?? "其他",
         amount: Number(tx.amount),
         date: tx.occurred_at.slice(0, 10),
         ...(tx.note?.trim() ? { note: tx.note.trim() } : {}),
@@ -153,7 +168,7 @@ export function getDimensionValue(
   point: DailyDataPoint,
   dimension: Dimension,
 ): number {
-  if (dimension === 'expense') return point.expense;
-  if (dimension === 'income')  return point.income;
+  if (dimension === "expense") return point.expense;
+  if (dimension === "income") return point.income;
   return point.income - point.expense;
 }

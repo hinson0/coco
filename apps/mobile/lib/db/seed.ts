@@ -23,11 +23,9 @@ const DEFAULT_CATEGORIES: readonly SeedCategory[] = [
   { name: "其他支出", icon: "📦", type: "expense" },
 ];
 
-export async function seedCategories(
-  db: SQLite.SQLiteDatabase
-): Promise<void> {
+export async function seedCategories(db: SQLite.SQLiteDatabase): Promise<void> {
   const existing = await db.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM categories"
+    "SELECT COUNT(*) as count FROM categories",
   );
   if ((existing?.count ?? 0) > 0) return;
 
@@ -37,7 +35,7 @@ export async function seedCategories(
       Crypto.randomUUID(),
       cat.name,
       cat.icon,
-      cat.type
+      cat.type,
     );
   }
 }

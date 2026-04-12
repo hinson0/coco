@@ -61,9 +61,9 @@ async function saveSettings(settings: ReminderSettings): Promise<void> {
 async function scheduleReminder(hour: number, minute: number): Promise<void> {
   if (!Notifications) return;
   try {
-    await Notifications.cancelScheduledNotificationAsync(
-      NOTIFICATION_ID,
-    ).catch(() => {});
+    await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID).catch(
+      () => {},
+    );
 
     const message =
       REMINDER_MESSAGES[Math.floor(Math.random() * REMINDER_MESSAGES.length)];

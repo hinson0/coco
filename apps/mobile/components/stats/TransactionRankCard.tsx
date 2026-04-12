@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { Card } from '../ui/Card';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
-import type { RankedTransaction } from '../../utils/statsUtils';
-import type { Dimension } from './DailyTrendCard';
+import { useState, useEffect } from "react";
+import { View, StyleSheet, Pressable } from "react-native";
+import { Card } from "../ui/Card";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
+import type { RankedTransaction } from "../../utils/statsUtils";
+import type { Dimension } from "./DailyTrendCard";
 
 interface TransactionRankCardProps {
   readonly expenseTransactions: RankedTransaction[];
@@ -16,8 +16,8 @@ interface TransactionRankCardProps {
  * 将 "2026-03-22" 格式转成 "03月22日"
  */
 function formatDate(dateStr: string): string {
-  const month = dateStr.slice(5, 7);   // "03"
-  const day = dateStr.slice(8, 10);    // "22"
+  const month = dateStr.slice(5, 7); // "03"
+  const day = dateStr.slice(8, 10); // "22"
   return `${month}月${day}日`;
 }
 
@@ -29,18 +29,20 @@ export function TransactionRankCard({
   incomeTransactions,
   dimension,
 }: TransactionRankCardProps) {
-  const [tab, setTab] = useState<'expense' | 'income'>('expense');
+  const [tab, setTab] = useState<"expense" | "income">("expense");
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (dimension === 'expense' || dimension === 'income') {
+    if (dimension === "expense" || dimension === "income") {
       setTab(dimension);
       setExpanded(false);
     }
   }, [dimension]);
 
-  const data = tab === 'expense' ? expenseTransactions : incomeTransactions;
-  const visible = expanded ? data.slice(0, MAX_EXPANDED) : data.slice(0, MAX_VISIBLE);
+  const data = tab === "expense" ? expenseTransactions : incomeTransactions;
+  const visible = expanded
+    ? data.slice(0, MAX_EXPANDED)
+    : data.slice(0, MAX_VISIBLE);
 
   return (
     <Card radius="lg" shadow="md" padding={16}>
@@ -62,7 +64,11 @@ export function TransactionRankCard({
               {/* 主行 */}
               <View style={styles.rankRow}>
                 {/* 序号 */}
-                <AppText size="md" color={colors.textLighter} style={styles.rankNum}>
+                <AppText
+                  size="md"
+                  color={colors.textLighter}
+                  style={styles.rankNum}
+                >
                   {index + 1}
                 </AppText>
 
@@ -72,7 +78,12 @@ export function TransactionRankCard({
                 </AppText>
 
                 {/* 分类名称 */}
-                <AppText size="lg" weight="semibold" color={colors.text} style={styles.categoryName}>
+                <AppText
+                  size="lg"
+                  weight="semibold"
+                  color={colors.text}
+                  style={styles.categoryName}
+                >
                   {item.categoryName}
                 </AppText>
 
@@ -80,10 +91,10 @@ export function TransactionRankCard({
                 <AppText
                   size="md"
                   weight="semibold"
-                  color={tab === 'expense' ? colors.coral : colors.sage}
+                  color={tab === "expense" ? colors.coral : colors.sage}
                 >
-                  {tab === 'expense' ? '-' : '+'}¥
-                  {item.amount.toLocaleString('zh-CN', {
+                  {tab === "expense" ? "-" : "+"}¥
+                  {item.amount.toLocaleString("zh-CN", {
                     maximumFractionDigits: 0,
                   })}
                 </AppText>
@@ -92,7 +103,7 @@ export function TransactionRankCard({
               <View style={styles.detailRow}>
                 <AppText size="sm" color={colors.textLighter} numberOfLines={1}>
                   {formatDate(item.date)}
-                  {item.note ? ` · ${item.note}` : ''}
+                  {item.note ? ` · ${item.note}` : ""}
                 </AppText>
               </View>
             </View>
@@ -106,9 +117,12 @@ export function TransactionRankCard({
 
       {/* Expand toggle */}
       {data.length > MAX_VISIBLE && (
-        <Pressable onPress={() => setExpanded(!expanded)} style={styles.expandBtn}>
+        <Pressable
+          onPress={() => setExpanded(!expanded)}
+          style={styles.expandBtn}
+        >
           <AppText size="sm" color={colors.textLighter}>
-            {expanded ? '↑ 收起' : '↓ 查看更多'}
+            {expanded ? "↑ 收起" : "↓ 查看更多"}
           </AppText>
         </Pressable>
       )}
@@ -118,14 +132,14 @@ export function TransactionRankCard({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   titleAccent: {
@@ -138,18 +152,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingVertical: 4,
   },
   rankNum: {
     width: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emoji: {
     width: 28,
-    textAlign: 'center',
+    textAlign: "center",
   },
   categoryName: {
     flex: 1,
@@ -159,11 +173,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   empty: {
-    textAlign: 'center',
+    textAlign: "center",
     marginVertical: 20,
   },
   expandBtn: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
     paddingVertical: 4,
   },

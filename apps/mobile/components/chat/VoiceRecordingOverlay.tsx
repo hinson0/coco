@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from "react";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,13 +9,13 @@ import Animated, {
   withDelay,
   interpolateColor,
   Easing,
-} from 'react-native-reanimated';
-import { AppText } from '../ui/AppText';
-import { colors } from '../../constants/theme';
+} from "react-native-reanimated";
+import { AppText } from "../ui/AppText";
+import { colors } from "../../constants/theme";
 
 interface VoiceRecordingOverlayProps {
   readonly visible: boolean;
-  readonly state: 'recording' | 'cancelling';
+  readonly state: "recording" | "cancelling";
   readonly metering: number; // 0~1 归一化音量
 }
 
@@ -34,7 +34,15 @@ const BAR_RANDOM = Array.from({ length: BAR_COUNT }, (_, i) => {
 const MIN_HEIGHT = 4;
 const MAX_HEIGHT = 36;
 
-function WaveBar({ index, metering, isCancelling }: { index: number; metering: number; isCancelling: boolean }) {
+function WaveBar({
+  index,
+  metering,
+  isCancelling,
+}: {
+  index: number;
+  metering: number;
+  isCancelling: boolean;
+}) {
   const height = useSharedValue(MIN_HEIGHT);
   const colorProgress = useSharedValue(0);
   const isAutoAnimatingRef = useRef(false);
@@ -58,14 +66,28 @@ function WaveBar({ index, metering, isCancelling }: { index: number; metering: n
       barDelay,
       withRepeat(
         withSequence(
-          withTiming(maxH, { duration: barPeriod, easing: Easing.inOut(Easing.ease) }),
-          withTiming(minH, { duration: barPeriod, easing: Easing.inOut(Easing.ease) }),
+          withTiming(maxH, {
+            duration: barPeriod,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(minH, {
+            duration: barPeriod,
+            easing: Easing.inOut(Easing.ease),
+          }),
         ),
         -1,
         true,
       ),
     );
-  }, [isCancelling, metering, height, barDelay, barPeriod, barMinScale, barMaxScale]);
+  }, [
+    isCancelling,
+    metering,
+    height,
+    barDelay,
+    barPeriod,
+    barMinScale,
+    barMaxScale,
+  ]);
 
   // 数据驱动动画 + 取消状态
   useEffect(() => {
@@ -81,7 +103,8 @@ function WaveBar({ index, metering, isCancelling }: { index: number; metering: n
     if (metering > 0) {
       isAutoAnimatingRef.current = false;
       const level = Math.max(0, Math.min(1, metering + jitter * metering));
-      const targetHeight = MIN_HEIGHT + level * weight * (MAX_HEIGHT - MIN_HEIGHT);
+      const targetHeight =
+        MIN_HEIGHT + level * weight * (MAX_HEIGHT - MIN_HEIGHT);
       height.value = withTiming(targetHeight, { duration: 80 });
     }
   }, [isCancelling, metering, height, colorProgress, weight, jitter]);
@@ -99,7 +122,13 @@ function WaveBar({ index, metering, isCancelling }: { index: number; metering: n
 }
 
 // ─── 脉冲圆环 ───
-function PulseRing({ metering, isCancelling }: { metering: number; isCancelling: boolean }) {
+function PulseRing({
+  metering,
+  isCancelling,
+}: {
+  metering: number;
+  isCancelling: boolean;
+}) {
   const ringScale = useSharedValue(1);
   const ringOpacity = useSharedValue(0.3);
   const outerScale = useSharedValue(1);
@@ -139,7 +168,15 @@ function PulseRing({ metering, isCancelling }: { metering: number; isCancelling:
       outerScale.value = withTiming(oScale, { duration: 120 });
       outerOpacity.value = withTiming(oOpacity, { duration: 120 });
     }
-  }, [isCancelling, metering, ringScale, ringOpacity, outerScale, outerOpacity, colorProgress]);
+  }, [
+    isCancelling,
+    metering,
+    ringScale,
+    ringOpacity,
+    outerScale,
+    outerOpacity,
+    colorProgress,
+  ]);
 
   const innerRingStyle = useAnimatedStyle(() => ({
     transform: [{ scale: ringScale.value * breathScale.value }],
@@ -177,13 +214,17 @@ function PulseRing({ metering, isCancelling }: { metering: number; isCancelling:
       <Animated.View style={[styles.ring, styles.innerRing, innerRingStyle]} />
       {/* 中心图标 */}
       <Animated.View style={[styles.centerIcon, iconBgStyle]}>
-        <AppText size="3xl">{isCancelling ? '✕' : '🎙️'}</AppText>
+        <AppText size="3xl">{isCancelling ? "✕" : "🎙️"}</AppText>
       </Animated.View>
     </View>
   );
 }
 
-export function VoiceRecordingOverlay({ visible, state, metering }: VoiceRecordingOverlayProps) {
+export function VoiceRecordingOverlay({
+  visible,
+  state,
+  metering,
+}: VoiceRecordingOverlayProps) {
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
 
@@ -197,12 +238,12 @@ export function VoiceRecordingOverlay({ visible, state, metering }: VoiceRecordi
     }
   }, [visible, opacity, translateY]);
 
-  const isCancelling = state === 'cancelling';
+  const isCancelling = state === "cancelling";
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
-    pointerEvents: opacity.value > 0 ? 'auto' as const : 'none' as const,
+    pointerEvents: opacity.value > 0 ? ("auto" as const) : ("none" as const),
   }));
 
   return (
@@ -210,7 +251,12 @@ export function VoiceRecordingOverlay({ visible, state, metering }: VoiceRecordi
       {/* ── 声纹波形（顶部） ── */}
       <View style={styles.waveContainer}>
         {Array.from({ length: BAR_COUNT }, (_, i) => (
-          <WaveBar key={i} index={i} metering={metering} isCancelling={isCancelling} />
+          <WaveBar
+            key={i}
+            index={i}
+            metering={metering}
+            isCancelling={isCancelling}
+          />
         ))}
       </View>
 
@@ -221,7 +267,7 @@ export function VoiceRecordingOverlay({ visible, state, metering }: VoiceRecordi
         color={isCancelling ? colors.coral : colors.sage}
         style={styles.hint}
       >
-        {isCancelling ? '松开取消' : '松手发送 · 上移取消'}
+        {isCancelling ? "松开取消" : "松手发送 · 上移取消"}
       </AppText>
 
       {/* ── 脉冲圆环 + 图标 ── */}
@@ -234,7 +280,7 @@ const RING_SIZE = 88;
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
@@ -242,13 +288,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     backgroundColor: colors.cream,
     zIndex: 100,
-    alignItems: 'center',
+    alignItems: "center",
   },
   // ─── 声纹波形 ───
   waveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 2,
     height: 42,
     paddingHorizontal: 20,
@@ -262,12 +308,12 @@ const styles = StyleSheet.create({
   pulseContainer: {
     width: RING_SIZE + 40,
     height: RING_SIZE + 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   ring: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 9999,
     borderWidth: 2,
   },
@@ -283,12 +329,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   // ─── 提示文字 ───
   hint: {
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 12,
   },
 });

@@ -1,14 +1,14 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { AppText } from '../ui/AppText';
-import { colors, shadows } from '../../constants/theme';
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { AppText } from "../ui/AppText";
+import { colors, shadows } from "../../constants/theme";
 
 export function AiAssistantCard() {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/')}>
+    <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/")}>
       <LinearGradient
-        colors={[colors.sagePale, '#edf6f0']}
+        colors={[colors.sagePale, "#edf6f0"]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -18,12 +18,16 @@ export function AiAssistantCard() {
             <AppText size="2xl">🌿</AppText>
           </View>
           <View style={styles.info}>
-            <AppText size="xl" weight="bold" color={colors.sage}>棉花助手</AppText>
+            <AppText size="xl" weight="bold" color={colors.sage}>
+              棉花助手
+            </AppText>
             <AppText size="base" color={colors.textLight} style={styles.desc}>
               AI 智能记账，随时随地
             </AppText>
           </View>
-          <AppText size="2xl" color={colors.sage}>›</AppText>
+          <AppText size="2xl" color={colors.sage}>
+            ›
+          </AppText>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -38,8 +42,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   avatar: {
@@ -47,8 +51,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 14,
     backgroundColor: colors.sagePale,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.md,
   },
   info: {
