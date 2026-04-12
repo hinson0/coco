@@ -1,19 +1,37 @@
 // apps/mobile/app/budget-category-edit.tsx
 // 分类预算添加/编辑页面：分类选择 + 金额输入
 import { useState, useRef, useEffect } from "react";
-import { View, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Keyboard,
+  Animated,
+} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreateBudget, useUpdateBudget } from "../hooks/useLocalBudgets";
+import {
+  useCreateBudget,
+  useUpdateBudget,
+  useCategoryBudgets,
+  useGlobalBudget,
+} from "../hooks/useLocalBudgets";
 import { useLocalCategories } from "../hooks/useLocalCategories";
-import { useCategoryBudgets } from "../hooks/useLocalBudgets";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, spacing, shadows } from "../constants/theme";
 
 export default function BudgetCategoryEditScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; categoryId?: string; amount?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    categoryId?: string;
+    amount?: string;
+  }>();
   const isEdit = !!params.id;
 
   const qc = useQueryClient();
@@ -21,25 +39,51 @@ export default function BudgetCategoryEditScreen() {
   const { data: existingBudgets = [] } = useCategoryBudgets();
   const { mutateAsync: createBudget } = useCreateBudget();
   const { mutateAsync: updateBudget } = useUpdateBudget();
+  const { data: globalBudget } = useGlobalBudget();
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(params.categoryId || null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    params.categoryId || null,
+  );
   const [amount, setAmount] = useState(params.amount ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const amountRef = useRef<TextInput>(null);
+  const warningAnim = useRef(new Animated.Value(0)).current;
+
+  const otherCategorySum = existingBudgets
+    .filter((b) => b.id !== params.id)
+    .reduce((sum, b) => sum + b.amount, 0);
+  const currentAmount = parseFloat(amount) || 0;
+  const categoryTotal = otherCategorySum + currentAmount;
+  const isOverBudget = !!globalBudget && categoryTotal > globalBudget.amount;
+
+  useEffect(() => {
+    Animated.timing(warningAnim, {
+      toValue: isOverBudget ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isOverBudget]);
 
   // 过滤掉已有预算的分类（编辑时排除自身）
   const usedCategoryIds = new Set(
-    existingBudgets.filter((b) => b.id !== params.id).map((b) => b.category_id)
+    existingBudgets.filter((b) => b.id !== params.id).map((b) => b.category_id),
   );
   const availableCategories = categories.filter(
-    (c) => c.type === "expense" && !usedCategoryIds.has(c.id)
+    (c) => c.type === "expense" && !usedCategoryIds.has(c.id),
   );
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -67,7 +111,11 @@ export default function BudgetCategoryEditScreen() {
           category_id: selectedCategoryId,
           amount: numAmount,
           period: "monthly",
-          start_date: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+          start_date: new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1,
+          ).toISOString(),
         });
       }
       await qc.invalidateQueries({ queryKey: ["budgets"] });
@@ -83,17 +131,29 @@ export default function BudgetCategoryEditScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
           <AppText size="2xl">←</AppText>
         </TouchableOpacity>
-        <AppText size="2xl" weight="semibold">{isEdit ? "编辑分类预算" : "添加分类预算"}</AppText>
+        <AppText size="2xl" weight="semibold">
+          {isEdit ? "编辑分类预算" : "添加分类预算"}
+        </AppText>
         <View style={{ width: 36 }} />
       </View>
 
       {/* Category selector (only for new) */}
       {!isEdit && (
         <View style={styles.section}>
-          <AppText size="md" color={colors.textLighter} style={{ marginBottom: 10 }}>选择分类</AppText>
+          <AppText
+            size="md"
+            color={colors.textLighter}
+            style={{ marginBottom: 10 }}
+          >
+            选择分类
+          </AppText>
           <FlatList
             horizontal
             data={availableCategories}
@@ -102,13 +162,21 @@ export default function BudgetCategoryEditScreen() {
             contentContainerStyle={{ gap: 10 }}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[styles.categoryChip, item.id === selectedCategoryId && styles.categoryChipActive]}
+                style={[
+                  styles.categoryChip,
+                  item.id === selectedCategoryId && styles.categoryChipActive,
+                ]}
                 onPress={() => setSelectedCategoryId(item.id)}
                 activeOpacity={0.7}
               >
                 <AppText style={{ fontSize: 20 }}>{item.icon}</AppText>
-                <AppText size="md" weight="medium"
-                  color={item.id === selectedCategoryId ? colors.white : colors.text}>
+                <AppText
+                  size="md"
+                  weight="medium"
+                  color={
+                    item.id === selectedCategoryId ? colors.white : colors.text
+                  }
+                >
                   {item.name}
                 </AppText>
               </TouchableOpacity>
@@ -119,7 +187,13 @@ export default function BudgetCategoryEditScreen() {
 
       {/* Amount */}
       <View style={styles.section}>
-        <AppText size="md" color={colors.textLighter} style={{ marginBottom: 10 }}>预算金额</AppText>
+        <AppText
+          size="md"
+          color={colors.textLighter}
+          style={{ marginBottom: 10 }}
+        >
+          预算金额
+        </AppText>
         <View style={styles.amountBox}>
           <AppText style={styles.amountPrefix}>¥</AppText>
           <TextInput
@@ -134,8 +208,44 @@ export default function BudgetCategoryEditScreen() {
         </View>
       </View>
 
+      {/* Over-budget warning */}
+      {globalBudget && (
+        <Animated.View
+          style={[
+            styles.overBudgetCard,
+            {
+              opacity: warningAnim,
+              transform: [
+                {
+                  translateY: warningAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-8, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents={isOverBudget ? "auto" : "none"}
+        >
+          <AppText size="md" weight="medium" color={colors.coral}>
+            ⚠ 分类预算合计 ¥{categoryTotal.toLocaleString()}
+          </AppText>
+          <AppText size="sm" color={colors.coral}>
+            已超出总预算 ¥{globalBudget.amount.toLocaleString()}
+          </AppText>
+        </Animated.View>
+      )}
+
       {/* Save button */}
-      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.saveBtn, submitting && { opacity: 0.6 }]}
           onPress={handleSave}
@@ -145,7 +255,9 @@ export default function BudgetCategoryEditScreen() {
           {submitting ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <AppText size="2xl" weight="semibold" color={colors.white}>保存</AppText>
+            <AppText size="2xl" weight="semibold" color={colors.white}>
+              保存
+            </AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -156,35 +268,73 @@ export default function BudgetCategoryEditScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.white },
   header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
-    borderBottomWidth: 1, borderBottomColor: colors.creamDark,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.creamDark,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: radii.sm,
-    backgroundColor: colors.cream, alignItems: "center", justifyContent: "center",
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+    justifyContent: "center",
   },
   section: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   categoryChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: radii.md, backgroundColor: colors.cream,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radii.md,
+    backgroundColor: colors.cream,
   },
   categoryChipActive: { backgroundColor: colors.sage },
   amountBox: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: colors.cream, borderRadius: radii.md,
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.cream,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
-  amountPrefix: { fontSize: 28, fontWeight: "700", color: colors.textLighter, marginRight: 4 },
+  amountPrefix: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: colors.textLighter,
+    marginRight: 4,
+  },
   amountInput: { flex: 1, fontSize: 36, fontWeight: "700", color: colors.text },
+  overBudgetCard: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.coralPale,
+    borderRadius: radii.md,
+  },
   bottomBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    paddingHorizontal: spacing.xl, paddingTop: 12,
-    backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.creamDark,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.xl,
+    paddingTop: 12,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.creamDark,
   },
   saveBtn: {
-    height: 48, borderRadius: radii.md, backgroundColor: colors.sage,
-    alignItems: "center", justifyContent: "center", ...shadows.md,
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: colors.sage,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.md,
   },
 });

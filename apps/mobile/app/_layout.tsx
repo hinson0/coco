@@ -2,13 +2,18 @@ import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
 import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack } from "expo-router";
 import type * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
-import { AppOpenAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
-import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
+
 import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
+
+let GoogleAds: typeof import("react-native-google-mobile-ads") | null = null;
+try {
+  GoogleAds = require("react-native-google-mobile-ads");
+} catch {}
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -31,7 +36,7 @@ try {
 
 // AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
 const APP_OPEN_AD_ID = __DEV__
-  ? TestIds.APP_OPEN
+  ? (GoogleAds?.TestIds.APP_OPEN ?? "")
   : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
 const SPLASH_MIN_INTERVAL_MS = 30_000;
 
@@ -82,27 +87,38 @@ function AppContent() {
   const lastSplashTime = useRef(0);
 
   const tryShowSplash = useCallback(() => {
+    if (!GoogleAds) return;
+
     // TODO: Pro 用户检查
     const now = Date.now();
     if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
     lastSplashTime.current = now;
 
-    const appOpenAd = AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
+    const appOpenAd = GoogleAds.AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
     function cleanupAll() {
       unsubLoaded();
       unsubError();
       unsubClosed();
     }
-    const unsubLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-      cleanupAll();
-      appOpenAd.show();
-    });
-    const unsubError = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
-      cleanupAll();
-    });
-    const unsubClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-      cleanupAll();
-    });
+    const unsubLoaded = appOpenAd.addAdEventListener(
+      GoogleAds.AdEventType.LOADED,
+      () => {
+        cleanupAll();
+        appOpenAd.show();
+      },
+    );
+    const unsubError = appOpenAd.addAdEventListener(
+      GoogleAds.AdEventType.ERROR,
+      () => {
+        cleanupAll();
+      },
+    );
+    const unsubClosed = appOpenAd.addAdEventListener(
+      GoogleAds.AdEventType.CLOSED,
+      () => {
+        cleanupAll();
+      },
+    );
     appOpenAd.load();
   }, []);
 

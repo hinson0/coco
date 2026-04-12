@@ -1,18 +1,28 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Keyboard } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Keyboard,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalBudgets, useCreateBudget, useUpdateBudget } from "../hooks/useLocalBudgets";
+import {
+  useGlobalBudget,
+  useCreateBudget,
+  useUpdateBudget,
+} from "../hooks/useLocalBudgets";
 import { colors, radii, shadows, spacing } from "../constants/theme";
 
 export default function BudgetSettingScreen() {
   const insets = useSafeAreaInsets();
-  const { data: budgets = [] } = useLocalBudgets();
+  const { data: existingBudget } = useGlobalBudget();
   const { mutateAsync: createBudget } = useCreateBudget();
   const { mutateAsync: updateBudget } = useUpdateBudget();
-
-  const existingBudget = budgets.find(b => b.period === "monthly" && b.category_id === null)
-    ?? budgets.find(b => b.period === "monthly");
 
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -26,9 +36,16 @@ export default function BudgetSettingScreen() {
   }, [existingBudget?.id]);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -49,7 +66,11 @@ export default function BudgetSettingScreen() {
         await updateBudget({ id: existingBudget.id, amount: numAmount });
       } else {
         const now = new Date();
-        const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1,
+        ).toISOString();
         await createBudget({
           category_id: null,
           amount: numAmount,
@@ -69,7 +90,11 @@ export default function BudgetSettingScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.75}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.iconBtn}
+          activeOpacity={0.75}
+        >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>设置本月预算</Text>
@@ -79,7 +104,9 @@ export default function BudgetSettingScreen() {
       {/* Body */}
       <View style={styles.body}>
         <Text style={styles.hint}>
-          {existingBudget ? "修改你的月度预算额度" : "设置一个月度预算来管理支出"}
+          {existingBudget
+            ? "修改你的月度预算额度"
+            : "设置一个月度预算来管理支出"}
         </Text>
 
         <View style={styles.amountBox}>
@@ -97,7 +124,15 @@ export default function BudgetSettingScreen() {
       </View>
 
       {/* Bottom save button */}
-      <View style={[styles.bottomBar, { paddingBottom: (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12 }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom:
+              (keyboardHeight > 0 ? keyboardHeight + 16 : insets.bottom) + 12,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
           onPress={handleSubmit}
@@ -107,7 +142,9 @@ export default function BudgetSettingScreen() {
           {submitting ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <Text style={styles.saveBtnText}>{existingBudget ? "保存修改" : "保存"}</Text>
+            <Text style={styles.saveBtnText}>
+              {existingBudget ? "保存修改" : "保存"}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
