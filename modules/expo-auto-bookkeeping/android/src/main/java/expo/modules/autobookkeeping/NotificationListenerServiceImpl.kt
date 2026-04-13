@@ -13,7 +13,7 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
       "com.eg.android.AlipayGphone"  // 支付宝
     )
 
-    private var moduleRef: WeakReference<ExpoAutoBookkeepingModule>? = null
+    internal var moduleRef: WeakReference<ExpoAutoBookkeepingModule>? = null
     private val pendingBuffer = mutableListOf<NotificationData>()
 
     fun registerModule(module: ExpoAutoBookkeepingModule) {

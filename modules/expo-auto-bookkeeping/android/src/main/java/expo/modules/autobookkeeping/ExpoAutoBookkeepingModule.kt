@@ -30,11 +30,12 @@ class ExpoAutoBookkeepingModule : Module() {
     }
 
     Function("openPermissionSettings") {
-      val context = appContext.reactContext ?: return@Function
+      val context = appContext.reactContext ?: return@Function null
       val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
       context.startActivity(intent)
+      null
     }
 
     Function("getServiceStatus") {
