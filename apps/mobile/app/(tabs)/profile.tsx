@@ -229,13 +229,6 @@ export default function ProfileScreen() {
         />
         <View style={styles.separator} />
         <MenuItem
-          icon="🎬"
-          iconBg={colors.honeyPale}
-          title="广告收益"
-          onPress={() => router.push("/ad-rewards")}
-        />
-        <View style={styles.separator} />
-        <MenuItem
           icon="💬"
           iconBg={colors.creamDark}
           title="意见反馈"
