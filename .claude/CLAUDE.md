@@ -25,7 +25,7 @@ Monorepo (pnpm workspace)：
 
 - **严禁** `git push origin xxx:main`，任何情况都不允许直接推送到 main
 - push 时只推到当前分支：`git push origin HEAD` 或 `git push -u origin <branch-name>`
-- 合并到 main 必须通过 PR：`gh pr create` → review → merge
+- 如果在main执行了commit/push/pr等命令,必须询问用户是否,使用`AskUserQuestion`工具,得到明确的答复执行.
 
 # 开发流程（必须遵守）
 
@@ -63,6 +63,7 @@ brainstorming → writing-plans → executing-plans
 ## 多行文本输入框键盘
 
 所有 `multiline` 的 `TextInput`（如备注输入框）必须设置：
+
 - `returnKeyType="default"` — 键盘显示"换行"而非"完成"
 - `blurOnSubmit={false}` — 按回车键换行而非提交/关闭键盘
 
