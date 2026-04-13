@@ -1,0 +1,26 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.autobookkeeping" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <application>
+7-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:2:3-11:17
+8        <service
+8-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:3:5-10:15
+9            android:name="expo.modules.autobookkeeping.NotificationListenerServiceImpl"
+9-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:4:7-54
+10            android:exported="false"
+10-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:6:7-31
+11            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+11-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:5:7-81
+12            <intent-filter>
+12-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:7:7-9:23
+13                <action android:name="android.service.notification.NotificationListenerService" />
+13-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:8:9-91
+13-->/Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:8:17-88
+14            </intent-filter>
+15        </service>
+16    </application>
+17
+18</manifest>

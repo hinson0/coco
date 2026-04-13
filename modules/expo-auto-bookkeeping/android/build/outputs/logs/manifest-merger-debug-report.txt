@@ -1,0 +1,32 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:1:1-12:12
+INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:1:1-12:12
+	package
+		INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:1:11-69
+application
+ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:2:3-11:17
+service#expo.modules.autobookkeeping.NotificationListenerServiceImpl
+ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:3:5-10:15
+	android:exported
+		ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:6:7-31
+	android:permission
+		ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:5:7-81
+	android:name
+		ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:4:7-54
+intent-filter#action:name:android.service.notification.NotificationListenerService
+ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:7:7-9:23
+action#android.service.notification.NotificationListenerService
+ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:8:9-91
+	android:name
+		ADDED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml:8:17-88
+uses-sdk
+INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml
+INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/a114514/coco/.claude/worktrees/feat-auto/modules/expo-auto-bookkeeping/android/src/main/AndroidManifest.xml
