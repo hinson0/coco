@@ -52,7 +52,6 @@
         }
       ],
       "expo-sqlite",
-      "../../modules/expo-auto-bookkeeping/plugin/withAutoBookkeeping",
       "@react-native-community/datetimepicker",
       [
         "react-native-google-mobile-ads",

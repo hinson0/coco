@@ -88,5 +88,10 @@
       "^expo-crypto$": "<rootDir>/__mocks__/expo-crypto.ts"
     }
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "../../modules"
+    }
+  }
 }
