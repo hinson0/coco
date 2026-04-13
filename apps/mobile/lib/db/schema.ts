@@ -204,6 +204,27 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
       last_pull_at TEXT
     )
   `);
+
+  // ── 自动记账待确认队列 ──
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS pending_notifications (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      amount REAL NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+      source TEXT NOT NULL,
+      raw_title TEXT,
+      raw_text TEXT,
+      notification_timestamp INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'dismissed')),
+      created_at TEXT NOT NULL,
+      confirmed_at TEXT,
+      transaction_id TEXT
+    )
+  `);
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_pending_notifications_status ON pending_notifications(status, user_id)",
+  );
 }
 
 async function addColumnIfNotExists(

@@ -1,6 +1,6 @@
 import type { TransactionType } from "./category";
 
-export type RecordSource = "manual" | "llm" | "ocr" | "asr" | "text";
+export type RecordSource = "manual" | "llm" | "ocr" | "asr" | "text" | "notification";
 
 export interface Transaction {
   readonly id: string;

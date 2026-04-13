@@ -4,11 +4,13 @@ import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import type * as SQLite from "expo-sqlite";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
 
 import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { useAutoBookkeeping } from "../hooks/useAutoBookkeeping";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
+import { PendingConfirmOverlay } from "../components/auto-bookkeeping/PendingConfirmOverlay";
 
 let GoogleAds: typeof import("react-native-google-mobile-ads") | null = null;
 try {
@@ -64,6 +66,11 @@ function AppContent() {
             importance: Notifications.AndroidImportance.HIGH,
             sound: "default",
           });
+          await Notifications.setNotificationChannelAsync("auto-bookkeeping", {
+            name: "自动记账",
+            importance: Notifications.AndroidImportance.HIGH,
+            sound: "default",
+          });
         }
         await Notifications.requestPermissionsAsync();
       } catch {}
@@ -83,59 +90,29 @@ function AppContent() {
   //   if (!loading && !isAuthenticated) router.replace("/(auth)/login");
   // }, [isAuthenticated, loading]);
 
-  // === AdMob 开屏广告 ===
-  const lastSplashTime = useRef(0);
-
-  const tryShowSplash = useCallback(() => {
-    if (!GoogleAds) return;
-
-    // TODO: Pro 用户检查
-    const now = Date.now();
-    if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
-    lastSplashTime.current = now;
-
-    const appOpenAd = GoogleAds.AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
-    function cleanupAll() {
-      unsubLoaded();
-      unsubError();
-      unsubClosed();
-    }
-    const unsubLoaded = appOpenAd.addAdEventListener(
-      GoogleAds.AdEventType.LOADED,
-      () => {
-        cleanupAll();
-        appOpenAd.show();
-      },
-    );
-    const unsubError = appOpenAd.addAdEventListener(
-      GoogleAds.AdEventType.ERROR,
-      () => {
-        cleanupAll();
-      },
-    );
-    const unsubClosed = appOpenAd.addAdEventListener(
-      GoogleAds.AdEventType.CLOSED,
-      () => {
-        cleanupAll();
-      },
-    );
-    appOpenAd.load();
-  }, []);
-
-  // 只在真正从后台恢复时弹开屏广告（非广告关闭导致的 active）
-  const wasBackgroundRef = useRef(false);
-  useEffect(() => {
-    tryShowSplash(); // 冷启动
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "background") {
-        wasBackgroundRef.current = true;
-      } else if (nextState === "active" && wasBackgroundRef.current) {
-        wasBackgroundRef.current = false;
-        tryShowSplash();
-      }
-    });
-    return () => subscription.remove();
-  }, [tryShowSplash]);
+  // === AdMob 开屏广告（已暂停，保留代码以备恢复） ===
+  // const lastSplashTime = useRef(0);
+  // const tryShowSplash = useCallback(() => {
+  //   if (!GoogleAds) return;
+  //   const now = Date.now();
+  //   if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
+  //   lastSplashTime.current = now;
+  //   const appOpenAd = GoogleAds.AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
+  //   function cleanupAll() { unsubLoaded(); unsubError(); unsubClosed(); }
+  //   const unsubLoaded = appOpenAd.addAdEventListener(GoogleAds.AdEventType.LOADED, () => { cleanupAll(); appOpenAd.show(); });
+  //   const unsubError = appOpenAd.addAdEventListener(GoogleAds.AdEventType.ERROR, () => { cleanupAll(); });
+  //   const unsubClosed = appOpenAd.addAdEventListener(GoogleAds.AdEventType.CLOSED, () => { cleanupAll(); });
+  //   appOpenAd.load();
+  // }, []);
+  // const wasBackgroundRef = useRef(false);
+  // useEffect(() => {
+  //   tryShowSplash();
+  //   const subscription = AppState.addEventListener("change", (nextState) => {
+  //     if (nextState === "background") { wasBackgroundRef.current = true; }
+  //     else if (nextState === "active" && wasBackgroundRef.current) { wasBackgroundRef.current = false; tryShowSplash(); }
+  //   });
+  //   return () => subscription.remove();
+  // }, [tryShowSplash]);
 
   // 每 30s 静默 push（仅 App 前台有效）
   useEffect(() => {
@@ -166,7 +143,9 @@ function AppContent() {
   return (
     <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
       <EntitlementDecayRunner />
+      <AutoBookkeepingRunner />
       <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
+      <PendingConfirmOverlay />
     </OfflineContext.Provider>
   );
 }
@@ -184,5 +163,11 @@ export default function RootLayout() {
 /** 权益衰减必须在 QueryClientProvider + OfflineContext 内部运行 */
 function EntitlementDecayRunner() {
   useEntitlementDecay();
+  return null;
+}
+
+/** 自动记账通知监听 */
+function AutoBookkeepingRunner() {
+  useAutoBookkeeping();
   return null;
 }
