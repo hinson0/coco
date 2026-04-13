@@ -5,9 +5,18 @@
   - TODO 发布
 - TODO 刷面试题
   - 刷2-3个这样的面试题,主要涵盖: python+fastapi+redis+postgres等
+- TODO 自动记账
+- TODO 取消广告功能.就用21天免费.然后之后可以手动记账,语音/OCR/自然语言等功能需购买VIP
+  - 月10元
+  - 年88元
+  - 永久138元
 
 - TODO 体验下`知识图谱`
 - TODO 体验下omega-memory ecc的记忆系统
+
+## 0413
+
+- ~TODO 继续第7章节<中间件>
 
 ## 0412
 
