@@ -53,10 +53,10 @@ brainstorming → writing-plans → executing-plans
 - `executing-plans` 全部 Task 完成后，**必须**调用 `superpowers:requesting-code-review`
 - Learning 模式不是跳过 code review 和测试的理由
 
-## ECC 工作流文档路径
+## ECC(everything-claude-code插件) 工作流文档路径
 
-- PRD 文档：`docs/ecc/prds/`
-- 实现计划：`docs/ecc/plans/`（由 `/prp-plan` 生成）
+- PRD 文档：必须放在`docs/ecc/prds/`
+- 实现计划：必须放在`docs/ecc/plans/`
 
 # UI 规范（必须遵守）
 
@@ -66,15 +66,3 @@ brainstorming → writing-plans → executing-plans
 
 - `returnKeyType="default"` — 键盘显示"换行"而非"完成"
 - `blurOnSubmit={false}` — 按回车键换行而非提交/关闭键盘
-
-# 协作模式（必须遵守）
-
-## Learning 模式下的分工
-
-当 Learning 模式开启时：
-
-- **目录结构变更**：100% 由用户亲自创建（`mkdir` 等），Claude 不创建目录或文件结构
-- **代码编写（前后端统一）**：
-  1. Claude 把完整代码输出到对话
-  2. 用户 review，说 OK 后自己在编辑器里输入
-  3. 用户说 review → Claude 审查实际文件
