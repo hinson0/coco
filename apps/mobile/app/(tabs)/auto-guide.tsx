@@ -20,11 +20,17 @@ import {
 } from "../../lib/auto-bookkeeping/brand-detection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const guideNotifListener = require("../../assets/guides/notif-listener.png");
+const guideNotifListener1 = require("../../assets/guides/notif-listener-1.png");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const guideNotifListener2 = require("../../assets/guides/notif-listener-2.png");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifMain = require("../../assets/guides/notif-main.png");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const guideNotifChannel = require("../../assets/guides/notif-channel.png");
+const guideNotifChannel1 = require("../../assets/guides/notif-channel-1.png");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const guideNotifChannel2 = require("../../assets/guides/notif-channel-2.png");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const guideNotifChannel3 = require("../../assets/guides/notif-channel-3.png");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideAutoStart = require("../../assets/guides/app-autostart.png");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -204,8 +210,12 @@ export default function AutoBookkeepingScreen() {
             允许 CoCo 读取微信和支付宝的支付通知，用于自动识别金额
           </AppText>
           <GuideImage
-            source={guideNotifListener}
-            label="参考：开启通知使用权（小米手机）"
+            source={guideNotifListener1}
+            label="参考：找到 CoCo AI记账（小米手机）"
+          />
+          <GuideImage
+            source={guideNotifListener2}
+            label="参考：确认授权（小米手机）"
           />
         </SetupStep>
 
@@ -224,11 +234,25 @@ export default function AutoBookkeepingScreen() {
             label="参考：通知主设置（小米手机）"
           />
           <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
-            进入「自动记账」通知渠道，开启「悬浮通知」
+            进入底部「自动记账」通知类别
           </AppText>
           <GuideImage
-            source={guideNotifChannel}
-            label="参考：自动记账渠道设置（小米手机）"
+            source={guideNotifChannel1}
+            label="参考：找到自动记账通道（小米手机）"
+          />
+          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+            开启「允许通知」和「悬浮通知」
+          </AppText>
+          <GuideImage
+            source={guideNotifChannel2}
+            label="参考：自动记账通知设置（小米手机）"
+          />
+          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+            锁屏显示选择「显示通知及其内容」
+          </AppText>
+          <GuideImage
+            source={guideNotifChannel3}
+            label="参考：锁屏通知显示规则（小米手机）"
           />
         </SetupStep>
 
