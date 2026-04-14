@@ -51,7 +51,6 @@ be-env:
 env: fe-env be-env
 
 # ── 依赖同步 ──────────────────────────────────
-
 fe-sync:
     pnpm install
 
@@ -61,7 +60,6 @@ be-sync:
 sync: fe-sync be-sync
 
 # ── 开发服务器 ────────────────────────────────
-
 fe-start: fe-env fe-sync
     pnpm --filter {{ mobile }} dev
 
@@ -69,8 +67,8 @@ be-start: be-env be-sync
     cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 
-# ── CI/CD ─────────────────────────────────────
 
+# ── CI/CD ─────────────────────────────────────
 fe-cicd:
     pnpm --filter {{ mobile }} lint
     pnpm --filter {{ mobile }} format:check
