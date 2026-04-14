@@ -80,9 +80,10 @@ export async function dismissPending(
 export async function getRecentForDedup(
   db: SQLite.SQLiteDatabase,
   userId: string,
+  referenceTimestamp?: number,
   windowMs: number = 10_000,
 ): Promise<readonly { amount: number; source: string; timestamp: number }[]> {
-  const cutoff = Date.now() - windowMs;
+  const cutoff = (referenceTimestamp ?? Date.now()) - windowMs;
   const rows = await db.getAllAsync<{
     amount: number;
     source: string;

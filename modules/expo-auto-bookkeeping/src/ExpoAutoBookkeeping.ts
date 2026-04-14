@@ -40,4 +40,34 @@ export function onNotificationReceived(
   return emitter.addListener("onNotificationReceived", callback);
 }
 
+export function getAndClearBuffer(): NotificationEvent[] {
+  if (!NativeModule) return [];
+  return NativeModule.getAndClearBuffer();
+}
+
+export interface DebugInfo {
+  readonly serviceConnected: boolean;
+  readonly moduleRegistered: boolean;
+  readonly totalNotifications: number;
+  readonly watchedNotifications: number;
+  readonly lastPkg: string;
+  readonly lastTitle: string;
+  readonly lastText: string;
+}
+
+export function getDebugInfo(): DebugInfo {
+  if (!NativeModule) {
+    return {
+      serviceConnected: false,
+      moduleRegistered: false,
+      totalNotifications: 0,
+      watchedNotifications: 0,
+      lastPkg: "",
+      lastTitle: "",
+      lastText: "",
+    };
+  }
+  return NativeModule.getDebugInfo();
+}
+
 export type { NotificationEvent, ServiceStatus };
