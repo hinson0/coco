@@ -20,7 +20,6 @@ export function usePendingNotifications() {
       return getPendingList(db, userId);
     },
     enabled: !!db && !!userId,
-    refetchInterval: 5_000,
   });
 }
 
@@ -34,7 +33,6 @@ export function usePendingCount() {
       return getPendingCount(db, userId);
     },
     enabled: !!db && !!userId,
-    refetchInterval: 5_000,
   });
 }
 
