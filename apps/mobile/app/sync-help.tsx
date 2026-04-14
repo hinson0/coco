@@ -31,7 +31,7 @@ export default function SyncHelpScreen() {
     setError(null);
     setSuccess(null);
     try {
-      await push(db, userId);
+      await push(db, userId, { full: true });
       setSuccess("上传完成 ✓");
       setPendingCount(0);
     } catch {
