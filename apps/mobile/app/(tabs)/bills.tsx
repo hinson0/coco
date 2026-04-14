@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,11 +19,11 @@ import {
 } from "../../lib/auto-bookkeeping/brand-detection";
 
 let AutoBookkeeping:
-  | typeof import("../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping")
+  | typeof import("../../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping")
   | null = null;
 if (Platform.OS === "android") {
   try {
-    AutoBookkeeping = require("../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping");
+    AutoBookkeeping = require("../../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping");
   } catch {}
 }
 
@@ -46,7 +47,29 @@ export default function AutoBookkeepingScreen() {
   const guideSteps = getBrandGuideSteps(brand);
 
   const handleOpenSettings = () => {
-    AutoBookkeeping?.openPermissionSettings();
+    if (!AutoBookkeeping) {
+      Alert.alert("调试", "原生模块未加载，AutoBookkeeping 为 null");
+      return;
+    }
+    AutoBookkeeping.openPermissionSettings();
+  };
+
+  const handleDebug = () => {
+    if (!AutoBookkeeping) {
+      Alert.alert("调试", "模块未加载");
+      return;
+    }
+    const info = AutoBookkeeping.getDebugInfo();
+    Alert.alert(
+      "NLS 调试信息",
+      `服务连接: ${info.serviceConnected}\n` +
+        `模块注册: ${info.moduleRegistered}\n` +
+        `总通知数: ${info.totalNotifications}\n` +
+        `微信/支付宝通知: ${info.watchedNotifications}\n` +
+        `最后包名: ${info.lastPkg}\n` +
+        `最后标题: ${info.lastTitle}\n` +
+        `最后文本: ${info.lastText}`,
+    );
   };
 
   if (Platform.OS !== "android") {
@@ -229,6 +252,17 @@ export default function AutoBookkeepingScreen() {
             </View>
           </Card>
         </View>
+
+        {/* 调试按钮（开发阶段） */}
+        <TouchableOpacity
+          style={styles.debugBtn}
+          activeOpacity={0.8}
+          onPress={handleDebug}
+        >
+          <AppText size="base" color={colors.textLight}>
+            🔧 查看 NLS 调试信息
+          </AppText>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -306,4 +340,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   howText: { flex: 1 },
+  debugBtn: {
+    alignItems: "center",
+    paddingVertical: 16,
+    marginTop: 12,
+    marginBottom: 20,
+  },
 });

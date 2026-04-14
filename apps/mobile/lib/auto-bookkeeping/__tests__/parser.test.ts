@@ -177,6 +177,38 @@ describe("parseNotification", () => {
       );
       expect(result?.amount).toBe(12345.67);
     });
+
+    it("¥前缀格式（已支付¥0.01）", () => {
+      const result = parseNotification(
+        "com.tencent.mm",
+        "微信支付",
+        "已支付¥0.01",
+      );
+      expect(result?.amount).toBe(0.01);
+      expect(result?.type).toBe("expense");
+    });
+
+    it("￥前缀格式", () => {
+      const result = parseNotification(
+        "com.tencent.mm",
+        "微信支付",
+        "已支付￥25.50",
+      );
+      expect(result?.amount).toBe(25.5);
+      expect(result?.type).toBe("expense");
+    });
+
+    it("title 中包含支付关键词", () => {
+      const result = parseNotification("com.tencent.mm", "微信支付", "¥0.01");
+      expect(result?.amount).toBe(0.01);
+      expect(result?.type).toBe("expense");
+    });
+
+    it("聊天消息不含金额返回 null", () => {
+      expect(
+        parseNotification("com.tencent.mm", "爆米花", "[2条]爆米花: 1"),
+      ).toBeNull();
+    });
   });
 });
 

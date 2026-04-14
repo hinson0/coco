@@ -52,6 +52,30 @@ class ExpoAutoBookkeepingModule : Module() {
         "serviceConnected" to (NotificationListenerServiceImpl.moduleRef?.get() != null)
       )
     }
+
+    Function("getAndClearBuffer") {
+      val buffer = NotificationListenerServiceImpl.getAndClearBuffer()
+      buffer.map { data ->
+        mapOf(
+          "packageName" to data.packageName,
+          "title" to data.title,
+          "text" to data.text,
+          "timestamp" to data.timestamp
+        )
+      }
+    }
+
+    Function("getDebugInfo") {
+      mapOf(
+        "serviceConnected" to NotificationListenerServiceImpl.serviceConnected,
+        "moduleRegistered" to (NotificationListenerServiceImpl.moduleRef?.get() != null),
+        "totalNotifications" to NotificationListenerServiceImpl.totalNotificationCount,
+        "watchedNotifications" to NotificationListenerServiceImpl.watchedNotificationCount,
+        "lastPkg" to NotificationListenerServiceImpl.lastNotificationPkg,
+        "lastTitle" to NotificationListenerServiceImpl.lastNotificationTitle,
+        "lastText" to NotificationListenerServiceImpl.lastNotificationText
+      )
+    }
   }
 
   fun dispatchNotification(data: NotificationData) {
