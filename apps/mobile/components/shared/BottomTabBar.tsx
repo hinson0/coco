@@ -12,7 +12,7 @@ const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
   diary: { emoji: "📋", label: "账单" },
   stats: { emoji: "📊", label: "统计" },
   "ai-placeholder": { emoji: "", label: "" },
-  bills: { emoji: "🤖", label: "自动" },
+  "auto-guide": { emoji: "🤖", label: "自动" },
   profile: { emoji: "🌿", label: "我的" },
 };
 

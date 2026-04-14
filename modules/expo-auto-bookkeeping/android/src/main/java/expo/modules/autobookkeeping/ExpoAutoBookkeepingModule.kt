@@ -1,7 +1,9 @@
 package expo.modules.autobookkeeping
 
-import android.content.ComponentName
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import expo.modules.kotlin.modules.Module
@@ -53,6 +55,50 @@ class ExpoAutoBookkeepingModule : Module() {
       )
     }
 
+    Function("areNotificationsEnabled") {
+      val context = appContext.reactContext ?: return@Function false
+      NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    Function("isChannelEnabled") {
+      val context = appContext.reactContext ?: return@Function false
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@Function true
+      val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      val channel = nm.getNotificationChannel("auto-bookkeeping")
+        ?: return@Function false
+      channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    Function("openNotificationSettings") {
+      val context = appContext.reactContext ?: return@Function null
+      val intent = Intent().apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+          putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        } else {
+          action = "android.settings.APP_NOTIFICATION_SETTINGS"
+          putExtra("app_package", context.packageName)
+          putExtra("app_uid", context.applicationInfo.uid)
+        }
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      context.startActivity(intent)
+      null
+    }
+
+    Function("openAutoStartSettings") {
+      val context = appContext.reactContext ?: return@Function null
+      try {
+        val intent = Intent().apply {
+          action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+          data = android.net.Uri.parse("package:${context.packageName}")
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+      } catch (_: Exception) {}
+      null
+    }
+
     Function("getAndClearBuffer") {
       val buffer = NotificationListenerServiceImpl.getAndClearBuffer()
       buffer.map { data ->
@@ -71,6 +117,8 @@ class ExpoAutoBookkeepingModule : Module() {
         "moduleRegistered" to (NotificationListenerServiceImpl.moduleRef?.get() != null),
         "totalNotifications" to NotificationListenerServiceImpl.totalNotificationCount,
         "watchedNotifications" to NotificationListenerServiceImpl.watchedNotificationCount,
+        "localNotifSent" to NotificationListenerServiceImpl.localNotificationSentCount,
+        "localNotifError" to NotificationListenerServiceImpl.localNotificationError,
         "lastPkg" to NotificationListenerServiceImpl.lastNotificationPkg,
         "lastTitle" to NotificationListenerServiceImpl.lastNotificationTitle,
         "lastText" to NotificationListenerServiceImpl.lastNotificationText

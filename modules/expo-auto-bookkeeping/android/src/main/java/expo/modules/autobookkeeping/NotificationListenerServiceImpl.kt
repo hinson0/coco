@@ -1,9 +1,16 @@
 package expo.modules.autobookkeeping
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import java.lang.ref.WeakReference
 
 class NotificationListenerServiceImpl : NotificationListenerService() {
@@ -26,6 +33,8 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
     // 调试信息
     internal var totalNotificationCount = 0
     internal var watchedNotificationCount = 0
+    internal var localNotificationSentCount = 0
+    internal var localNotificationError = ""
     internal var lastNotificationPkg = ""
     internal var lastNotificationTitle = ""
     internal var lastNotificationText = ""
@@ -115,19 +124,76 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
       timestamp = sbn.postTime
     )
 
-    // 先尝试 EventEmitter（App 前台时 JS 可实时接收）
+    // 立即发送本地通知（前台后台都发，确保用户看到）
+    showAutoBookkeepingNotification(pkg, text)
+
+    // 尝试 EventEmitter（App 前台时 JS 可实时接收并入账）
     val module = moduleRef?.get()
     if (module != null) {
       Log.d(TAG, "Dispatching to module (foreground)")
       module.dispatchNotification(data)
     } else {
-      // Module 不可用（App 在后台），写入缓冲区等 App 回前台时拉取
+      // Module 不可用，写入缓冲区等 App 回前台时拉取入账
       synchronized(pendingBuffer) {
         if (pendingBuffer.size < 50) {
           pendingBuffer.add(data)
         }
       }
       Log.d(TAG, "Buffered notification (buffer size: ${pendingBuffer.size})")
+    }
+  }
+
+  /** 发送"已自动记账"本地通知 */
+  private fun showAutoBookkeepingNotification(pkg: String, text: String) {
+    try {
+      val channelId = "auto-bookkeeping"
+      val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (nm.getNotificationChannel(channelId) == null) {
+          val channel = NotificationChannel(
+            channelId, "自动记账", NotificationManager.IMPORTANCE_HIGH
+          ).apply { description = "自动记账通知" }
+          nm.createNotificationChannel(channel)
+        }
+      }
+
+      val sourceLabel = if (pkg == "com.tencent.mm") "微信支付" else "支付宝"
+      // 尝试提取金额，失败则用原始文本
+      val amountMatch = Regex("[¥￥]([\\d]+\\.?\\d{0,2})").find(text)
+        ?: Regex("([\\d]+\\.?\\d{0,2})\\s*元").find(text)
+      val body = if (amountMatch != null) {
+        "$sourceLabel ¥${amountMatch.groupValues[1]}"
+      } else {
+        "$sourceLabel $text"
+      }
+
+      val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+      val pendingIntent = if (launchIntent != null) {
+        PendingIntent.getActivity(
+          this, 0, launchIntent,
+          PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+      } else null
+
+      val notification = NotificationCompat.Builder(this, channelId)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle("已自动记账")
+        .setContentText(body)
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .setDefaults(NotificationCompat.DEFAULT_ALL)
+        .setAutoCancel(true)
+        .setContentIntent(pendingIntent)
+        .build()
+
+      nm.notify(localNotificationSentCount, notification)
+      localNotificationSentCount++
+      Log.d(TAG, "Notification sent ($localNotificationSentCount): $body")
+    } catch (e: Exception) {
+      localNotificationError = e.toString()
+      Log.e(TAG, "Failed to send notification", e)
     }
   }
 
