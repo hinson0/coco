@@ -56,12 +56,12 @@ function AppContent() {
           await Notifications.setNotificationChannelAsync("reminder", {
             name: "记账提醒",
             importance: Notifications.AndroidImportance.HIGH,
-            sound: "default",
+            sound: null,
           });
           await Notifications.setNotificationChannelAsync("auto-bookkeeping", {
             name: "自动记账",
             importance: Notifications.AndroidImportance.HIGH,
-            sound: "default",
+            sound: null,
           });
         }
         await Notifications.requestPermissionsAsync();
