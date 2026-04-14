@@ -10,7 +10,6 @@
       "mcp__plugin_context7__*"
     ],
     "deny": [
-      "Bash(rm -rf *)",
       "Bash(sudo *)",
       "Bash(git push --force *)",
       "Bash(git push -f *)",
