@@ -3,6 +3,7 @@ import { AppState, Platform } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
 import { parseNotification } from "@/lib/auto-bookkeeping/parser";
+import { push } from "@/lib/sync/sync-service";
 import { useQueryClient } from "@tanstack/react-query";
 import type { NotificationEvent } from "../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping.types";
 
@@ -136,8 +137,18 @@ export function useAutoBookkeeping() {
           qc.invalidateQueries({ queryKey: ["chat-messages"] });
           qc.invalidateQueries({ queryKey: ["account-balance"] });
           qc.invalidateQueries({ queryKey: ["total-assets"] });
+
+          // 立即触发同步，不等 30s 定时器
+          push(currentDb, currentUserId).catch((pushErr: unknown) => {
+            const msg =
+              pushErr instanceof Error ? pushErr.message : String(pushErr);
+            console.warn(
+              "[AutoBookkeeping] 即时 push 失败，将由定时器重试:",
+              msg,
+            );
+          });
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("[AutoBookkeeping] 处理通知失败:", err);
         });
       return processingLock.current;
