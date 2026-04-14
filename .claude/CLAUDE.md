@@ -66,3 +66,9 @@ brainstorming → writing-plans → executing-plans
 
 - `returnKeyType="default"` — 键盘显示"换行"而非"完成"
 - `blurOnSubmit={false}` — 按回车键换行而非提交/关闭键盘
+
+# 当开启了learning模式(output style是learning时),要求:
+
+- **后端**代码输出到控制台,输出的代码要告知用户哪行新增/删减
+- 用户review
+- 用户说ok 则下一步
