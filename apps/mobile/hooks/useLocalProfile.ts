@@ -30,7 +30,7 @@ export function useEnsureProfile() {
     mutationFn: async () => {
       if (!db || !user) return null;
       const userId = user.id;
-      const nickname = user.email?.split("@")[0] ?? "棉花用户";
+      const nickname = user.email?.split("@")[0] ?? "CoCo 用户";
       const now = new Date().toISOString();
       await db.runAsync(
         `INSERT OR IGNORE INTO user_profiles 
@@ -63,7 +63,7 @@ export function useUpdateProfile() {
       const userId = user.id;
       const now = new Date().toISOString();
       const nickname =
-        input.nickname ?? user.email?.split("@")[0] ?? "棉花用户";
+        input.nickname ?? user.email?.split("@")[0] ?? "CoCo 用户";
       const avatarType = input.avatar_type ?? "emoji";
       const avatarValue = input.avatar_value ?? "🌿";
 

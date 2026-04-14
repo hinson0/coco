@@ -43,7 +43,7 @@ export default function FeedbackScreen() {
 
   const handleSubmit = () => {
     const email = "feedback@example.com";
-    const subject = encodeURIComponent(`【${feedbackType}】棉花记反馈`);
+    const subject = encodeURIComponent(`【${feedbackType}】CoCo 反馈`);
     const body = encodeURIComponent(`${content}\n\n联系方式：${contact}`);
     const url = `mailto:${email}?subject=${subject}&body=${body}`;
     Linking.openURL(url).catch(() => {

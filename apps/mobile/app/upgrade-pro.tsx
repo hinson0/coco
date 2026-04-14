@@ -73,7 +73,7 @@ export default function UpgradeProScreen() {
           </TouchableOpacity>
 
           <Text style={styles.crownEmoji}>👑</Text>
-          <Text style={styles.heroTitle}>棉花记 Pro</Text>
+          <Text style={styles.heroTitle}>CoCo Pro</Text>
           <Text style={styles.heroSubtitle}>专业版 · 解锁全部记账能力</Text>
 
           <View style={styles.trialBadge}>

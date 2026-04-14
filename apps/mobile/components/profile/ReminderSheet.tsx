@@ -29,7 +29,7 @@ const REMINDER_MESSAGES = [
   "今日账单还空着呢，来记一笔吧 📝",
   "坚持记账，让每一分钱都有去处 💰",
   "记账时间到！回顾一下今天的花销吧 🧾",
-  "棉花记提醒你：今天记账了吗？ 🌸",
+  "CoCo 提醒你：今天记账了吗？ 🌸",
 ];
 
 interface ReminderSettings {
