@@ -1,5 +1,5 @@
-// 多设备同步说明页：帮助用户理解功能 + 手动触发 Pull
-import { useState } from "react";
+// 多设备同步说明页：帮助用户理解功能 + 手动触发 Push/Pull
+import { useState, useEffect } from "react";
 import { View, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { TouchableOpacity } from "react-native";
 import { router } from "expo-router";
@@ -8,24 +8,48 @@ import { AppText } from "../components/ui/AppText";
 import { Card } from "../components/ui/Card";
 import { colors, radii, spacing } from "../constants/theme";
 import { useOfflineContext } from "@/lib/offline-context";
-import { pull } from "@/lib/sync/sync-service";
+import { pull, push, getPendingCount } from "@/lib/sync/sync-service";
 
 export default function SyncHelpScreen() {
   const insets = useSafeAreaInsets();
   const { db, userId } = useOfflineContext();
   const [syncing, setSyncing] = useState(false);
+  const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const handleSync = async () => {
+  // 进入页面时查询待同步记录数
+  useEffect(() => {
+    if (!db || !userId) return;
+    getPendingCount(db, userId).then(setPendingCount);
+  }, [db, userId]);
+
+  const handlePush = async () => {
+    if (!db || !userId || pushing) return;
+    setPushing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await push(db, userId, { full: true });
+      setSuccess("上传完成 ✓");
+      setPendingCount(0);
+    } catch {
+      setError("上传失败，请检查网络后重试");
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const handlePull = async () => {
     if (!db || !userId || syncing) return;
     setSyncing(true);
     setError(null);
-    setSuccess(false);
+    setSuccess(null);
     try {
       await pull(db, userId);
-      setSuccess(true);
-    } catch (e) {
+      setSuccess("同步完成 ✓");
+    } catch {
       setError("同步失败，请检查网络后重试");
     } finally {
       setSyncing(false);
@@ -155,21 +179,53 @@ export default function SyncHelpScreen() {
         style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}
       >
         {error && (
-          <AppText size="base" color={colors.coral} style={styles.errorText}>
+          <AppText size="base" color={colors.coral} style={styles.statusText}>
             {error}
           </AppText>
         )}
         {success && (
-          <AppText size="base" color={colors.sage} style={styles.errorText}>
-            同步完成 ✓
+          <AppText size="base" color={colors.sage} style={styles.statusText}>
+            {success}
           </AppText>
+        )}
+        {__DEV__ && pendingCount > 0 && (
+          <AppText
+            size="base"
+            color={colors.textLight}
+            style={styles.statusText}
+          >
+            {pendingCount} 条记录待上传
+          </AppText>
+        )}
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[
+              styles.pushButton,
+              (!userId || pushing) && styles.syncButtonDisabled,
+            ]}
+            onPress={handlePush}
+            disabled={!userId || pushing}
+            activeOpacity={0.8}
+          >
+            {pushing ? (
+              <ActivityIndicator color={colors.sage} />
+            ) : (
+              <AppText
+                size="xl"
+                weight="semibold"
+                color={!userId ? colors.textLight : colors.sage}
+              >
+                {!userId ? "请先登录" : "上传本机数据到云端"}
+              </AppText>
+            )}
+          </TouchableOpacity>
         )}
         <TouchableOpacity
           style={[
             styles.syncButton,
             (!userId || syncing) && styles.syncButtonDisabled,
           ]}
-          onPress={handleSync}
+          onPress={handlePull}
           disabled={!userId || syncing}
           activeOpacity={0.8}
         >
@@ -181,7 +237,7 @@ export default function SyncHelpScreen() {
               weight="semibold"
               color={!userId ? colors.textLight : colors.white}
             >
-              {!userId ? "请先登录后再同步" : "立即同步"}
+              {!userId ? "请先登录" : "从云端同步数据到本机"}
             </AppText>
           )}
         </TouchableOpacity>
@@ -236,12 +292,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.creamDark,
   },
-  errorText: { textAlign: "center", marginBottom: spacing.sm },
+  statusText: { textAlign: "center", marginBottom: spacing.sm },
+  pushButton: {
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: colors.sage,
+    marginBottom: spacing.sm,
+  },
   syncButton: {
     backgroundColor: colors.sage,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     alignItems: "center",
   },
-  syncButtonDisabled: { backgroundColor: colors.creamDark },
+  syncButtonDisabled: {
+    backgroundColor: colors.creamDark,
+    borderColor: colors.creamDark,
+  },
 });

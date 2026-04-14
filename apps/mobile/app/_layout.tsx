@@ -56,12 +56,12 @@ function AppContent() {
           await Notifications.setNotificationChannelAsync("reminder", {
             name: "记账提醒",
             importance: Notifications.AndroidImportance.HIGH,
-            sound: "default",
+            sound: null,
           });
           await Notifications.setNotificationChannelAsync("auto-bookkeeping", {
             name: "自动记账",
             importance: Notifications.AndroidImportance.HIGH,
-            sound: "default",
+            sound: null,
           });
         }
         await Notifications.requestPermissionsAsync();
@@ -77,13 +77,36 @@ function AppContent() {
     }
   }, [db, user?.id]);
 
-  // 每 30s 静默 push（仅 App 前台有效）
+  // 自动 push：30s 基准间隔，失败时指数退避（60s → 120s → 240s），成功后恢复 30s
   useEffect(() => {
     if (!db || !user?.id) return;
-    const interval = setInterval(() => {
-      push(db, user.id).catch(() => {});
-    }, 30_000);
-    return () => clearInterval(interval);
+    let timer: ReturnType<typeof setTimeout>;
+    let delay = 30_000;
+    let cancelled = false;
+
+    function schedule() {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          await push(db!, user!.id);
+          delay = 30_000; // 成功 → 恢复基准间隔
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(
+            `[Sync] push 失败 (下次 ${(delay * 2) / 1000}s 后重试):`,
+            msg,
+          );
+          delay = Math.min(delay * 2, 240_000); // 指数退避，上限 4 分钟
+        }
+        if (!cancelled) schedule();
+      }, delay);
+    }
+
+    schedule();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [db, user?.id]);
 
   // App 未准备好时，return null 让原生 splash 持续显示
