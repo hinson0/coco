@@ -188,7 +188,7 @@ export default function SyncHelpScreen() {
             {success}
           </AppText>
         )}
-        {pendingCount > 0 && (
+        {__DEV__ && pendingCount > 0 && (
           <AppText
             size="base"
             color={colors.textLight}
@@ -197,27 +197,29 @@ export default function SyncHelpScreen() {
             {pendingCount} 条记录待上传
           </AppText>
         )}
-        <TouchableOpacity
-          style={[
-            styles.pushButton,
-            (!userId || pushing) && styles.syncButtonDisabled,
-          ]}
-          onPress={handlePush}
-          disabled={!userId || pushing}
-          activeOpacity={0.8}
-        >
-          {pushing ? (
-            <ActivityIndicator color={colors.sage} />
-          ) : (
-            <AppText
-              size="xl"
-              weight="semibold"
-              color={!userId ? colors.textLight : colors.sage}
-            >
-              {!userId ? "请先登录" : "上传本机数据到云端"}
-            </AppText>
-          )}
-        </TouchableOpacity>
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[
+              styles.pushButton,
+              (!userId || pushing) && styles.syncButtonDisabled,
+            ]}
+            onPress={handlePush}
+            disabled={!userId || pushing}
+            activeOpacity={0.8}
+          >
+            {pushing ? (
+              <ActivityIndicator color={colors.sage} />
+            ) : (
+              <AppText
+                size="xl"
+                weight="semibold"
+                color={!userId ? colors.textLight : colors.sage}
+              >
+                {!userId ? "请先登录" : "上传本机数据到云端"}
+              </AppText>
+            )}
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[
             styles.syncButton,
