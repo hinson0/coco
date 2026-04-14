@@ -1,15 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
-import { Alert, AppState, Platform } from "react-native";
-import * as Notifications from "expo-notifications";
+import { AppState, Platform } from "react-native";
+import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
 import { parseNotification } from "@/lib/auto-bookkeeping/parser";
-import { isDuplicate } from "@/lib/auto-bookkeeping/dedup";
-import {
-  addPending,
-  getRecentForDedup,
-} from "@/lib/auto-bookkeeping/pending-queue";
 import { useQueryClient } from "@tanstack/react-query";
-import { PENDING_QUERY_KEY } from "./usePendingNotifications";
 import type { NotificationEvent } from "../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping.types";
 
 let _nativeModule:
@@ -30,12 +24,13 @@ function getNativeModule() {
   }
 }
 
+const DEDUP_WINDOW_MS = 10_000;
+
 export function useAutoBookkeeping() {
   const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
   const dbRef = useRef(db);
   const userIdRef = useRef(userId);
-  // 串行锁：防止并发 check-then-insert 竞态
   const processingLock = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -45,56 +40,111 @@ export function useAutoBookkeeping() {
 
   const processNotification = useCallback(
     (event: NotificationEvent) => {
-      processingLock.current = processingLock.current.then(async () => {
-        const currentDb = dbRef.current;
-        const currentUserId = userIdRef.current;
-        if (!currentDb || !currentUserId) return;
+      processingLock.current = processingLock.current
+        .then(async () => {
+          const currentDb = dbRef.current;
+          const currentUserId = userIdRef.current;
+          if (!currentDb || !currentUserId) return;
 
-        const parsed = parseNotification(
-          event.packageName,
-          event.title,
-          event.text,
-        );
-        if (!parsed) return;
+          const parsed = parseNotification(
+            event.packageName,
+            event.title,
+            event.text,
+          );
+          if (!parsed) return;
 
-        const recentItems = await getRecentForDedup(
-          currentDb,
-          currentUserId,
-          event.timestamp,
-        );
-        if (
-          isDuplicate(
-            {
+          // 去重：查询最近 10s 内同金额同来源的自动记账交易
+          // 用 occurred_at（通知发生时间）而非 created_at（入库时间），
+          // 避免 buffer flush 延迟导致去重窗口失效
+          const cutoff = new Date(
+            (event.timestamp ?? Date.now()) - DEDUP_WINDOW_MS,
+          ).toISOString();
+          const existing = await currentDb.getFirstAsync<{ id: string }>(
+            `SELECT id FROM transactions
+           WHERE user_id = ? AND source = 'notification'
+             AND amount = ? AND occurred_at > ?
+           LIMIT 1`,
+            currentUserId,
+            parsed.amount,
+            cutoff,
+          );
+          if (existing) return;
+
+          // 查找"购物"分类
+          const category = await currentDb.getFirstAsync<{
+            id: string;
+            name: string;
+            icon: string;
+          }>(
+            `SELECT id, name, icon FROM categories
+           WHERE (user_id = ? OR (user_id IS NULL AND is_default = 1))
+             AND name = '购物' AND deleted_at IS NULL
+           LIMIT 1`,
+            currentUserId,
+          );
+          if (!category) return;
+          const categoryId = category.id;
+
+          // 直接创建交易
+          const txId = Crypto.randomUUID();
+          const now = new Date().toISOString();
+          const occurredAt = new Date(
+            event.timestamp ?? Date.now(),
+          ).toISOString();
+
+          await currentDb.runAsync(
+            `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, updated_at, account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'notification', ?, NULL, NULL, ?, ?, NULL)`,
+            txId,
+            currentUserId,
+            categoryId,
+            parsed.amount,
+            parsed.type,
+            "",
+            occurredAt,
+            event.packageName,
+            now,
+            now,
+          );
+
+          // 创建聊天消息（bill_card）
+          const sourceLabel =
+            parsed.source === "wechat" ? "微信支付" : "支付宝";
+          const msgId = Crypto.randomUUID();
+          await currentDb.runAsync(
+            `INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, updated_at)
+           VALUES (?, ?, 'assistant', 'bill_card', ?, ?, ?, ?)`,
+            msgId,
+            currentUserId,
+            JSON.stringify({
+              id: txId,
               amount: parsed.amount,
-              source: parsed.source,
-              timestamp: event.timestamp,
-              rawText: parsed.rawText,
-            },
-            recentItems,
-          )
-        ) {
-          return;
-        }
+              type: parsed.type,
+              category_id: categoryId,
+              note: "",
+              source: "notification",
+              source_label: sourceLabel,
+              raw_input: event.packageName,
+              occurred_at: occurredAt,
+            }),
+            txId,
+            now,
+            now,
+          );
 
-        await addPending(currentDb, currentUserId, parsed, event.timestamp);
-        qc.invalidateQueries({ queryKey: [PENDING_QUERY_KEY] });
-
-        const sourceLabel = parsed.source === "wechat" ? "微信支付" : "支付宝";
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "检测到一笔消费",
-            body: `${sourceLabel} ¥${parsed.amount.toFixed(2)}，点击确认记账`,
-            data: { type: "auto-bookkeeping" },
-          },
-          trigger: null,
+          qc.invalidateQueries({ queryKey: ["transactions"] });
+          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+          qc.invalidateQueries({ queryKey: ["account-balance"] });
+          qc.invalidateQueries({ queryKey: ["total-assets"] });
+        })
+        .catch((err) => {
+          console.error("[AutoBookkeeping] 处理通知失败:", err);
         });
-      });
       return processingLock.current;
     },
     [qc],
   );
 
-  // 从原生缓冲区拉取通知（解决后台时 EventEmitter 不工作的问题）
   const flushBuffer = useCallback(async () => {
     const mod = getNativeModule();
     if (!mod) return;
@@ -110,17 +160,14 @@ export function useAutoBookkeeping() {
   useEffect(() => {
     if (Platform.OS !== "android") return;
 
-    // App 启动时拉取一次
     flushBuffer();
 
-    // App 从后台回到前台时拉取
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         flushBuffer();
       }
     });
 
-    // 同时监听实时事件（App 在前台时）
     const mod = getNativeModule();
     const eventSub = mod?.onNotificationReceived(async (event) => {
       await processNotification(event);
