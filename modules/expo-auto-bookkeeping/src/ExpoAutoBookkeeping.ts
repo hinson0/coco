@@ -40,6 +40,26 @@ export function onNotificationReceived(
   return emitter.addListener("onNotificationReceived", callback);
 }
 
+export function areNotificationsEnabled(): boolean {
+  if (!NativeModule) return false;
+  return NativeModule.areNotificationsEnabled();
+}
+
+export function isChannelEnabled(): boolean {
+  if (!NativeModule) return false;
+  return NativeModule.isChannelEnabled();
+}
+
+export function openNotificationSettings(): void {
+  if (!NativeModule) return;
+  NativeModule.openNotificationSettings();
+}
+
+export function openAutoStartSettings(): void {
+  if (!NativeModule) return;
+  NativeModule.openAutoStartSettings();
+}
+
 export function getAndClearBuffer(): NotificationEvent[] {
   if (!NativeModule) return [];
   return NativeModule.getAndClearBuffer();
@@ -50,6 +70,8 @@ export interface DebugInfo {
   readonly moduleRegistered: boolean;
   readonly totalNotifications: number;
   readonly watchedNotifications: number;
+  readonly localNotifSent: number;
+  readonly localNotifError: string;
   readonly lastPkg: string;
   readonly lastTitle: string;
   readonly lastText: string;
