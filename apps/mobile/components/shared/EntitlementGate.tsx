@@ -55,7 +55,7 @@ export function EntitlementGate({
               {featureLabel}需要权益才能使用
             </AppText>
             <AppText size="base" color={colors.textLight} style={styles.msg}>
-              观看广告即可免费解锁，或升级 Pro 无限使用
+              升级 Pro 无限使用所有高级功能
             </AppText>
           </View>
 
@@ -65,22 +65,10 @@ export function EntitlementGate({
               activeOpacity={0.8}
               onPress={() => {
                 onClose();
-                router.push("/(tabs)/bills");
-              }}
-            >
-              <AppText size="xl" weight="semibold" color={colors.white}>
-                🎬 去看广告
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.proBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                onClose();
                 router.push("/upgrade-pro");
               }}
             >
-              <AppText size="xl" weight="semibold" color={colors.sage}>
+              <AppText size="xl" weight="semibold" color={colors.white}>
                 👑 升级 Pro
               </AppText>
             </TouchableOpacity>

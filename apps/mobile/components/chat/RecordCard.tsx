@@ -43,7 +43,26 @@ export function RecordCard({
               {categoryName ?? "未知"}
             </AppText>
             {isMajor ? <Badge text="大宗" variant="pro" /> : null}
+            {transaction.source === "notification" ? (
+              <Badge text="自动记" variant="auto" />
+            ) : null}
           </View>
+          {transaction.source === "notification" && transaction.raw_input ? (
+            <View style={styles.sourceTagRow}>
+              <Badge
+                text={
+                  transaction.raw_input.includes("com.tencent.mm")
+                    ? "微信支付"
+                    : transaction.raw_input.includes(
+                          "com.eg.android.AlipayGphone",
+                        )
+                      ? "支付宝"
+                      : "自动"
+                }
+                variant="ai"
+              />
+            </View>
+          ) : null}
           {transaction.note ? (
             <AppText size="base" color={colors.textLighter}>
               {transaction.note}
@@ -133,6 +152,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexWrap: "wrap",
+  },
+  sourceTagRow: {
+    flexDirection: "row",
+    marginTop: 2,
   },
 
   divider: {

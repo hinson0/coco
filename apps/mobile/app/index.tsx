@@ -17,12 +17,11 @@ import {
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatBubble } from "../components/chat/ChatBubble";
+import { PulseDot } from "../components/ui/PulseDot";
 import type { RecordingState } from "../components/chat/ChatInputBar";
 import { ChatInputBar } from "../components/chat/ChatInputBar";
 import { ChatToolBar } from "../components/chat/ChatToolBar";
@@ -101,28 +100,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   created_at: new Date().toISOString(),
 };
 
-// ─── Animated pulse dot ───────────────────────────────────────────────────────
-
-function PulseDot() {
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.4, { duration: 700 }),
-        withTiming(1, { duration: 700 }),
-      ),
-      -1,
-      false,
-    );
-  }, [scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return <Animated.View style={[styles.statusDot, animatedStyle]} />;
-}
+// PulseDot 已提取到 components/ui/PulseDot.tsx
 
 // ─── Date separator ───────────────────────────────────────────────────────────
 
@@ -142,6 +120,9 @@ const LOAD_MORE_SIZE = 20;
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ChatScreen() {
+  const mountTime = useRef(Date.now());
+  const [loadMs, setLoadMs] = useState<number | null>(null);
+
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
   const { pickImage } = useCamera();
@@ -158,9 +139,11 @@ export default function ChatScreen() {
   const clearMutation = useClearChatMessages();
   const { data: categories = [] } = useLocalCategories();
 
-  // 用 ref 保存最新 messages，让 useCallback 不依赖 messages 数组引用
+  // 用 ref 保存最新引用，让 useCallback 不依赖数组引用变化
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
 
   // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
@@ -197,6 +180,13 @@ export default function ChatScreen() {
     paddingBottom:
       keyboardHeight.value > 0 ? keyboardHeight.value + 16 : insets.bottom,
   }));
+
+  // 测量加载耗时
+  useEffect(() => {
+    if (loadMs === null) {
+      setLoadMs(Date.now() - mountTime.current);
+    }
+  }, [messages, loadMs]);
 
   // 是否还有更多历史消息可加载
   const hasMore = messages.length >= loadedLimit;
@@ -268,6 +258,10 @@ export default function ChatScreen() {
       router.push("/manual-entry");
       return;
     }
+    if (tool === "使用帮助") {
+      router.push("/ai-help");
+      return;
+    }
     sendText(tool);
   }
 
@@ -289,7 +283,7 @@ export default function ChatScreen() {
         <View style={styles.bubbleWrapper}>
           <ChatBubble
             message={msg}
-            categories={categories}
+            categories={categoriesRef.current}
             onDelete={handleDelete}
             onEditRecord={
               msg.content_type === "bill_card" ? handleEditRecord : undefined
@@ -312,7 +306,6 @@ export default function ChatScreen() {
       );
     },
     [
-      categories,
       handleDelete,
       handleEditRecord,
       handleResendOcr,
@@ -338,7 +331,9 @@ export default function ChatScreen() {
 
         <View style={styles.titleArea}>
           <PulseDot />
-          <Text style={styles.titleText}>棉花助手</Text>
+          <Text style={styles.titleText}>
+            CoCo AI记账助手{loadMs !== null && __DEV__ ? ` (${loadMs}ms)` : ""}
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -374,6 +369,10 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="handled"
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
         ListFooterComponent={
           isFetchingMessages && loadedLimit > INITIAL_LIMIT ? (
             <View style={styles.loadingMoreContainer}>
