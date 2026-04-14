@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "CoCo AI记账",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAFAF0"
     },
     "ios": {
       "supportsTablet": true,

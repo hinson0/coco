@@ -3,19 +3,17 @@ import { OfflineContext } from "@/lib/offline-context";
 import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import type * as SQLite from "expo-sqlite";
-import { useEffect, useState } from "react";
-import { AppState, Platform, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Platform, View } from "react-native";
+
+// 阻止 splash 自动消失，等 App 完全准备好再手动隐藏
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import { useAutoBookkeeping } from "../hooks/useAutoBookkeeping";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
-import { PendingConfirmOverlay } from "../components/auto-bookkeeping/PendingConfirmOverlay";
-
-let GoogleAds: typeof import("react-native-google-mobile-ads") | null = null;
-try {
-  GoogleAds = require("react-native-google-mobile-ads");
-} catch {}
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -35,12 +33,6 @@ try {
     }),
   });
 } catch {}
-
-// AdMob 开屏广告配置（__DEV__ 时使用测试 ID）
-const APP_OPEN_AD_ID = __DEV__
-  ? (GoogleAds?.TestIds.APP_OPEN ?? "")
-  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
-const SPLASH_MIN_INTERVAL_MS = 30_000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,35 +77,6 @@ function AppContent() {
     }
   }, [db, user?.id]);
 
-  // TODO: 暂时跳过登录，测试广告功能
-  // useEffect(() => {
-  //   if (!loading && !isAuthenticated) router.replace("/(auth)/login");
-  // }, [isAuthenticated, loading]);
-
-  // === AdMob 开屏广告（已暂停，保留代码以备恢复） ===
-  // const lastSplashTime = useRef(0);
-  // const tryShowSplash = useCallback(() => {
-  //   if (!GoogleAds) return;
-  //   const now = Date.now();
-  //   if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
-  //   lastSplashTime.current = now;
-  //   const appOpenAd = GoogleAds.AppOpenAd.createForAdRequest(APP_OPEN_AD_ID);
-  //   function cleanupAll() { unsubLoaded(); unsubError(); unsubClosed(); }
-  //   const unsubLoaded = appOpenAd.addAdEventListener(GoogleAds.AdEventType.LOADED, () => { cleanupAll(); appOpenAd.show(); });
-  //   const unsubError = appOpenAd.addAdEventListener(GoogleAds.AdEventType.ERROR, () => { cleanupAll(); });
-  //   const unsubClosed = appOpenAd.addAdEventListener(GoogleAds.AdEventType.CLOSED, () => { cleanupAll(); });
-  //   appOpenAd.load();
-  // }, []);
-  // const wasBackgroundRef = useRef(false);
-  // useEffect(() => {
-  //   tryShowSplash();
-  //   const subscription = AppState.addEventListener("change", (nextState) => {
-  //     if (nextState === "background") { wasBackgroundRef.current = true; }
-  //     else if (nextState === "active" && wasBackgroundRef.current) { wasBackgroundRef.current = false; tryShowSplash(); }
-  //   });
-  //   return () => subscription.remove();
-  // }, [tryShowSplash]);
-
   // 每 30s 静默 push（仅 App 前台有效）
   useEffect(() => {
     if (!db || !user?.id) return;
@@ -123,30 +86,27 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [db, user?.id]);
 
-  if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#F5F5F5",
-        }}
-      >
-        <Text style={{ color: "#2D9B83", fontSize: 28, fontWeight: "800" }}>
-          CoCo
-        </Text>
-      </View>
-    );
-  }
+  // App 未准备好时，return null 让原生 splash 持续显示
+  const isReady = !loading && db !== null;
+
+  const onLayoutRootView = useCallback(async () => {
+    if (isReady) {
+      // 延迟 1 帧再隐藏，防止掉帧
+      await new Promise(requestAnimationFrame);
+      await SplashScreen.hideAsync();
+    }
+  }, [isReady]);
+
+  if (!isReady) return null;
 
   return (
-    <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
-      <EntitlementDecayRunner />
-      <AutoBookkeepingRunner />
-      <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
-      <PendingConfirmOverlay />
-    </OfflineContext.Provider>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <OfflineContext.Provider value={{ db, userId: user?.id ?? null }}>
+        <EntitlementDecayRunner />
+        <AutoBookkeepingRunner />
+        <Stack screenOptions={{ headerShown: false, gestureEnabled: false }} />
+      </OfflineContext.Provider>
+    </View>
   );
 }
 
