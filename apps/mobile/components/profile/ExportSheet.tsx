@@ -133,7 +133,7 @@ export function ExportSheet({ visible, onClose }: ExportSheetProps) {
       const csv = buildCsv(rows);
       const now = new Date();
       const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-      const filePath = `${FileSystem.cacheDirectory}棉花记_${timestamp}.csv`;
+      const filePath = `${FileSystem.cacheDirectory}CoCo_${timestamp}.csv`;
 
       await FileSystem.writeAsStringAsync(filePath, csv, {
         encoding: FileSystem.EncodingType.UTF8,

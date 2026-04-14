@@ -38,6 +38,7 @@ export function TransactionItem({
     transaction.source === "text" ||
     transaction.source === "asr" ||
     transaction.source === "ocr";
+  const isAutoRecord = transaction.source === "notification";
   const isMajor = !isIncome && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
   return (
@@ -57,6 +58,20 @@ export function TransactionItem({
             {time} · {categoryName}
           </AppText>
           {isAi ? <Badge text="AI" variant="ai" /> : null}
+          {isAutoRecord ? (
+            <Badge
+              text={
+                transaction.raw_input?.includes("com.tencent.mm")
+                  ? "微信·自动记"
+                  : transaction.raw_input?.includes(
+                        "com.eg.android.AlipayGphone",
+                      )
+                    ? "支付宝·自动记"
+                    : "自动记"
+              }
+              variant="auto"
+            />
+          ) : null}
           {isMajor ? <Badge text="大宗" variant="pro" /> : null}
         </View>
       </View>

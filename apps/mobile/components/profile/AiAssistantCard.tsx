@@ -19,7 +19,7 @@ export function AiAssistantCard() {
           </View>
           <View style={styles.info}>
             <AppText size="xl" weight="bold" color={colors.sage}>
-              棉花助手
+              CoCo 助手
             </AppText>
             <AppText size="base" color={colors.textLight} style={styles.desc}>
               AI 智能记账，随时随地

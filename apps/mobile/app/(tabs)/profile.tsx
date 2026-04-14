@@ -98,7 +98,7 @@ export default function ProfileScreen() {
   }, []);
 
   const userName =
-    profile?.nickname ?? user?.email?.split("@")[0] ?? "棉花用户";
+    profile?.nickname ?? user?.email?.split("@")[0] ?? "CoCo 用户";
 
   const handleSignOut = () => {
     Alert.alert("退出登录", "确定要退出吗？", [
@@ -229,13 +229,6 @@ export default function ProfileScreen() {
         />
         <View style={styles.separator} />
         <MenuItem
-          icon="🎬"
-          iconBg={colors.honeyPale}
-          title="广告收益"
-          onPress={() => router.push("/ad-rewards")}
-        />
-        <View style={styles.separator} />
-        <MenuItem
           icon="💬"
           iconBg={colors.creamDark}
           title="意见反馈"
@@ -245,7 +238,7 @@ export default function ProfileScreen() {
         <MenuItem
           icon="ℹ️"
           iconBg={colors.creamDark}
-          title="关于棉花记"
+          title="关于 CoCo"
           onPress={() => router.push("/about")}
         />
       </Card>
