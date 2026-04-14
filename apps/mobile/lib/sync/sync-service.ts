@@ -62,9 +62,14 @@ async function getChangedRows(
 /** 正在执行 push 的互斥锁，防止定时 push 和即时 push 并发 */
 let pushInFlight: Promise<void> | null = null;
 
+/**
+ * 推送本地变更到后端。
+ * @param full 全量推送（忽略水位线，重传所有数据）。用于修复历史同步失败。
+ */
 export async function push(
   db: SQLite.SQLiteDatabase,
   userId: string,
+  { full = false } = {},
 ): Promise<void> {
   // 互斥：如果已有 push 在执行，等它结束再开始新的
   if (pushInFlight) {
@@ -77,7 +82,7 @@ export async function push(
   });
 
   try {
-    await pushInternal(db, userId);
+    await pushInternal(db, userId, full);
   } finally {
     pushInFlight = null;
     resolve!();
@@ -87,14 +92,17 @@ export async function push(
 async function pushInternal(
   db: SQLite.SQLiteDatabase,
   userId: string,
+  full = false,
 ): Promise<void> {
   const now = new Date().toISOString();
   const payload: Record<string, readonly Row[]> = {};
   let totalRows = 0;
 
   for (const table of SYNC_TABLES) {
-    const { last_push_at } = await getWatermark(db, table);
-    const rows = await getChangedRows(db, userId, table, last_push_at);
+    const lastPushAt = full
+      ? null
+      : (await getWatermark(db, table)).last_push_at;
+    const rows = await getChangedRows(db, userId, table, lastPushAt);
     payload[table] = rows;
     totalRows += rows.length;
   }

@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends
@@ -24,9 +25,21 @@ Db = Annotated[AsyncSession, Depends(get_db)]
 async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
     """接收客户端批量上传，LWW upsert 到 PostgreSQL"""
 
-    logger.debug(f"push body keys:{body.model_dump().keys()}")
+    # get_current_user 返回 str，而 Pydantic 模型中 user_id 是 UUID
+    # 必须统一类型，否则 UUID("xxx") == "xxx" 永远为 False，导致所有记录被静默丢弃
+    uid = UUID(user_id)
 
-    profiles = [r.model_dump() for r in body.user_profiles if r.id == user_id]
+    received = {
+        "transactions": len(body.transactions),
+        "categories": len(body.categories),
+        "accounts": len(body.accounts),
+        "budgets": len(body.budgets),
+        "chat_messages": len(body.chat_messages),
+        "user_profiles": len(body.user_profiles),
+    }
+    logger.info("sync_push 收到", user_id=user_id, received=received)
+
+    profiles = [r.model_dump() for r in body.user_profiles if r.id == uid]
     if profiles:
         await db.execute(
             text(
@@ -49,7 +62,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
     categories = [
         r.model_dump()
         for r in body.categories
-        if r.user_id == user_id or r.user_id is None
+        if r.user_id == uid or r.user_id is None
     ]
     if categories:
         await db.execute(
@@ -67,7 +80,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             categories,
         )
 
-    accounts = [r.model_dump() for r in body.accounts if r.user_id == user_id]
+    accounts = [r.model_dump() for r in body.accounts if r.user_id == uid]
     if accounts:
         await db.execute(
             text(
@@ -84,7 +97,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             accounts,
         )
 
-    budgets = [r.model_dump() for r in body.budgets if r.user_id == user_id]
+    budgets = [r.model_dump() for r in body.budgets if r.user_id == uid]
     if budgets:
         await db.execute(
             text(
@@ -101,7 +114,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             budgets,
         )
 
-    txns = [r.model_dump() for r in body.transactions if r.user_id == user_id]
+    txns = [r.model_dump() for r in body.transactions if r.user_id == uid]
     if txns:
         await db.execute(
             text(
@@ -124,7 +137,7 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             txns,
         )
 
-    msgs = [r.model_dump() for r in body.chat_messages if r.user_id == user_id]
+    msgs = [r.model_dump() for r in body.chat_messages if r.user_id == uid]
     if msgs:
         await db.execute(
             text(
@@ -144,6 +157,16 @@ async def sync_push(body: SyncPushRequest, user_id: UserId, db: Db) -> dict:
             ),
             msgs,
         )
+
+    written = {
+        "profiles": len(profiles),
+        "categories": len(categories),
+        "accounts": len(accounts),
+        "budgets": len(budgets),
+        "transactions": len(txns),
+        "chat_messages": len(msgs),
+    }
+    logger.info("sync_push 写入", user_id=user_id, written=written)
 
     await db.commit()
     return {"ok": True}
