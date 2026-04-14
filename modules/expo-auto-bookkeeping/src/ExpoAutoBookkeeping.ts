@@ -1,4 +1,6 @@
+// @ts-expect-error TS2307: types resolved by Expo/Metro bundler, not tsc
 import { Platform } from "react-native";
+// @ts-expect-error TS2307: types resolved by Expo/Metro bundler, not tsc
 import { requireNativeModule, EventEmitter } from "expo-modules-core";
 import type { NotificationEvent, ServiceStatus } from "./ExpoAutoBookkeeping.types";
 
@@ -84,6 +86,8 @@ export function getDebugInfo(): DebugInfo {
       moduleRegistered: false,
       totalNotifications: 0,
       watchedNotifications: 0,
+      localNotifSent: 0,
+      localNotifError: "",
       lastPkg: "",
       lastTitle: "",
       lastText: "",
