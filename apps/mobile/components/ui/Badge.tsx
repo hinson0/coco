@@ -2,12 +2,13 @@ import { View, type ViewStyle } from "react-native";
 import { AppText } from "./AppText";
 import { colors } from "../../constants/theme";
 
-export type BadgeVariant = "ai" | "new" | "pro";
+export type BadgeVariant = "ai" | "new" | "pro" | "auto";
 
 const variantStyles: Record<BadgeVariant, { bg: string; text: string }> = {
   ai: { bg: colors.sage, text: colors.white },
   new: { bg: colors.coralPale, text: colors.coral },
   pro: { bg: colors.honeyPale, text: colors.honey },
+  auto: { bg: colors.sagePale, text: colors.sage },
 };
 
 interface BadgeProps {
