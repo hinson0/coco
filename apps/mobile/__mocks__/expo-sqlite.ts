@@ -36,6 +36,20 @@ class MockSQLiteDatabase {
     return stmt.all(...(params as unknown[])) as T[];
   }
 
+  async withExclusiveTransactionAsync<T>(
+    fn: (txn: MockSQLiteDatabase) => Promise<T>,
+  ): Promise<T> {
+    this.db.exec("BEGIN EXCLUSIVE");
+    try {
+      const result = await fn(this);
+      this.db.exec("COMMIT");
+      return result;
+    } catch (e) {
+      this.db.exec("ROLLBACK");
+      throw e;
+    }
+  }
+
   async closeAsync(): Promise<void> {
     this.db.close();
   }

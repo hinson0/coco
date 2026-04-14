@@ -47,6 +47,15 @@ describe("push()", () => {
 
   it("updates last_push_at watermark after success", async () => {
     const db = await makeDb();
+    // 需要有数据才会触发 push（空 payload 会跳过）
+    await db.runAsync(
+      `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T12:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO transactions
+        (id, user_id, category_id, amount, type, note, occurred_at, source, created_at, updated_at)
+       VALUES ('tx1', 'u1', 'cat1', 100.0, 'expense', '午饭', '2026-04-09T12:00:00.000Z', 'manual', '2026-04-09T12:00:00.000Z', '2026-04-09T12:00:00.000Z')`,
+    );
 
     await push(db, "u1");
 
@@ -56,8 +65,24 @@ describe("push()", () => {
 
   it("does not send records older than last_push_at", async () => {
     const db = await makeDb();
+    // 设置所有表的水位线在记录之后
     await db.runAsync(
       `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('transactions', '2026-04-09T13:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('categories', '2026-04-09T13:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('accounts', '2026-04-09T13:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('budgets', '2026-04-09T13:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('chat_messages', '2026-04-09T13:00:00.000Z')`,
+    );
+    await db.runAsync(
+      `INSERT INTO sync_watermarks (table_name, last_push_at) VALUES ('user_profiles', '2026-04-09T13:00:00.000Z')`,
     );
     await db.runAsync(
       `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T10:00:00.000Z')`,
@@ -70,23 +95,16 @@ describe("push()", () => {
 
     await push(db, "u1");
 
-    const callBody = JSON.parse(
-      (mockApiFetch.mock.calls[0][1] as RequestInit).body as string,
-    );
-    expect(callBody.transactions).toHaveLength(0);
+    // 所有记录都在水位线之前 → 空 payload → 跳过网络请求
+    expect(mockApiFetch).not.toHaveBeenCalled();
   });
 
-  it("sends empty arrays when no data exists", async () => {
+  it("skips network request when no data exists", async () => {
     const db = await makeDb();
 
     await push(db, "u1");
 
-    expect(mockApiFetch).toHaveBeenCalledTimes(1);
-    const callBody = JSON.parse(
-      (mockApiFetch.mock.calls[0][1] as RequestInit).body as string,
-    );
-    expect(callBody.transactions).toHaveLength(0);
-    expect(callBody.categories).toHaveLength(0);
+    expect(mockApiFetch).not.toHaveBeenCalled();
   });
 });
 

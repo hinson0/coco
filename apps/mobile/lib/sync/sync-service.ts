@@ -1,11 +1,6 @@
 import { apiFetch } from "@/lib/api";
 import type * as SQLite from "expo-sqlite";
-import {
-  getWatermark,
-  setLastPullAt,
-  setLastPushAt,
-  type SyncTable,
-} from "./watermarks";
+import { getWatermark, setLastPullAt, type SyncTable } from "./watermarks";
 
 type Row = Record<string, SQLite.SQLiteBindValue>;
 
@@ -64,26 +59,77 @@ async function getChangedRows(
   );
 }
 
+/** 正在执行 push 的互斥锁，防止定时 push 和即时 push 并发 */
+let pushInFlight: Promise<void> | null = null;
+
+/**
+ * 推送本地变更到后端。
+ * @param full 全量推送（忽略水位线，重传所有数据）。用于修复历史同步失败。
+ */
 export async function push(
   db: SQLite.SQLiteDatabase,
   userId: string,
+  { full = false } = {},
+): Promise<void> {
+  // 互斥：如果已有 push 在执行，等它结束再开始新的
+  if (pushInFlight) {
+    await pushInFlight;
+  }
+
+  let resolve: () => void;
+  pushInFlight = new Promise<void>((r) => {
+    resolve = r;
+  });
+
+  try {
+    await pushInternal(db, userId, full);
+  } finally {
+    pushInFlight = null;
+    resolve!();
+  }
+}
+
+async function pushInternal(
+  db: SQLite.SQLiteDatabase,
+  userId: string,
+  full = false,
 ): Promise<void> {
   const now = new Date().toISOString();
   const payload: Record<string, readonly Row[]> = {};
+  let totalRows = 0;
 
   for (const table of SYNC_TABLES) {
-    const { last_push_at } = await getWatermark(db, table);
-    payload[table] = await getChangedRows(db, userId, table, last_push_at);
+    const lastPushAt = full
+      ? null
+      : (await getWatermark(db, table)).last_push_at;
+    const rows = await getChangedRows(db, userId, table, lastPushAt);
+    payload[table] = rows;
+    totalRows += rows.length;
   }
+
+  if (totalRows === 0) return; // 没有变更，跳过网络请求
+
+  console.info(`[Sync] push: ${totalRows} 条记录待上传`);
 
   await apiFetch<{ ok: boolean }>("/sync/push", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 
-  for (const table of SYNC_TABLES) {
-    await setLastPushAt(db, table, now);
-  }
+  // 水位线原子更新：用事务保证全部成功或全部不更新
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    for (const table of SYNC_TABLES) {
+      await txn.runAsync(
+        `INSERT INTO sync_watermarks (table_name, last_push_at)
+         VALUES (?, ?)
+         ON CONFLICT(table_name) DO UPDATE SET last_push_at = excluded.last_push_at`,
+        table,
+        now,
+      );
+    }
+  });
+
+  console.info(`[Sync] push 完成，水位线更新至 ${now}`);
 }
 
 // ── Pull: 远端数据 LWW 合并到本地 ──
@@ -277,4 +323,18 @@ export async function pull(
   for (const table of SYNC_TABLES) {
     await setLastPullAt(db, table, now);
   }
+}
+
+/** 查询所有表中尚未 push 的记录总数 */
+export async function getPendingCount(
+  db: SQLite.SQLiteDatabase,
+  userId: string,
+): Promise<number> {
+  let total = 0;
+  for (const table of SYNC_TABLES) {
+    const { last_push_at } = await getWatermark(db, table);
+    const rows = await getChangedRows(db, userId, table, last_push_at);
+    total += rows.length;
+  }
+  return total;
 }
