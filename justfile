@@ -71,13 +71,14 @@ be-start: be-env be-sync
 
 # ── CI/CD ─────────────────────────────────────
 
-cicd-frontend:
+fe-cicd:
     pnpm --filter {{ mobile }} lint
     pnpm --filter {{ mobile }} format:check
     pnpm --filter {{ mobile }} typecheck
     pnpm --filter {{ shared }} lint
     pnpm --filter {{ mobile }} test
 
+be-cicd:
     #!/usr/bin/env bash
     cd {{ backend }} && \
     uv run ruff check . && \
@@ -90,4 +91,4 @@ cicd-frontend:
     JWT_SECRET=test \
     uv run pytest -x -q
 
-cicd: cicd-frontend cicd-backend
+cicd: be-cicd fe-cicd
