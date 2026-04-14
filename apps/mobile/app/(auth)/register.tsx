@@ -60,7 +60,7 @@ export default function RegisterScreen() {
             🌿
           </AppText>
           <AppText size="6xl" weight="bold" style={styles.appName}>
-            棉花记
+            CoCo
           </AppText>
           <AppText size="lg" color={colors.textLighter} style={styles.tagline}>
             AI 智能记账助手

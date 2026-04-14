@@ -67,7 +67,7 @@ export default function AboutScreen() {
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <AppText size="2xl" weight="semibold">
-          关于棉花记
+          关于CoCo
         </AppText>
         <View style={{ width: 36 }} />
       </View>
@@ -84,7 +84,7 @@ export default function AboutScreen() {
         <View style={styles.logoSection}>
           <AppText style={{ fontSize: 60 }}>🍃</AppText>
           <AppText size="4xl" weight="bold" color={colors.text}>
-            棉花记
+            CoCo
           </AppText>
           <AppText size="base" color={colors.textLighter}>
             v{version}
@@ -180,7 +180,7 @@ export default function AboutScreen() {
             color={colors.textLighter}
             style={{ marginTop: 4 }}
           >
-            © 2025 棉花记
+            © 2025 CoCo
           </AppText>
         </View>
       </ScrollView>

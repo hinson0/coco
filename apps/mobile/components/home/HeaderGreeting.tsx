@@ -36,8 +36,7 @@ function getChineseDate(): string {
   const day = cnDay(now.getDate());
   const weekday = CN_WEEKDAY[now.getDay()];
   // Fixed weather for now — could be dynamic from API
-  const weather = WEATHER_EMOJI[0];
-  return `${month}月${day}日 ${weekday} ${weather}`;
+  return `${month}月${day}日 ${weekday}`;
 }
 
 export function HeaderGreeting() {
@@ -55,7 +54,7 @@ export function HeaderGreeting() {
           color={colors.text}
           style={styles.title}
         >
-          棉花记
+          CoCo记账
         </AppText>
       </View>
       <LinearGradient

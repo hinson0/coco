@@ -82,7 +82,7 @@ export function AiBubbleEntry() {
             </View>
             <View>
               <AppText size="lg" weight="bold" color={colors.sage}>
-                棉花助手
+                CoCo 助手
               </AppText>
               <AppText size="base" color={colors.textLighter}>
                 随时记账，随时问
