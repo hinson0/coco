@@ -88,7 +88,7 @@ function AppContent() {
       timer = setTimeout(async () => {
         if (cancelled) return;
         try {
-          await push(db, user!.id);
+          await push(db!, user!.id);
           delay = 30_000; // 成功 → 恢复基准间隔
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
