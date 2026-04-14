@@ -68,6 +68,7 @@ export function useAutoBookkeeping() {
               amount: parsed.amount,
               source: parsed.source,
               timestamp: event.timestamp,
+              rawText: parsed.rawText,
             },
             recentItems,
           )

@@ -60,15 +60,25 @@ export default function AutoBookkeepingScreen() {
       return;
     }
     const info = AutoBookkeeping.getDebugInfo();
+    // 拉取缓冲区（注意：会清空缓冲区）
+    const buffer = AutoBookkeeping.getAndClearBuffer();
     Alert.alert(
       "NLS 调试信息",
       `服务连接: ${info.serviceConnected}\n` +
         `模块注册: ${info.moduleRegistered}\n` +
         `总通知数: ${info.totalNotifications}\n` +
         `微信/支付宝通知: ${info.watchedNotifications}\n` +
-        `最后包名: ${info.lastPkg}\n` +
-        `最后标题: ${info.lastTitle}\n` +
-        `最后文本: ${info.lastText}`,
+        `缓冲区条数: ${buffer.length}\n` +
+        `---最后通知---\n` +
+        `包名: ${info.lastPkg}\n` +
+        `标题: ${info.lastTitle}\n` +
+        `文本: ${info.lastText}\n` +
+        (buffer.length > 0
+          ? `---缓冲区第1条---\n` +
+            `包名: ${buffer[0].packageName}\n` +
+            `标题: ${buffer[0].title}\n` +
+            `文本: ${buffer[0].text}`
+          : ""),
     );
   };
 

@@ -69,4 +69,52 @@ describe("isDuplicate", () => {
     expect(isDuplicate(baseItem, existing, 3000)).toBe(false);
     expect(isDuplicate(baseItem, existing, 6000)).toBe(true);
   });
+
+  it("同金额不同 rawText = 非重复（不同交易）", () => {
+    const existing: DedupItem[] = [
+      {
+        amount: 25.5,
+        source: "wechat",
+        timestamp: 999000,
+        rawText: "微信支付-商户A",
+      },
+    ];
+    const incoming: DedupItem = {
+      amount: 25.5,
+      source: "wechat",
+      timestamp: 999500,
+      rawText: "微信支付-商户B",
+    };
+    expect(isDuplicate(incoming, existing)).toBe(false);
+  });
+
+  it("同金额同 rawText 在窗口内 = 重复", () => {
+    const existing: DedupItem[] = [
+      {
+        amount: 25.5,
+        source: "wechat",
+        timestamp: 999000,
+        rawText: "微信支付-商户A",
+      },
+    ];
+    const incoming: DedupItem = {
+      amount: 25.5,
+      source: "wechat",
+      timestamp: 999500,
+      rawText: "微信支付-商户A",
+    };
+    expect(isDuplicate(incoming, existing)).toBe(true);
+  });
+
+  it("rawText 都为 undefined = 重复（兼容旧数据）", () => {
+    const existing: DedupItem[] = [
+      { amount: 25.5, source: "wechat", timestamp: 999000 },
+    ];
+    const incoming: DedupItem = {
+      amount: 25.5,
+      source: "wechat",
+      timestamp: 999500,
+    };
+    expect(isDuplicate(incoming, existing)).toBe(true);
+  });
 });
