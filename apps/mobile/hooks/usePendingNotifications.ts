@@ -8,13 +8,13 @@ import {
 } from "@/lib/auto-bookkeeping/pending-queue";
 import type { PendingNotification } from "@/lib/auto-bookkeeping/pending-queue";
 
-const QUERY_KEY = "pending-notifications";
+export const PENDING_QUERY_KEY = "pending-notifications";
 
 export function usePendingNotifications() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: [QUERY_KEY, userId],
+    queryKey: [PENDING_QUERY_KEY, userId],
     queryFn: async (): Promise<readonly PendingNotification[]> => {
       if (!db || !userId) return [];
       return getPendingList(db, userId);
@@ -28,7 +28,7 @@ export function usePendingCount() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: [QUERY_KEY, "count", userId],
+    queryKey: [PENDING_QUERY_KEY, "count", userId],
     queryFn: async (): Promise<number> => {
       if (!db || !userId) return 0;
       return getPendingCount(db, userId);
@@ -54,7 +54,7 @@ export function useConfirmPending() {
       await confirmPending(db, pendingId, transactionId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [QUERY_KEY] });
+      qc.invalidateQueries({ queryKey: [PENDING_QUERY_KEY] });
     },
   });
 }
@@ -69,7 +69,7 @@ export function useDismissPending() {
       await dismissPending(db, pendingId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [QUERY_KEY] });
+      qc.invalidateQueries({ queryKey: [PENDING_QUERY_KEY] });
     },
   });
 }
