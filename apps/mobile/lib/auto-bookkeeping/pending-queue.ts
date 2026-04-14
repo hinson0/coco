@@ -82,14 +82,22 @@ export async function getRecentForDedup(
   userId: string,
   referenceTimestamp?: number,
   windowMs: number = 10_000,
-): Promise<readonly { amount: number; source: string; timestamp: number }[]> {
+): Promise<
+  readonly {
+    amount: number;
+    source: string;
+    timestamp: number;
+    rawText: string | null;
+  }[]
+> {
   const cutoff = (referenceTimestamp ?? Date.now()) - windowMs;
   const rows = await db.getAllAsync<{
     amount: number;
     source: string;
     notification_timestamp: number;
+    raw_text: string | null;
   }>(
-    `SELECT amount, source, notification_timestamp FROM pending_notifications
+    `SELECT amount, source, notification_timestamp, raw_text FROM pending_notifications
      WHERE user_id = ? AND notification_timestamp > ?
      ORDER BY notification_timestamp DESC`,
     userId,
@@ -99,6 +107,7 @@ export async function getRecentForDedup(
     amount: r.amount,
     source: r.source,
     timestamp: r.notification_timestamp,
+    rawText: r.raw_text,
   }));
 }
 

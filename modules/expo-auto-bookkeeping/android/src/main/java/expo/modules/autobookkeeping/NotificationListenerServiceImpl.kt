@@ -74,19 +74,7 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
 
     watchedNotificationCount++
 
-    // 用 packageName:notificationId 去重（微信更新通知时 id 不变）
-    val dedupKey = "$pkg:${sbn.id}"
-    val now = System.currentTimeMillis()
-    synchronized(processedKeys) {
-      // 清理过期 key
-      processedKeys.entries.removeAll { now - it.value > DEDUP_WINDOW_MS }
-      if (processedKeys.containsKey(dedupKey)) {
-        Log.d(TAG, "Skipped duplicate notification: $dedupKey")
-        return
-      }
-      processedKeys[dedupKey] = now
-    }
-
+    // 先提取通知内容（去重需要内容哈希）
     val extras = sbn.notification?.extras ?: return
     val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
     val text = (
@@ -103,6 +91,21 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
     if (text.isBlank()) {
       Log.d(TAG, "Skipped: text is blank")
       return
+    }
+
+    // 用 pkg:id:contentHash 去重
+    // 同一通知重复推送（内容不变）→ 去重 ✓
+    // 微信复用通知 ID 但内容更新为新交易 → 放行 ✓
+    val contentHash = (title + text).hashCode()
+    val dedupKey = "$pkg:${sbn.id}:$contentHash"
+    val now = System.currentTimeMillis()
+    synchronized(processedKeys) {
+      processedKeys.entries.removeAll { now - it.value > DEDUP_WINDOW_MS }
+      if (processedKeys.containsKey(dedupKey)) {
+        Log.d(TAG, "Skipped duplicate notification: $dedupKey")
+        return
+      }
+      processedKeys[dedupKey] = now
     }
 
     val data = NotificationData(
