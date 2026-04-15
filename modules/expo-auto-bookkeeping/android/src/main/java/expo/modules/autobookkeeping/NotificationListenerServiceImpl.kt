@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -124,8 +126,10 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
       timestamp = sbn.postTime
     )
 
-    // 立即发送本地通知（前台后台都发，确保用户看到）
-    showAutoBookkeepingNotification(pkg, text)
+    // 延迟 5 秒发送本地通知，避免和微信/支付宝的原始支付通知同时弹出
+    Handler(Looper.getMainLooper()).postDelayed({
+      showAutoBookkeepingNotification(pkg, text)
+    }, 5_000L)
 
     // 尝试 EventEmitter（App 前台时 JS 可实时接收并入账）
     val module = moduleRef?.get()
