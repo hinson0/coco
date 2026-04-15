@@ -214,7 +214,7 @@ describe("parseNotification", () => {
         parseNotification(
           "com.tencent.mm",
           "微信",
-          "https://openrouter.ai/models?max_price=0&fmt=cards&input_modalities=text"
+          "https://openrouter.ai/models?max_price=0&fmt=cards&input_modalities=text",
         ),
       ).toBeNull();
     });
@@ -224,7 +224,7 @@ describe("parseNotification", () => {
         parseNotification(
           "com.tencent.mm",
           "微信",
-          "openrouter 这个网站有很多贵的 LLM API"
+          "openrouter 这个网站有很多贵的 LLM API",
         ),
       ).toBeNull();
     });

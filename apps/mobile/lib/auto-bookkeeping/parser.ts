@@ -55,7 +55,7 @@ export function parseNotification(
   } else if (isExpense) {
     type = "expense";
   } else {
-    return null;  // 无明确的收支方向，不记账
+    return null; // 无明确的收支方向，不记账
   }
 
   return { amount, source, type, rawTitle: title, rawText: text };
