@@ -57,6 +57,25 @@ describe("schema migration: updated_at + sync_watermarks", () => {
   });
 });
 
+describe("schema migration: chat_messages 复合部分索引", () => {
+  it("idx_chat_messages_user_active 覆盖 user_id/created_at 且为部分索引", async () => {
+    const db = await openDatabaseAsync(":memory:");
+    await createTables(db);
+
+    const indexes = await db.getAllAsync<{ name: string; sql: string | null }>(
+      "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='chat_messages'",
+    );
+    const sql = indexes
+      .find((i) => i.name === "idx_chat_messages_user_active")
+      ?.sql?.toLowerCase();
+
+    expect(sql).toBeDefined();
+    expect(sql).toContain("user_id");
+    expect(sql).toContain("created_at");
+    expect(sql).toContain("where deleted_at is null");
+  });
+});
+
 describe("schema migration: existing data gets updated_at default", () => {
   it("transactions existing rows get updated_at = created_at", async () => {
     const db = await openDatabaseAsync(":memory:");

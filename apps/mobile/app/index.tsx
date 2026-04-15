@@ -37,6 +37,7 @@ import {
   useDeleteChatMessage,
   useLocalChatMessages,
 } from "../hooks/useLocalChatMessages";
+import { CHAT_INITIAL_LIMIT } from "../lib/db/queries";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,22 +65,32 @@ function buildListItems(
   isLoading: boolean,
 ): ListItem[] {
   const items: ListItem[] = [];
-  let lastDateLabel = "";
-
-  for (const msg of messages) {
-    const label = toDateLabel(msg.created_at);
-    if (label !== lastDateLabel) {
-      items.push({ type: "separator", id: `sep-${msg.id}`, label });
-      lastDateLabel = label;
-    }
-    items.push({ type: "message", data: msg });
-  }
 
   if (isLoading) {
     items.push({ type: "typing", id: "typing-indicator" });
   }
 
-  return items.reverse();
+  let prevLabel = "";
+
+  for (const msg of messages) {
+    const label = toDateLabel(msg.created_at);
+    // inverted FlatList 中 push 在消息之后 = 视觉上方（日期标签在该组上方）
+    if (prevLabel !== "" && label !== prevLabel) {
+      items.push({
+        type: "separator",
+        id: `sep-${prevLabel}`,
+        label: prevLabel,
+      });
+    }
+    items.push({ type: "message", data: msg });
+    prevLabel = label;
+  }
+
+  if (prevLabel !== "") {
+    items.push({ type: "separator", id: `sep-${prevLabel}`, label: prevLabel });
+  }
+
+  return items;
 }
 
 function itemKey(item: ListItem): string {
@@ -114,7 +125,6 @@ function DateSeparator({ label }: { label: string }) {
 
 // ─── Pagination constants ─────────────────────────────────────────────────────
 
-const INITIAL_LIMIT = 30;
 const LOAD_MORE_SIZE = 20;
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
@@ -132,7 +142,7 @@ export default function ChatScreen() {
     setFailedOcrIds((prev) => new Set(prev).add(imageMessageId));
   }
 
-  const [loadedLimit, setLoadedLimit] = useState(INITIAL_LIMIT);
+  const [loadedLimit, setLoadedLimit] = useState(CHAT_INITIAL_LIMIT);
   const { data: messages = [], isFetching: isFetchingMessages } =
     useLocalChatMessages(loadedLimit);
   const deleteMutation = useDeleteChatMessage();
@@ -374,7 +384,7 @@ export default function ChatScreen() {
         windowSize={7}
         removeClippedSubviews={Platform.OS === "android"}
         ListFooterComponent={
-          isFetchingMessages && loadedLimit > INITIAL_LIMIT ? (
+          isFetchingMessages && loadedLimit > CHAT_INITIAL_LIMIT ? (
             <View style={styles.loadingMoreContainer}>
               <ActivityIndicator size="small" color={colors.textLighter} />
             </View>
