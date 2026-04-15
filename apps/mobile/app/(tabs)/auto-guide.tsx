@@ -13,29 +13,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../components/ui/AppText";
 import { Card } from "../../components/ui/Card";
 import { PulseDot } from "../../components/ui/PulseDot";
-import { colors, radii, spacing } from "../../constants/theme";
-import {
-  getDeviceBrand,
-  getBrandGuideSteps,
-} from "../../lib/auto-bookkeeping/brand-detection";
+import { colors, radii } from "../../constants/theme";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifListener1 = require("../../assets/guides/notif-listener-1.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifListener2 = require("../../assets/guides/notif-listener-2.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifMain = require("../../assets/guides/notif-main.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifChannel1 = require("../../assets/guides/notif-channel-1.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifChannel2 = require("../../assets/guides/notif-channel-2.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideNotifChannel3 = require("../../assets/guides/notif-channel-3.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideAutoStart = require("../../assets/guides/app-autostart.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideBattery = require("../../assets/guides/battery-unlimited.png");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const guideDemoResult = require("../../assets/guides/demo-result.png");
 
 let AutoBookkeeping:
@@ -155,8 +142,6 @@ export default function AutoBookkeepingScreen() {
   }, [checkAll]);
 
   const allDone = listenerGranted && notifEnabled && channelEnabled;
-  const brand = getDeviceBrand();
-  const guideSteps = getBrandGuideSteps(brand);
 
   if (Platform.OS !== "android") {
     return (

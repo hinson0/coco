@@ -38,8 +38,8 @@ export default function RegisterScreen() {
       Alert.alert("注册成功", "请检查邮箱完成验证", [
         { text: "好的", onPress: () => router.replace("/(auth)/login") },
       ]);
-    } catch (e: any) {
-      Alert.alert("注册失败", e.message);
+    } catch (e: unknown) {
+      Alert.alert("注册失败", e instanceof Error ? e.message : "未知错误");
     } finally {
       setLoading(false);
     }

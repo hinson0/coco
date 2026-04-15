@@ -1,5 +1,10 @@
 import { savingRule } from "../savingRule";
-import type { InsightContext, InsightItem } from "../types";
+import type {
+  InsightContext,
+  InsightItem,
+  SavingMeta,
+  InsightMeta,
+} from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -27,7 +32,7 @@ describe("savingRule", () => {
         emoji: "👍",
         title: "t",
         desc: "d",
-        meta: { score: 80 },
+        meta: { score: 80 } as InsightMeta,
       },
     ];
     expect(savingRule(makeCtx(), prior)).toBeNull();
@@ -72,7 +77,7 @@ describe("savingRule", () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe("saving");
     expect(result!.priority).toBe(7);
-    expect(result!.meta!.totalSaving).toBeGreaterThanOrEqual(50);
+    expect((result!.meta as SavingMeta).totalSaving).toBeGreaterThanOrEqual(50);
   });
 
   it("有高频消费时生成节省建议", () => {
@@ -94,7 +99,7 @@ describe("savingRule", () => {
     ];
     const result = savingRule(makeCtx(), prior);
     expect(result).not.toBeNull();
-    expect(result!.meta!.totalSaving).toBeGreaterThanOrEqual(50);
+    expect((result!.meta as SavingMeta).totalSaving).toBeGreaterThanOrEqual(50);
   });
 
   it("预估节省 < ¥50 不触发", () => {
