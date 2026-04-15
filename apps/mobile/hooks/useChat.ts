@@ -1,6 +1,7 @@
 import { useAddChatMessage } from "@/hooks/useLocalChatMessages";
 import { useCreateTransaction } from "@/hooks/useLocalTransactions";
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type { Category } from "@coco/shared";
 import NetInfo from "@react-native-community/netinfo";
 import { useQueryClient } from "@tanstack/react-query";
@@ -73,7 +74,7 @@ export function useChat() {
         if (resp.data.type === "bill") {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
-            "categories",
+            QK.categories,
             userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
@@ -107,7 +108,7 @@ export function useChat() {
             }),
             transaction_id: txId,
           });
-          qc.invalidateQueries({ queryKey: ["transactions"] });
+          qc.invalidateQueries({ queryKey: [QK.transactions] });
         } else {
           await addMessage({
             role: "assistant",
@@ -124,7 +125,7 @@ export function useChat() {
         });
       } finally {
         setLoading(false);
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
     [qc, addMessage, createTransaction, db],
@@ -135,7 +136,7 @@ export function useChat() {
       if (!db) return;
       console.log("[sendText] 文字输入:", text);
       await addMessage({ role: "user", content_type: "text", content: text });
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       try {
         await processText(text);
       } catch (err) {
@@ -145,7 +146,7 @@ export function useChat() {
           content_type: "text",
           content: "网络错误，请重试。",
         });
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
     [db, qc, addMessage, processText],
@@ -183,7 +184,7 @@ export function useChat() {
         content_type: "image",
         content: imageContent,
       });
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       console.log("[sendOcr] → 调用 /record-ocr");
       setLoading(true);
       try {
@@ -195,7 +196,7 @@ export function useChat() {
         if (resp.data?.type === "bill") {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
-            "categories",
+            QK.categories,
             userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
@@ -232,7 +233,7 @@ export function useChat() {
             }),
             transaction_id: txId,
           });
-          qc.invalidateQueries({ queryKey: ["transactions"] });
+          qc.invalidateQueries({ queryKey: [QK.transactions] });
         } else {
           // error
           console.log("[sendOcr] ⚠️ OCR 失败:", resp.data?.message);
@@ -253,7 +254,7 @@ export function useChat() {
         onFail?.(imageMessageId);
       } finally {
         setLoading(false);
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
     [db, qc, addMessage, createTransaction],
@@ -284,7 +285,7 @@ export function useChat() {
         audio_uri: audioUri,
         duration_seconds: durationSeconds,
       });
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
 
       // 3. 检查网络
       const netState = await NetInfo.fetch();
@@ -294,7 +295,7 @@ export function useChat() {
           content_type: "text",
           content: "未联网，无法使用语音服务。",
         });
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
         return;
       }
 
@@ -323,7 +324,7 @@ export function useChat() {
         if (resp.data.type === "bill") {
           const tx = resp.data.transaction;
           const categoriesData = qc.getQueryData<readonly Category[]>([
-            "categories",
+            QK.categories,
             userId,
           ]);
           const otherName = tx.type === "income" ? "其他收入" : "其他支出";
@@ -357,7 +358,7 @@ export function useChat() {
             }),
             transaction_id: txId,
           });
-          qc.invalidateQueries({ queryKey: ["transactions"] });
+          qc.invalidateQueries({ queryKey: [QK.transactions] });
         } else {
           await addMessage({
             role: "assistant",
@@ -374,7 +375,7 @@ export function useChat() {
         });
       } finally {
         setLoading(false);
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
     [db, qc, addMessage, createTransaction],

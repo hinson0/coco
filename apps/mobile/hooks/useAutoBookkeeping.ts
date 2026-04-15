@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { AppState, Platform } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import { parseNotification } from "@/lib/auto-bookkeeping/parser";
 import { push } from "@/lib/sync/sync-service";
 import { useQueryClient } from "@tanstack/react-query";
@@ -133,10 +134,10 @@ export function useAutoBookkeeping() {
             now,
           );
 
-          qc.invalidateQueries({ queryKey: ["transactions"] });
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
-          qc.invalidateQueries({ queryKey: ["account-balance"] });
-          qc.invalidateQueries({ queryKey: ["total-assets"] });
+          qc.invalidateQueries({ queryKey: [QK.transactions] });
+          qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+          qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+          qc.invalidateQueries({ queryKey: [QK.totalAssets] });
 
           // 立即触发同步，不等 30s 定时器
           push(currentDb, currentUserId).catch((pushErr: unknown) => {

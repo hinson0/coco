@@ -1,4 +1,5 @@
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type { UpdateProfileInput, UserProfile } from "@coco/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
@@ -9,7 +10,7 @@ export function useProfile() {
   const userId = user?.id;
 
   return useQuery({
-    queryKey: ["profile", userId],
+    queryKey: [QK.profile, userId],
     queryFn: async (): Promise<UserProfile | null> => {
       if (!db || !userId) return null;
       return db.getFirstAsync<UserProfile>(
@@ -47,7 +48,7 @@ export function useEnsureProfile() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: [QK.profile] });
     },
   });
 }
@@ -84,7 +85,7 @@ export function useUpdateProfile() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: [QK.profile] });
     },
   });
 }

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import {
   useProfile,
   useUpdateProfile,
@@ -97,7 +98,7 @@ export default function ProfileEditScreen() {
         avatar_type: avatarType,
         avatar_value: avatarValue,
       });
-      await qc.invalidateQueries({ queryKey: ["profile"] });
+      await qc.invalidateQueries({ queryKey: [QK.profile] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

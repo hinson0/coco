@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -18,7 +19,7 @@ function useStreakDetail() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "streak-detail", userId],
+    queryKey: [QK.transactions, "streak-detail", userId],
     queryFn: async () => {
       if (!db || !userId)
         return {

@@ -15,6 +15,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import {
   useCreateBudget,
   useUpdateBudget,
@@ -118,7 +119,7 @@ export default function BudgetCategoryEditScreen() {
           ).toISOString(),
         });
       }
-      await qc.invalidateQueries({ queryKey: ["budgets"] });
+      await qc.invalidateQueries({ queryKey: [QK.budgets] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

@@ -13,6 +13,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import {
   useLocalCategories,
   useCreateCategory,
@@ -51,7 +52,7 @@ export default function CategoryEditScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteCategory(params.id!);
-            await qc.invalidateQueries({ queryKey: ["categories"] });
+            await qc.invalidateQueries({ queryKey: [QK.categories] });
             router.back();
           },
         },
@@ -112,7 +113,7 @@ export default function CategoryEditScreen() {
         await createCategory({ name: trimmedName, icon, type });
       }
       // 等缓存刷新完再返回，避免列表页短暂显示旧数据
-      await qc.invalidateQueries({ queryKey: ["categories"] });
+      await qc.invalidateQueries({ queryKey: [QK.categories] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

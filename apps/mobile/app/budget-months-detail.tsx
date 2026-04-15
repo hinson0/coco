@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import { router } from "expo-router";
 import {
   ScrollView,
@@ -17,7 +18,7 @@ function useBudgetMonthsDetail() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "budget-months-detail", userId],
+    queryKey: [QK.transactions, "budget-months-detail", userId],
     queryFn: async () => {
       if (!db || !userId)
         return { total: 0, months: [] as { month: string; count: number }[] };

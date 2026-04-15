@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { QK } from "../../lib/queryKeys";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -25,7 +26,7 @@ function useProfileStats() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", "stats", userId],
+    queryKey: [QK.transactions, "stats", userId],
     queryFn: async () => {
       if (!db || !userId)
         return { monthlyCount: 0, streak: 0, budgetMonths: 0 };
