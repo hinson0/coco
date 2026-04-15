@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     jwt_access_expire_minutes: int = 60
     jwt_refresh_expire_days: int = 30
 
+    # Apple IAP
+    apple_shared_secret: str = ""  # App Store Connect 共享密钥（有资质后填入）
+
     # Logging
     app_env: str = "dev"
     log_level: str = "DEBUG"

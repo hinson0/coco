@@ -6,9 +6,9 @@ import { Stack } from "expo-router";
 import type * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
-
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
+import { getIsProFromCache } from "../hooks/usePro";
 
 let GoogleAds: typeof import("react-native-google-mobile-ads") | null = null;
 try {
@@ -86,10 +86,11 @@ function AppContent() {
   // === AdMob 开屏广告 ===
   const lastSplashTime = useRef(0);
 
-  const tryShowSplash = useCallback(() => {
+  const tryShowSplash = useCallback(async () => {
     if (!GoogleAds) return;
 
-    // TODO: Pro 用户检查
+    const isPro = await getIsProFromCache();
+    if (isPro) return;
     const now = Date.now();
     if (now - lastSplashTime.current < SPLASH_MIN_INTERVAL_MS) return;
     lastSplashTime.current = now;

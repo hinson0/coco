@@ -8,6 +8,11 @@ import * as Crypto from "expo-crypto";
 import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useState } from "react";
 import { apiFetch } from "../lib/api";
+import { getIsProFromCache } from "./usePro";
+import {
+  getEntitlement,
+  consumeEntitlement,
+} from "../lib/entitlements/queries";
 
 type ChatBillData = {
   type: "bill";
@@ -145,6 +150,20 @@ export function useChat() {
   const sendOcr = useCallback(
     async (imageBase64: string, onFail?: (imageMessageId: string) => void) => {
       if (!db) return;
+      // 权益检查：Pro 用户跳过，非 Pro 检查余额并扣减
+      const isPro = await getIsProFromCache();
+      if (!isPro) {
+        const ent = await getEntitlement(db, "ocr");
+        if (ent.balance <= 0) {
+          await addMessage({
+            role: "assistant",
+            content_type: "text",
+            content: "小票识别次数已用完，请升级 Pro 继续使用。",
+          });
+          return;
+        }
+        await consumeEntitlement(db, "ocr");
+      }
       console.log("[sendOcr] 拍照记账");
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
@@ -253,6 +272,20 @@ export function useChat() {
   const sendAsr = useCallback(
     async (audioBase64: string, durationSeconds: number) => {
       if (!db) return;
+      // 权益检查：Pro 用户跳过，非 Pro 检查余额并扣减
+      const isPro = await getIsProFromCache();
+      if (!isPro) {
+        const ent = await getEntitlement(db, "asr");
+        if (ent.balance <= 0) {
+          await addMessage({
+            role: "assistant",
+            content_type: "text",
+            content: "语音记账次数已用完，请升级 Pro 继续使用。",
+          });
+          return;
+        }
+        await consumeEntitlement(db, "asr");
+      }
 
       // 1. 保存音频文件到本地
       let audioUri: string | null = null;

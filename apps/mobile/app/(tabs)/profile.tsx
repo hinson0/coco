@@ -18,6 +18,8 @@ import { AppText } from "../../components/ui/AppText";
 import { Card } from "../../components/ui/Card";
 import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
+import { useCheckAndConsume } from "../../hooks/useEntitlement";
+import { useIsPro, useProStatus } from "../../hooks/usePro";
 import { useEnsureProfile, useProfile } from "../../hooks/useLocalProfile";
 import { useOfflineContext } from "../../lib/offline-context";
 
@@ -92,6 +94,9 @@ export default function ProfileScreen() {
   const { monthlyCount = 0, streak = 0, budgetMonths = 0 } = stats ?? {};
   const { data: profile } = useProfile();
   const { mutate: ensureProfile } = useEnsureProfile();
+  const isPro = useIsPro();
+  const proStatus = useProStatus();
+  const checkAndConsume = useCheckAndConsume();
 
   useEffect(() => {
     ensureProfile();
@@ -192,7 +197,11 @@ export default function ProfileScreen() {
           icon="📤"
           iconBg={colors.sagePale}
           title="导出报表"
-          onPress={() => setExportVisible(true)}
+          onPress={async () => {
+            const canExport = await checkAndConsume("csv_export");
+            if (!canExport) return;
+            setExportVisible(true);
+          }}
         />
         <View style={styles.separator} />
         <MenuItem
@@ -221,18 +230,20 @@ export default function ProfileScreen() {
       </AppText>
       <Card padding={0} style={styles.menuCard}>
         <MenuItem
-          icon="🌟"
+          icon={isPro ? "👑" : "🌟"}
           iconBg={colors.coralPale}
-          title="升级Pro"
-          badge={{ text: "PRO", variant: "pro" }}
+          title={isPro ? "Pro 会员" : "升级Pro"}
+          badge={
+            isPro
+              ? {
+                  text: proStatus.is_trial
+                    ? `试用${proStatus.trial_days_left}天`
+                    : "PRO",
+                  variant: "pro" as const,
+                }
+              : { text: "PRO", variant: "pro" as const }
+          }
           onPress={() => router.push("/upgrade-pro")}
-        />
-        <View style={styles.separator} />
-        <MenuItem
-          icon="🎬"
-          iconBg={colors.honeyPale}
-          title="广告收益"
-          onPress={() => router.push("/ad-rewards")}
         />
         <View style={styles.separator} />
         <MenuItem

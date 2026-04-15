@@ -8,6 +8,7 @@ import { AppText } from "../../components/ui/AppText";
 import { Card } from "../../components/ui/Card";
 import { colors, radii, shadows } from "../../constants/theme";
 import { useAdWatchCount, useRecordAdWatch } from "../../hooks/useEntitlement";
+import { useIsPro, useProStatus } from "../../hooks/usePro";
 import {
   FEATURE_META,
   getRewardsForWatch,
@@ -28,6 +29,8 @@ type AdState = "loading" | "playing" | "paused" | "error" | "idle";
 
 export default function RevenueScreen() {
   const insets = useSafeAreaInsets();
+  const isPro = useIsPro();
+  const proStatus = useProStatus();
   const [adState, setAdState] = useState<AdState>("paused");
   const [, setErrorCount] = useState(0);
   const isPausedRef = useRef(true);
@@ -207,6 +210,44 @@ export default function RevenueScreen() {
       setAdState("paused");
     }
   };
+
+  if (isPro) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" backgroundColor={colors.cream} />
+        <View style={styles.header}>
+          <AppText size="5xl" weight="bold" color={colors.text}>
+            会员
+          </AppText>
+        </View>
+        <View style={styles.adContainer}>
+          <View style={styles.adCenter}>
+            <AppText size="3xl">👑</AppText>
+            <AppText
+              size="xl"
+              weight="medium"
+              color={colors.text}
+              style={styles.adText}
+            >
+              {proStatus.is_trial ? "试用中" : "Pro 会员"}
+            </AppText>
+            <AppText size="base" color={colors.textLight} style={styles.adText}>
+              {proStatus.is_trial
+                ? `免费试用剩余 ${proStatus.trial_days_left} 天`
+                : proStatus.pro_expires_at?.startsWith("9999")
+                  ? "永久会员，感谢支持！"
+                  : `有效期至 ${proStatus.pro_expires_at?.slice(0, 10) ?? ""}`}
+            </AppText>
+          </View>
+        </View>
+        <View style={styles.bottomSection}>
+          <AppText size="lg" color={colors.textLight} style={styles.tip}>
+            所有高级功能已解锁，尽情使用语音记账、小票识别等功能吧。
+          </AppText>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>

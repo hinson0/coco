@@ -1,16 +1,17 @@
-import { useOfflineContext } from "@/lib/offline-context";
-import type { FeatureKey } from "@/lib/entitlements/rewards";
 import {
-  getEntitlement,
-  getAllEntitlements,
-  consumeEntitlement,
   addEntitlement,
-  logAdWatch,
+  consumeEntitlement,
+  getAllEntitlements,
+  getEntitlement,
   getTotalRewardedWatchCount,
+  logAdWatch,
 } from "@/lib/entitlements/queries";
+import type { FeatureKey } from "@/lib/entitlements/rewards";
 import { getRewardsForWatch } from "@/lib/entitlements/rewards";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOfflineContext } from "@/lib/offline-context";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
+import { getIsProFromCache } from "./usePro";
 
 export const ENTITLEMENT_KEY = ["entitlements"];
 const AD_WATCH_COUNT_KEY = ["ad-watch-count"];
@@ -112,7 +113,8 @@ export function useCheckAndConsume() {
   return useCallback(
     async (feature: FeatureKey): Promise<boolean> => {
       if (!db) return false;
-      // TODO: Pro check — Pro 用户直接返回 true
+      const isPro = await getIsProFromCache();
+      if (isPro) return true;
       const ent = await getEntitlement(db, feature);
       if (ent.balance <= 0) return false;
       // 按次计费的功能立即扣减

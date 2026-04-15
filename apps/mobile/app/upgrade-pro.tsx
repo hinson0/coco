@@ -2,6 +2,7 @@
 // 升级 Pro 页面：Premium Botanical 设计风格
 import { useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -13,6 +14,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radii, shadows } from "../constants/theme";
+import { useIAP } from "../hooks/useIAP";
+import type { PlanType } from "../lib/iap/products";
 
 const PRO_FEATURES = [
   {
@@ -47,7 +50,12 @@ const FREE_FEATURES = [
 
 export default function UpgradeProScreen() {
   const insets = useSafeAreaInsets();
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
+  const [plan, setPlan] = useState<PlanType>("yearly");
+  const { purchase, restore, purchaseState, isAvailable } = useIAP();
+  const isBusy =
+    purchaseState === "loading" ||
+    purchaseState === "purchasing" ||
+    purchaseState === "verifying";
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -112,7 +120,7 @@ export default function UpgradeProScreen() {
               </Text>
               <View style={styles.badgeGroup}>
                 <View style={styles.badgeSave}>
-                  <Text style={styles.badgeSaveText}>省 46%</Text>
+                  <Text style={styles.badgeSaveText}>省 27%</Text>
                 </View>
                 <View style={styles.badgeRec}>
                   <Text style={styles.badgeRecText}>推荐</Text>
@@ -134,11 +142,11 @@ export default function UpgradeProScreen() {
                   plan === "yearly" && styles.priceColorActive,
                 ]}
               >
-                138
+                88
               </Text>
               <Text style={styles.priceUnit}>/年</Text>
             </View>
-            <Text style={styles.priceNote}>≈ ¥0.38 / 天 · 月均仅 ¥11.5</Text>
+            <Text style={styles.priceNote}>≈ ¥0.24 / 天 · 月均仅 ¥7.3</Text>
           </TouchableOpacity>
 
           {/* 月会员卡 */}
@@ -176,18 +184,74 @@ export default function UpgradeProScreen() {
                   plan === "monthly" && styles.priceColorActive,
                 ]}
               >
-                15
+                10
               </Text>
               <Text style={styles.priceUnit}>/月</Text>
             </View>
-            <Text style={styles.priceNote}>≈ ¥0.5 / 天</Text>
+            <Text style={styles.priceNote}>≈ ¥0.33 / 天</Text>
+          </TouchableOpacity>
+
+          {/* 永久会员卡 */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => setPlan("lifetime")}
+            style={[
+              styles.planCard,
+              plan === "lifetime" && styles.planCardSelected,
+            ]}
+          >
+            {plan === "lifetime" && <View style={styles.planSelectedBar} />}
+            <View style={styles.planTopRow}>
+              <Text
+                style={[
+                  styles.planName,
+                  plan === "lifetime" && styles.planNameSelected,
+                ]}
+              >
+                永久会员
+              </Text>
+              <View style={styles.badgeGroup}>
+                <View style={styles.badgeSave}>
+                  <Text style={styles.badgeSaveText}>买断</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.priceRow}>
+              <Text
+                style={[
+                  styles.priceCurrency,
+                  plan === "lifetime" && styles.priceColorActive,
+                ]}
+              >
+                ¥
+              </Text>
+              <Text
+                style={[
+                  styles.priceNumber,
+                  plan === "lifetime" && styles.priceColorActive,
+                ]}
+              >
+                138
+              </Text>
+              <Text style={styles.priceUnit}> 一次性</Text>
+            </View>
+            <Text style={styles.priceNote}>
+              一次购买，永久使用所有 Pro 功能
+            </Text>
           </TouchableOpacity>
 
           {/* CTA 按钮 */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Alert.alert("提示", "功能开发中，敬请期待")}
-            style={styles.ctaWrap}
+            disabled={isBusy}
+            onPress={() => {
+              if (!isAvailable) {
+                Alert.alert("提示", "当前环境不支持支付，请使用正式版本");
+                return;
+              }
+              purchase(plan);
+            }}
+            style={[styles.ctaWrap, isBusy && { opacity: 0.6 }]}
           >
             <LinearGradient
               colors={["#2d5a40", "#5a9468"]}
@@ -195,10 +259,28 @@ export default function UpgradeProScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.ctaText}>立即开通 Pro</Text>
+              {isBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.ctaText}>
+                  {plan === "lifetime"
+                    ? "一次性买断 Pro"
+                    : `开通${plan === "yearly" ? "年" : "月"}会员`}
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
           <Text style={styles.ctaNote}>随时可取消 · 到期不自动续费</Text>
+
+          {/* 恢复购买 */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={isBusy}
+            onPress={() => restore()}
+            style={styles.restoreBtn}
+          >
+            <Text style={styles.restoreText}>恢复购买</Text>
+          </TouchableOpacity>
 
           {/* Pro 专属权益 */}
           <View style={[styles.sectionRow, { marginTop: 28 }]}>
@@ -448,6 +530,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textLighter,
     marginTop: 10,
+  },
+  restoreBtn: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  restoreText: {
+    fontSize: 14,
+    color: colors.textLight,
+    textDecorationLine: "underline",
   },
 
   // ── 权益列表 ───────────────────────────────────
