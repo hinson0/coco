@@ -1,5 +1,6 @@
 // apps/mobile/hooks/useLocalBudgets.ts
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type {
   Budget,
   CreateBudgetInput,
@@ -12,7 +13,7 @@ export function useLocalBudgets() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["budgets", userId],
+    queryKey: [QK.budgets, userId],
     queryFn: async (): Promise<readonly Budget[]> => {
       if (!db || !userId) return [];
       return db.getAllAsync<Budget>(
@@ -45,7 +46,7 @@ export function useCreateBudget() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: [QK.budgets] });
     },
   });
 }
@@ -65,7 +66,7 @@ export function useUpdateBudget() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: [QK.budgets] });
     },
   });
 }
@@ -86,7 +87,7 @@ export function useDeleteBudget() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: [QK.budgets] });
     },
   });
 }
@@ -95,7 +96,7 @@ export function useGlobalBudget() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["budgets", "global", userId],
+    queryKey: [QK.budgets, "global", userId],
     queryFn: async (): Promise<Budget | null> => {
       if (!db || !userId) return null;
       return db.getFirstAsync<Budget>(
@@ -111,7 +112,7 @@ export function useCategoryBudgets() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["budgets", "category", userId],
+    queryKey: [QK.budgets, "category", userId],
     queryFn: async (): Promise<readonly Budget[]> => {
       if (!db || !userId) return [];
       return db.getAllAsync<Budget>(

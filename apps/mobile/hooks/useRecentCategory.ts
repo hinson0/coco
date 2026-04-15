@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type { TransactionType } from "@coco/shared";
 
 export function useRecentCategory(type: TransactionType) {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["recent-category", type, userId],
+    queryKey: [QK.recentCategory, type, userId],
     queryFn: async (): Promise<string | null> => {
       if (!db || !userId) return null;
 

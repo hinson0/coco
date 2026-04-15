@@ -21,6 +21,7 @@ import {
 } from "../hooks/useLocalAccounts";
 import { useOfflineContext } from "../lib/offline-context";
 import { useQuery } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import { AppText } from "../components/ui/AppText";
 import { useCheckAndConsume } from "../hooks/useEntitlement";
 import { EntitlementGate } from "../components/shared/EntitlementGate";
@@ -38,7 +39,7 @@ function useAccountBalanceInline(
   accountId: string,
 ) {
   return useQuery({
-    queryKey: ["account-balance", accountId],
+    queryKey: [QK.accountBalance, accountId],
     queryFn: async (): Promise<number> => {
       if (!db) return 0;
       const account = await db.getFirstAsync<Account>(
