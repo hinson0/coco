@@ -151,10 +151,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   emoji: {
-    fontSize: 20,
+    fontSize: 21,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.text,
   },

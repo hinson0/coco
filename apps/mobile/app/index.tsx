@@ -452,12 +452,12 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backArrow: {
-    fontSize: 18,
+    fontSize: 19,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   clearIcon: {
-    fontSize: 15,
+    fontSize: 16,
   },
   titleArea: {
     flexDirection: "row",
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sage,
   },
   titleText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: colors.text,
   },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   separatorText: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textLighter,
   },
 
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   noMoreText: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textLighter,
   },
 

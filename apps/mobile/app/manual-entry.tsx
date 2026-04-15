@@ -368,7 +368,7 @@ export default function ManualEntryScreen() {
                       resizeMode="contain"
                     />
                   ) : (
-                    <AppText style={{ fontSize: 16 }}>{a.icon}</AppText>
+                    <AppText style={{ fontSize: 17 }}>{a.icon}</AppText>
                   )}
                   <AppText
                     size="md"
@@ -499,12 +499,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backArrow: {
-    fontSize: 18,
+    fontSize: 19,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: colors.text,
   },
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   typeText: {
     color: colors.textLight,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
   },
   typeTextActive: {
@@ -554,14 +554,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   amountPrefix: {
-    fontSize: 28,
+    fontSize: 29,
     fontWeight: "700",
     color: colors.textLighter,
     marginRight: 4,
   },
   amountInput: {
     flex: 1,
-    fontSize: 36,
+    fontSize: 37,
     fontWeight: "700",
     color: colors.text,
   },
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   dateArrow: {
-    fontSize: 24,
+    fontSize: 25,
     color: colors.text,
     fontWeight: "600",
   },
@@ -598,10 +598,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateIcon: {
-    fontSize: 16,
+    fontSize: 17,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "500",
     color: colors.text,
   },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   dateConfirmText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
   },
 
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     padding: 14,
     borderRadius: radii.md,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 20,
     minHeight: 60,
   },
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
 

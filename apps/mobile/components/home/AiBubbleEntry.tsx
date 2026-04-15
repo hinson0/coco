@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   aiAvatarEmoji: {
-    fontSize: 16,
+    fontSize: 17,
   },
   inputArea: {
     flexDirection: "row",

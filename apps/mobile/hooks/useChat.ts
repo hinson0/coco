@@ -105,6 +105,7 @@ export function useChat() {
               note: tx.note,
               category_id: category?.id ?? "",
               occurred_at: occurredAt,
+              source: "llm",
             }),
             transaction_id: txId,
           });
@@ -230,6 +231,7 @@ export function useChat() {
               note: tx.note ?? "",
               category_id: category?.id,
               occurred_at: tx.occurred_at ?? new Date().toISOString(),
+              source: "ocr",
             }),
             transaction_id: txId,
           });
@@ -355,6 +357,7 @@ export function useChat() {
               note: tx.note,
               category_id: category?.id ?? "",
               occurred_at: occurredAt,
+              source: "asr",
             }),
             transaction_id: txId,
           });

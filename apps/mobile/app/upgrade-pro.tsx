@@ -240,14 +240,14 @@ export default function UpgradeProScreen() {
                 key={i}
                 style={[styles.featureRow, i > 0 && styles.featureDivider]}
               >
-                <Text style={[styles.featureIcon, { fontSize: 20 }]}>
+                <Text style={[styles.featureIcon, { fontSize: 21 }]}>
                   {f.icon}
                 </Text>
                 <View style={{ flex: 1 }}>
                   <Text
                     style={[
                       styles.featureTitle,
-                      { fontSize: 15, fontWeight: "500" },
+                      { fontSize: 16, fontWeight: "500" },
                     ]}
                   >
                     {f.title}
@@ -282,17 +282,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: { fontSize: 18, color: "#fff", lineHeight: 22 },
-  crownEmoji: { fontSize: 52, marginTop: 4 },
+  backArrow: { fontSize: 19, color: "#fff", lineHeight: 23 },
+  crownEmoji: { fontSize: 53, marginTop: 4 },
   heroTitle: {
-    fontSize: 30,
+    fontSize: 31,
     fontWeight: "700",
     color: "#fff",
     marginTop: 10,
     letterSpacing: 1,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: "rgba(255,255,255,0.6)",
     marginTop: 6,
     letterSpacing: 0.3,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.full,
   },
-  trialText: { fontSize: 13, color: "rgba(255,255,255,0.85)" },
+  trialText: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
 
   // ── 内容区 ─────────────────────────────────────
   contentCard: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sage,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "600",
     color: colors.text,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   planName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: colors.textLight,
   },
@@ -383,14 +383,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: radii.sm,
   },
-  badgeSaveText: { fontSize: 12, fontWeight: "600", color: colors.honey },
+  badgeSaveText: { fontSize: 13, fontWeight: "600", color: colors.honey },
   badgeRec: {
     backgroundColor: colors.sagePale,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radii.sm,
   },
-  badgeRecText: { fontSize: 12, fontWeight: "600", color: colors.sage },
+  badgeRecText: { fontSize: 13, fontWeight: "600", color: colors.sage },
 
   // 价格数字（核心改动：52px bold）
   priceRow: {
@@ -399,19 +399,19 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   priceCurrency: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "700",
     color: colors.textLighter,
     marginBottom: 4,
   },
   priceNumber: {
-    fontSize: 44,
+    fontSize: 45,
     fontWeight: "800",
     color: colors.textLighter,
-    lineHeight: 52,
+    lineHeight: 53,
   },
   priceUnit: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textLighter,
     marginLeft: 4,
     marginBottom: 6,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     color: colors.sage,
   },
   priceNote: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.textLighter,
     marginTop: 4,
   },
@@ -438,14 +438,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ctaText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     color: "#fff",
     letterSpacing: 0.8,
   },
   ctaNote: {
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textLighter,
     marginTop: 10,
   },
@@ -468,16 +468,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.creamDark,
   },
-  featureIcon: { fontSize: 22, marginTop: 2 },
+  featureIcon: { fontSize: 23, marginTop: 2 },
   featureTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
     color: colors.text,
     marginBottom: 3,
   },
   featureDesc: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.textLight,
-    lineHeight: 19,
+    lineHeight: 20,
   },
 });

@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
   },
   inputFocused: {

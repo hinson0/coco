@@ -82,7 +82,7 @@ export default function AboutScreen() {
       >
         {/* Logo 区 */}
         <View style={styles.logoSection}>
-          <AppText style={{ fontSize: 60 }}>🍃</AppText>
+          <AppText style={{ fontSize: 61 }}>🍃</AppText>
           <AppText size="4xl" weight="bold" color={colors.text}>
             CoCo
           </AppText>
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   scrollView: {
     flex: 1,
   },

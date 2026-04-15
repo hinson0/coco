@@ -99,7 +99,7 @@ function AccountRow({
             resizeMode="contain"
           />
         ) : (
-          <AppText style={{ fontSize: 24 }}>{account.icon}</AppText>
+          <AppText style={{ fontSize: 25 }}>{account.icon}</AppText>
         )}
       </View>
       <View style={{ flex: 1 }}>
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   helpBtn: {
     width: 36,
     height: 36,

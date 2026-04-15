@@ -46,7 +46,7 @@ function GuideImage({ source, label }: { source: number; label: string }) {
         onPress={() => setExpanded(!expanded)}
         style={styles.guideImageBtn}
       >
-        <AppText size="sm" color={colors.sage}>
+        <AppText size="base" color={colors.sage}>
           {expanded ? "▼" : "▶"} {label}
         </AppText>
       </TouchableOpacity>
@@ -85,18 +85,18 @@ function SetupStep({
       >
         <View style={styles.stepLeft}>
           <View style={[styles.stepNumber, done && styles.stepNumberDone]}>
-            <AppText size="base" weight="bold" color={colors.white}>
+            <AppText size="md" weight="bold" color={colors.white}>
               {step}
             </AppText>
           </View>
-          <AppText size="lg" weight="semibold" color={colors.text}>
+          <AppText size="xl" weight="semibold" color={colors.text}>
             {title}
           </AppText>
         </View>
         {done ? (
           <View style={styles.runningTag}>
             <PulseDot size={8} />
-            <AppText size="base" weight="medium" color={colors.sage}>
+            <AppText size="md" weight="medium" color={colors.sage}>
               运行中
             </AppText>
           </View>
@@ -110,7 +110,7 @@ function SetupStep({
             activeOpacity={0.8}
             onPress={onPress}
           >
-            <AppText size="base" weight="semibold" color={colors.white}>
+            <AppText size="md" weight="semibold" color={colors.white}>
               {buttonLabel}
             </AppText>
           </TouchableOpacity>
@@ -149,7 +149,11 @@ export default function AutoBookkeepingScreen() {
         <StatusBar style="dark" backgroundColor={colors.cream} />
         <View style={styles.centerContent}>
           <AppText size="3xl">📱</AppText>
-          <AppText size="xl" color={colors.textLight} style={styles.centerText}>
+          <AppText
+            size="2xl"
+            color={colors.textLight}
+            style={styles.centerText}
+          >
             自动记账仅支持 Android 设备
           </AppText>
         </View>
@@ -168,7 +172,7 @@ export default function AutoBookkeepingScreen() {
         {allDone ? (
           <View style={styles.headerStatus}>
             <PulseDot size={8} />
-            <AppText size="base" weight="medium" color={colors.sage}>
+            <AppText size="md" weight="medium" color={colors.sage}>
               全部就绪
             </AppText>
           </View>
@@ -191,7 +195,7 @@ export default function AutoBookkeepingScreen() {
           buttonLabel="去开启"
           onPress={() => AutoBookkeeping?.openPermissionSettings()}
         >
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             允许 CoCo 读取微信和支付宝的支付通知，用于自动识别金额
           </AppText>
           <GuideImage
@@ -211,28 +215,28 @@ export default function AutoBookkeepingScreen() {
           buttonLabel="去设置"
           onPress={() => AutoBookkeeping?.openNotificationSettings()}
         >
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             开启「允许通知」和「悬浮通知」
           </AppText>
           <GuideImage
             source={guideNotifMain}
             label="参考：通知主设置（小米手机）"
           />
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             进入底部「自动记账」通知类别
           </AppText>
           <GuideImage
             source={guideNotifChannel1}
             label="参考：找到自动记账通道（小米手机）"
           />
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             开启「允许通知」和「悬浮通知」
           </AppText>
           <GuideImage
             source={guideNotifChannel2}
             label="参考：自动记账通知设置（小米手机）"
           />
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             锁屏显示选择「显示通知及其内容」
           </AppText>
           <GuideImage
@@ -248,14 +252,14 @@ export default function AutoBookkeepingScreen() {
           buttonLabel="去设置"
           onPress={() => AutoBookkeeping?.openAutoStartSettings()}
         >
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             开启自启动，确保 CoCo 在后台持续运行
           </AppText>
           <GuideImage
             source={guideAutoStart}
             label="参考：开启自启动（小米手机）"
           />
-          <AppText size="base" color={colors.textLight} style={styles.stepDesc}>
+          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
             电量策略选择「无限制」，防止系统杀后台
           </AppText>
           <GuideImage
@@ -267,7 +271,7 @@ export default function AutoBookkeepingScreen() {
         {/* 支持的应用 */}
         <View style={styles.section}>
           <AppText
-            size="lg"
+            size="xl"
             weight="semibold"
             color={colors.text}
             style={styles.sectionTitle}
@@ -277,14 +281,14 @@ export default function AutoBookkeepingScreen() {
           <Card style={styles.appsCard}>
             <View style={styles.appRow}>
               <AppText size="2xl">💬</AppText>
-              <AppText size="xl" color={colors.text}>
+              <AppText size="2xl" color={colors.text}>
                 微信支付
               </AppText>
             </View>
             <View style={styles.divider} />
             <View style={styles.appRow}>
               <AppText size="2xl">🔵</AppText>
-              <AppText size="xl" color={colors.text}>
+              <AppText size="2xl" color={colors.text}>
                 支付宝
               </AppText>
             </View>
@@ -294,7 +298,7 @@ export default function AutoBookkeepingScreen() {
         {/* 工作原理 */}
         <View style={styles.section}>
           <AppText
-            size="lg"
+            size="xl"
             weight="semibold"
             color={colors.text}
             style={styles.sectionTitle}
@@ -305,7 +309,7 @@ export default function AutoBookkeepingScreen() {
             <View style={styles.howRow}>
               <AppText size="2xl">1️⃣</AppText>
               <AppText
-                size="base"
+                size="md"
                 color={colors.textLight}
                 style={styles.howText}
               >
@@ -315,7 +319,7 @@ export default function AutoBookkeepingScreen() {
             <View style={styles.howRow}>
               <AppText size="2xl">2️⃣</AppText>
               <AppText
-                size="base"
+                size="md"
                 color={colors.textLight}
                 style={styles.howText}
               >
@@ -325,7 +329,7 @@ export default function AutoBookkeepingScreen() {
             <View style={styles.howRow}>
               <AppText size="2xl">3️⃣</AppText>
               <AppText
-                size="base"
+                size="md"
                 color={colors.textLight}
                 style={styles.howText}
               >
@@ -334,7 +338,7 @@ export default function AutoBookkeepingScreen() {
             </View>
           </Card>
           <AppText
-            size="lg"
+            size="xl"
             weight="semibold"
             color={colors.text}
             style={styles.demoLabel}
@@ -367,7 +371,7 @@ export default function AutoBookkeepingScreen() {
               );
             }}
           >
-            <AppText size="base" color={colors.textLight}>
+            <AppText size="md" color={colors.textLight}>
               调试信息
             </AppText>
           </TouchableOpacity>
