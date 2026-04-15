@@ -3,7 +3,12 @@ import { AppText } from "../ui/AppText";
 import { Badge } from "../ui/Badge";
 import { colors, radii, spacing } from "../../constants/theme";
 import { formatAmount } from "../../lib/format";
-import { isAiSource, isNotificationSource } from "../../lib/badge-utils";
+import {
+  isAiSource,
+  isNotificationSource,
+  getSourceLabel,
+  getNotificationLabel,
+} from "../../lib/badge-utils";
 import { MAJOR_AMOUNT_THRESHOLD } from "@coco/shared";
 import type { Transaction } from "@coco/shared";
 
@@ -30,6 +35,7 @@ export function RecordCard({
   const isExpense = transaction.type === "expense";
   const amountStr = formatAmount(transaction.amount, transaction.type);
   const isMajor = isExpense && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
+  const sourceLabel = getSourceLabel(transaction.source);
 
   return (
     <View style={styles.card}>
@@ -47,26 +53,14 @@ export function RecordCard({
             {isAiSource(transaction.source) ? (
               <Badge text="AI" variant="ai" />
             ) : null}
+            {sourceLabel ? <Badge text={sourceLabel} variant="auto" /> : null}
             {isNotificationSource(transaction.source) ? (
-              <Badge text="自动记" variant="auto" />
+              <Badge
+                text={getNotificationLabel(transaction.raw_input)}
+                variant="auto"
+              />
             ) : null}
           </View>
-          {isNotificationSource(transaction.source) && transaction.raw_input ? (
-            <View style={styles.sourceTagRow}>
-              <Badge
-                text={
-                  transaction.raw_input.includes("com.tencent.mm")
-                    ? "微信支付"
-                    : transaction.raw_input.includes(
-                          "com.eg.android.AlipayGphone",
-                        )
-                      ? "支付宝"
-                      : "自动"
-                }
-                variant="ai"
-              />
-            </View>
-          ) : null}
           {transaction.note ? (
             <AppText size="base" color={colors.textLighter}>
               {transaction.note}
@@ -158,11 +152,6 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: "wrap",
   },
-  sourceTagRow: {
-    flexDirection: "row",
-    marginTop: 2,
-  },
-
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.creamDark,
