@@ -176,12 +176,12 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backArrow: {
-    fontSize: 18,
+    fontSize: 19,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: colors.text,
   },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   hint: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textLighter,
     marginBottom: 24,
     textAlign: "center",
@@ -204,14 +204,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   amountPrefix: {
-    fontSize: 28,
+    fontSize: 29,
     fontWeight: "700",
     color: colors.textLighter,
     marginRight: 4,
   },
   amountInput: {
     flex: 1,
-    fontSize: 36,
+    fontSize: 37,
     fontWeight: "700",
     color: colors.text,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
 });

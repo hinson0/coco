@@ -331,9 +331,9 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   backArrow: {
-    fontSize: 18,
+    fontSize: 19,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   scroll: {
     flex: 1,

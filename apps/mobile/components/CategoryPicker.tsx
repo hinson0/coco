@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   itemActive: { backgroundColor: "#2D9B83" },
-  icon: { fontSize: 22, marginBottom: 4 },
-  name: { color: "#64748b", fontSize: 11 },
+  icon: { fontSize: 23, marginBottom: 4 },
+  name: { color: "#64748b", fontSize: 12 },
   nameActive: { color: "#fff" },
   addItem: {
     alignItems: "center" as const,
@@ -97,6 +97,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed" as const,
     borderColor: "#CBD5E1",
   },
-  addIcon: { fontSize: 22, marginBottom: 4, color: "#94A3B8" },
-  addName: { color: "#94A3B8", fontSize: 11 },
+  addIcon: { fontSize: 23, marginBottom: 4, color: "#94A3B8" },
+  addName: { color: "#94A3B8", fontSize: 12 },
 });

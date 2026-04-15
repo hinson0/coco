@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
     minHeight: 44,
   },

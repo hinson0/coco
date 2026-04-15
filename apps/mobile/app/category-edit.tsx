@@ -150,7 +150,7 @@ export default function CategoryEditScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.iconPreview}>
-            <AppText style={{ fontSize: 40 }}>{icon}</AppText>
+            <AppText style={{ fontSize: 41 }}>{icon}</AppText>
           </View>
         </TouchableOpacity>
         <AppText size="md" color={colors.sage} style={{ marginTop: 8 }}>
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   iconSection: { alignItems: "center", paddingVertical: 28 },
   iconPreview: {
     width: 80,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     padding: spacing.xl,
   },
-  input: { fontSize: 16, color: colors.text, fontWeight: "500" },
+  input: { fontSize: 17, color: colors.text, fontWeight: "500" },
   typeSection: { marginTop: spacing.xxl },
   typeRow: { flexDirection: "row", gap: 12, paddingHorizontal: spacing.xxl },
   typeBtn: {
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
 });

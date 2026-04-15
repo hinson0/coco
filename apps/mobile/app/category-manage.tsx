@@ -90,7 +90,7 @@ export default function CategoryManageScreen() {
               {defaultCategories.map((item) => (
                 <View key={item.id} style={styles.gridItem}>
                   <View style={styles.gridIcon}>
-                    <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
+                    <AppText style={{ fontSize: 25 }}>{item.icon}</AppText>
                   </View>
                   <AppText
                     size="sm"
@@ -136,7 +136,7 @@ export default function CategoryManageScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.gridIcon}>
-                    <AppText style={{ fontSize: 24 }}>{item.icon}</AppText>
+                    <AppText style={{ fontSize: 25 }}>{item.icon}</AppText>
                   </View>
                   <AppText
                     size="sm"
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   tabRow: { flexDirection: "row", gap: 12, padding: spacing.xl },
   tab: {
     flex: 1,
