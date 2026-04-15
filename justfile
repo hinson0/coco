@@ -63,7 +63,7 @@ sync: sync-fe sync-be
 start-fe: env-fe sync-fe
     pnpm --filter {{ mobile }} dev
 
-be-start: env-be sync-be 
+start-be: env-be sync-be 
     cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 
