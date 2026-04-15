@@ -2,7 +2,7 @@ import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
 import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import type * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useState } from "react";
@@ -12,6 +12,7 @@ import { Platform, View } from "react-native";
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { AuthProvider, useAuth } from "../hooks/useAuth";
+import { getAuthRedirectTarget } from "../lib/auth-redirect";
 import { useAutoBookkeeping } from "../hooks/useAutoBookkeeping";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
 
@@ -44,6 +45,8 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { isAuthenticated, user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
 
   useEffect(() => {
@@ -111,6 +114,16 @@ function AppContent() {
 
   // App 未准备好时，return null 让原生 splash 持续显示
   const isReady = !loading && db !== null;
+
+  // 认证路由守卫：未登录时跳转登录页，已登录时离开 auth 页面
+  useEffect(() => {
+    const target = getAuthRedirectTarget(
+      isAuthenticated,
+      isReady,
+      segments[0] as string | undefined,
+    );
+    if (target) router.replace(target as any);
+  }, [isAuthenticated, isReady, segments, router]);
 
   const onLayoutRootView = useCallback(async () => {
     if (isReady) {
