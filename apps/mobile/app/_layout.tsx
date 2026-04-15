@@ -15,7 +15,6 @@ import { AuthProvider, useAuth } from "../hooks/useAuth";
 import { getAuthRedirectTarget } from "../lib/auth-redirect";
 import { useAutoBookkeeping } from "../hooks/useAutoBookkeeping";
 import { useEntitlementDecay } from "../hooks/useEntitlementDecay";
-import { PendingConfirmOverlay } from "../components/auto-bookkeeping/PendingConfirmOverlay";
 
 // 动态加载 expo-notifications（Expo Go 中不可用，静默降级）
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -163,8 +162,8 @@ function EntitlementDecayRunner() {
   return null;
 }
 
-/** 自动记账通知监听 + 待确认弹窗 */
+/** 自动记账通知监听 */
 function AutoBookkeepingRunner() {
   useAutoBookkeeping();
-  return <PendingConfirmOverlay />;
+  return null;
 }

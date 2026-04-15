@@ -9,5 +9,4 @@ export const QK = {
   budgets: "budgets",
   profile: "profile",
   recentCategory: "recent-category",
-  pendingNotifications: "pending-notifications",
 } as const;

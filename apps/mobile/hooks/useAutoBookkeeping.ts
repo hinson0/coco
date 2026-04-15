@@ -1,10 +1,10 @@
 import { useEffect, useRef, useCallback } from "react";
 import { AppState, Platform } from "react-native";
+import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
 import { QK } from "@/lib/queryKeys";
 import { parseNotification } from "@/lib/auto-bookkeeping/parser";
-import { addPending, getRecentForDedup } from "@/lib/auto-bookkeeping/pending-queue";
-import { isDuplicate } from "@/lib/auto-bookkeeping/dedup";
+import { push } from "@/lib/sync/sync-service";
 import { useQueryClient } from "@tanstack/react-query";
 import type { NotificationEvent } from "../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping.types";
 
@@ -26,6 +26,8 @@ function getNativeModule() {
   }
 }
 
+const DEDUP_WINDOW_MS = 10_000;
+
 export function useAutoBookkeeping() {
   const { db, userId } = useOfflineContext();
   const qc = useQueryClient();
@@ -46,7 +48,6 @@ export function useAutoBookkeeping() {
           const currentUserId = userIdRef.current;
           if (!currentDb || !currentUserId) return;
 
-          // 1. 解析通知
           const parsed = parseNotification(
             event.packageName,
             event.title,
@@ -54,33 +55,99 @@ export function useAutoBookkeeping() {
           );
           if (!parsed) return;
 
-          // 2. 去重：基于 pending_notifications 表，使用 dedup.ts 的逻辑
-          // 包含 rawText 比较，避免同金额不同商户的交易被误判为重复
-          const recentItems = await getRecentForDedup(
-            currentDb,
+          // 去重：查询最近 10s 内同金额同来源的自动记账交易
+          // 用 occurred_at（通知发生时间）而非 created_at（入库时间），
+          // 避免 buffer flush 延迟导致去重窗口失效
+          const cutoff = new Date(
+            (event.timestamp ?? Date.now()) - DEDUP_WINDOW_MS,
+          ).toISOString();
+          const existing = await currentDb.getFirstAsync<{ id: string }>(
+            `SELECT id FROM transactions
+           WHERE user_id = ? AND source = 'notification'
+             AND amount = ? AND occurred_at > ?
+           LIMIT 1`,
             currentUserId,
-            event.timestamp,
+            parsed.amount,
+            cutoff,
           );
-          const incoming = {
-            amount: parsed.amount,
-            source: parsed.source,
-            timestamp: event.timestamp ?? Date.now(),
-            rawText: parsed.rawText,
-          };
-          if (isDuplicate(incoming, recentItems)) {
-            console.debug(
-              "[AutoBookkeeping] 去重拦截：相同金额来源已存在待确认队列中",
-              incoming,
+          if (existing) return;
+
+          // 查找"购物"分类
+          const category = await currentDb.getFirstAsync<{
+            id: string;
+            name: string;
+            icon: string;
+          }>(
+            `SELECT id, name, icon FROM categories
+           WHERE (user_id = ? OR (user_id IS NULL AND is_default = 1))
+             AND name = '购物' AND deleted_at IS NULL
+           LIMIT 1`,
+            currentUserId,
+          );
+          if (!category) return;
+          const categoryId = category.id;
+
+          // 直接创建交易
+          const txId = Crypto.randomUUID();
+          const now = new Date().toISOString();
+          const occurredAt = new Date(
+            event.timestamp ?? Date.now(),
+          ).toISOString();
+
+          await currentDb.runAsync(
+            `INSERT INTO transactions (id, user_id, category_id, amount, type, note, occurred_at, source, raw_input, receipt_url, ai_confidence, created_at, updated_at, account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'notification', ?, NULL, NULL, ?, ?, NULL)`,
+            txId,
+            currentUserId,
+            categoryId,
+            parsed.amount,
+            parsed.type,
+            "",
+            occurredAt,
+            event.packageName,
+            now,
+            now,
+          );
+
+          // 创建聊天消息（bill_card）
+          const sourceLabel =
+            parsed.source === "wechat" ? "微信支付" : "支付宝";
+          const msgId = Crypto.randomUUID();
+          await currentDb.runAsync(
+            `INSERT INTO chat_messages (id, user_id, role, content_type, content, transaction_id, created_at, updated_at)
+           VALUES (?, ?, 'assistant', 'bill_card', ?, ?, ?, ?)`,
+            msgId,
+            currentUserId,
+            JSON.stringify({
+              id: txId,
+              amount: parsed.amount,
+              type: parsed.type,
+              category_id: categoryId,
+              note: "",
+              source: "notification",
+              source_label: sourceLabel,
+              raw_input: event.packageName,
+              occurred_at: occurredAt,
+            }),
+            txId,
+            now,
+            now,
+          );
+
+          qc.invalidateQueries({ queryKey: [QK.transactions] });
+          qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+          qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+          qc.invalidateQueries({ queryKey: [QK.totalAssets] });
+
+          // 立即触发同步，不等 30s 定时器
+          push(currentDb, currentUserId).catch((pushErr: unknown) => {
+            const msg =
+              pushErr instanceof Error ? pushErr.message : String(pushErr);
+            console.warn(
+              "[AutoBookkeeping] 即时 push 失败，将由定时器重试:",
+              msg,
             );
-            return;
-          }
-
-          // 3. 添加到 pending 队列，等待用户在 PendingConfirmOverlay 中确认
-          await addPending(currentDb, currentUserId, parsed, event.timestamp);
-          console.debug("[AutoBookkeeping] 已添加到待确认队列:", parsed);
-
-          // 4. 刷新 pending 查询，触发 PendingConfirmOverlay 弹窗
-          qc.invalidateQueries({ queryKey: [QK.pendingNotifications] });
+          });
         })
         .catch((err: unknown) => {
           console.error("[AutoBookkeeping] 处理通知失败:", err);
