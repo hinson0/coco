@@ -28,6 +28,62 @@ export interface InsightNavigation {
   readonly params: Record<string, string>;
 }
 
+export interface CategoryChangeMeta {
+  readonly categoryId: string;
+  readonly currentAmount: number;
+  readonly previousAmount: number;
+  readonly changePercent: number;
+}
+
+export interface AnomalyMeta {
+  readonly transactionId: string;
+  readonly amount: number;
+  readonly categoryEmoji: string;
+  readonly categoryName: string;
+  readonly date: string;
+}
+
+export interface PaceMeta {
+  readonly timeProgress: number;
+  readonly spendProgress: number;
+  readonly estimatedMonthTotal: number;
+}
+
+export interface FrequencyMeta {
+  readonly categoryId: string;
+  readonly categoryEmoji: string;
+  readonly categoryName: string;
+  readonly count: number;
+  readonly totalAmount: number;
+}
+
+export interface HealthScoreMeta {
+  readonly score: number;
+  readonly level: string;
+  readonly savingsRate: number;
+  readonly prevSavingsRate: number | undefined;
+}
+
+export interface SavingSuggestion {
+  readonly category: string;
+  readonly emoji: string;
+  readonly reduceCount: number;
+  readonly saveAmount: number;
+}
+
+export interface SavingMeta {
+  readonly suggestions: readonly SavingSuggestion[];
+  readonly totalSaving: number;
+}
+
+export type InsightMeta =
+  | CategoryChangeMeta
+  | AnomalyMeta
+  | PaceMeta
+  | FrequencyMeta
+  | HealthScoreMeta
+  | SavingMeta;
+
 export interface InsightItem {
   readonly type: InsightType;
   readonly priority: number;
@@ -36,7 +92,7 @@ export interface InsightItem {
   readonly desc: string;
   readonly badge?: InsightBadge;
   readonly navigation?: InsightNavigation;
-  readonly meta?: Record<string, any>;
+  readonly meta?: InsightMeta;
 }
 
 export type InsightRule = (
