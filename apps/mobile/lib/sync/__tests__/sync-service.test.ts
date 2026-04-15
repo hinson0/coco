@@ -99,6 +99,40 @@ describe("push()", () => {
     expect(mockApiFetch).not.toHaveBeenCalled();
   });
 
+  it("logs per-table breakdown before total", async () => {
+    const db = await makeDb();
+    const spy = jest.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      await db.runAsync(
+        `INSERT INTO categories (id, name, icon, type, updated_at) VALUES ('cat1', '餐饮', '🍔', 'expense', '2026-04-09T12:00:00.000Z')`,
+      );
+      await db.runAsync(
+        `INSERT INTO transactions
+          (id, user_id, category_id, amount, type, note, occurred_at, source, created_at, updated_at)
+         VALUES ('tx1', 'u1', 'cat1', 100.0, 'expense', '午饭', '2026-04-09T12:00:00.000Z', 'manual', '2026-04-09T12:00:00.000Z', '2026-04-09T12:00:00.000Z')`,
+      );
+
+      await push(db, "u1");
+
+      const infoArgs = spy.mock.calls.map((c) => c[0] as string);
+
+      // 应该有分表日志：categories 和 transactions 各 1 条
+      expect(infoArgs).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/\[Sync\]\s+categories: 1 条/),
+          expect.stringMatching(/\[Sync\]\s+transactions: 1 条/),
+        ]),
+      );
+
+      // 分表日志应在总数日志之前
+      const catIdx = infoArgs.findIndex((s) => s.includes("categories:"));
+      const totalIdx = infoArgs.findIndex((s) => s.includes("条记录待上传"));
+      expect(catIdx).toBeLessThan(totalIdx);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("skips network request when no data exists", async () => {
     const db = await makeDb();
 

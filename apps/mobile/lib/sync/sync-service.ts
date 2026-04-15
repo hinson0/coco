@@ -105,6 +105,9 @@ async function pushInternal(
     const rows = await getChangedRows(db, userId, table, lastPushAt);
     payload[table] = rows;
     totalRows += rows.length;
+    if (rows.length > 0) {
+      console.info(`[Sync]   ${table}: ${rows.length} 条`);
+    }
   }
 
   if (totalRows === 0) return; // 没有变更，跳过网络请求
