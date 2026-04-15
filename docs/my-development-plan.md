@@ -5,22 +5,20 @@
   - TODO 发布
 - TODO 刷面试题
   - 刷2-3个这样的面试题,主要涵盖: python+fastapi+redis+postgres等
-
 - TODO 体验下`知识图谱`
-
 - TODO (要企业资质) 取消广告功能.就用21天免费.然后之后可以手动记账,语音/OCR/自然语言等功能需购买VIP
   - 月10元
   - 年88元
   - 永久138元
 
-- TODO 删除ecc 试试gsd
-
 ## 0415 周三
 
-- TODO AItag 应该和自动记同在.
-- TODO 52 个 warning：都是之前遗留的 @typescript-eslint/no-explicit-any 和 no-unused-vars — 遍布各个旧文件
+- ~TODO AItag 应该和自动记同在.
+- ~TODO 52 个 warning：都是之前遗留的 @typescript-eslint/no-explicit-any 和 no-unused-vars — 遍布各个旧文件
 - ~TODO 如果用户未登录,强制切换到登录页面.
   - 要在测试下
+- ~TODO 删除ecc 试试gsd
+  - 以后再说吧
 
 ## 0413 & 0414
 
