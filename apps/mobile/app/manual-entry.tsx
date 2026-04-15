@@ -28,6 +28,7 @@ import { useAccounts } from "../hooks/useLocalAccounts";
 import { useAddChatMessage } from "../hooks/useLocalChatMessages";
 import { useOfflineContext } from "../lib/offline-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import { AppText } from "../components/ui/AppText";
 import { colors, radii, shadows, spacing } from "../constants/theme";
 
@@ -198,7 +199,7 @@ export default function ManualEntryScreen() {
             newContent,
             params.msgId,
           );
-          qc.invalidateQueries({ queryKey: ["chat-messages"] });
+          qc.invalidateQueries({ queryKey: [QK.chatMessages] });
         }
       } else {
         const txId = await createTransaction({

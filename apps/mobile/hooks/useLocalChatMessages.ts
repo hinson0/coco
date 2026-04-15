@@ -1,5 +1,7 @@
 // apps/mobile/hooks/useLocalChatMessages.ts
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
+import { CHAT_INITIAL_LIMIT, fetchChatMessages } from "@/lib/db/queries";
 import type { ChatContentType, ChatMessage, ChatRole } from "@coco/shared";
 import {
   keepPreviousData,
@@ -18,21 +20,14 @@ export interface AddMessageInput {
   readonly duration_seconds?: number | null;
 }
 
-const CHAT_PAGE_SIZE = 30;
-
-export function useLocalChatMessages(limit: number = CHAT_PAGE_SIZE) {
+export function useLocalChatMessages(limit: number = CHAT_INITIAL_LIMIT) {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["chat-messages", userId, limit],
+    queryKey: [QK.chatMessages, userId, limit],
     queryFn: async (): Promise<readonly ChatMessage[]> => {
       if (!db || !userId) return [];
-      const rows = await db.getAllAsync<ChatMessage>(
-        "SELECT * FROM chat_messages WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?",
-        userId,
-        limit,
-      );
-      return [...rows].reverse();
+      return fetchChatMessages(db, userId, limit);
     },
     enabled: !!db && !!userId,
     placeholderData: keepPreviousData,
@@ -65,7 +60,7 @@ export function useAddChatMessage(options?: { skipInvalidate?: boolean }) {
     },
     onSuccess: () => {
       if (!options?.skipInvalidate) {
-        qc.invalidateQueries({ queryKey: ["chat-messages"] });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
   });
@@ -87,7 +82,7 @@ export function useDeleteChatMessage() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
     },
   });
 }
@@ -108,7 +103,7 @@ export function useClearChatMessages() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
     },
   });
 }

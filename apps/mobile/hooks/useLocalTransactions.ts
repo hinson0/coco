@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type {
   Transaction,
   CreateTransactionInput,
@@ -12,7 +13,7 @@ export function useLocalTransactions(page = 1, limit = 20) {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["transactions", page, userId],
+    queryKey: [QK.transactions, page, userId],
     queryFn: async () => {
       if (!db || !userId)
         return { data: [] as Transaction[], total: 0, page, limit };
@@ -47,7 +48,7 @@ export function useMonthlyTransactions(
 
   return useQuery({
     queryKey: [
-      "transactions",
+      QK.transactions,
       "monthly",
       `${year}-${String(month + 1).padStart(2, "0")}`,
       accountId ?? "all",
@@ -105,9 +106,9 @@ export function useCreateTransaction() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      qc.invalidateQueries({ queryKey: ["account-balance"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.transactions] });
+      qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
@@ -157,9 +158,9 @@ export function useUpdateTransaction() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      qc.invalidateQueries({ queryKey: ["account-balance"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.transactions] });
+      qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
@@ -179,9 +180,9 @@ export function useDeleteTransaction() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["transactions"] });
-      qc.invalidateQueries({ queryKey: ["account-balance"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.transactions] });
+      qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
