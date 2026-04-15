@@ -4,13 +4,13 @@ ECC（Everything Claude Code）通过斜杠命令驱动开发工作流，覆盖�
 
 ## 核心命令
 
-| 命令 | 用途 | 典型场景 |
-|------|------|----------|
-| `/plan` | 快速对齐需求，生成实现计划（等确认后才动手） | 普通 feature、重构 |
-| `/tdd` | 测试驱动开发：RED → GREEN → REFACTOR，强制 80%+ 覆盖率 | 所有编码任务 |
-| `/code-review` | 代码审查（本地 diff 或 GitHub PR 模式） | 写完代码后 |
-| `/build-fix` | 增量修复构建/类型错误，每次修一个 | 构建失败 |
-| `/feature-dev` | 引导式 feature 开发（发现→探索→设计→实现→审查） | 中型功能 |
+| 命令           | 用途                                                   | 典型场景           |
+| -------------- | ------------------------------------------------------ | ------------------ |
+| `/plan`        | 快速对齐需求，生成实现计划（等确认后才动手）           | 普通 feature、重构 |
+| `/tdd`         | 测试驱动开发：RED → GREEN → REFACTOR，强制 80%+ 覆盖率 | 所有编码任务       |
+| `/code-review` | 代码审查（本地 diff 或 GitHub PR 模式）                | 写完代码后         |
+| `/build-fix`   | 增量修复构建/类型错误，每次修一个                      | 构建失败           |
+| `/feature-dev` | 引导式 feature 开发（发现→探索→设计→实现→审查）        | 中型功能           |
 
 ## PRP 工作流（大型功能：PRD → PR）
 
@@ -37,13 +37,13 @@ PRP = Plan → Review → PR，为高风险/大型功能设计的严格端到端
 ### 普通 feature
 
 ```
-/plan → /tdd → /code-review → /prp-commit → /prp-pr
+/plan → /tdd → -> /simplify → /prp-commit → /prp-pr
 ```
 
 ### Bug 修复
 
 ```
-/tdd（先写复现 bug 的失败测试 → 修复 → 重构） → /code-review → /prp-commit
+/tdd（先写复现 bug 的失败测试 → 修复 → 重构） → /simplify → /prp-commit → /prp-pr
 ```
 
 核心理念：用测试锁定 bug，防止回归。
@@ -51,7 +51,7 @@ PRP = Plan → Review → PR，为高风险/大型功能设计的严格端到端
 ### 大功能（PRD 到 PR）
 
 ```
-/prp-prd → /prp-plan → /prp-implement → /code-review → /prp-commit → /prp-pr
+/prp-prd → /prp-plan → /prp-implement → /simplify → /prp-commit → /prp-pr
 ```
 
 ## 关键设计原则
