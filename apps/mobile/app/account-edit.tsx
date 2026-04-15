@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../lib/queryKeys";
 import {
   useCreateAccount,
   useUpdateAccount,
@@ -180,8 +181,8 @@ export default function AccountEditScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteAccount(params.id!);
-            await qc.invalidateQueries({ queryKey: ["accounts"] });
-            await qc.invalidateQueries({ queryKey: ["total-assets"] });
+            await qc.invalidateQueries({ queryKey: [QK.accounts] });
+            await qc.invalidateQueries({ queryKey: [QK.totalAssets] });
             router.back();
           },
         },
@@ -217,8 +218,8 @@ export default function AccountEditScreen() {
           initial_balance: numBalance,
         });
       }
-      await qc.invalidateQueries({ queryKey: ["accounts"] });
-      await qc.invalidateQueries({ queryKey: ["total-assets"] });
+      await qc.invalidateQueries({ queryKey: [QK.accounts] });
+      await qc.invalidateQueries({ queryKey: [QK.totalAssets] });
       router.back();
     } catch {
       Alert.alert("保存失败", "请重试");

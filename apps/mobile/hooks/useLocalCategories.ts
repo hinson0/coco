@@ -1,5 +1,7 @@
 // 分类数据的本地 CRUD hook（查询、新增、编辑、软删除）
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
+import { fetchCategories } from "@/lib/db/queries";
 import type { Category, CreateCategoryInput } from "@coco/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
@@ -8,20 +10,10 @@ export function useLocalCategories() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["categories", userId],
+    queryKey: [QK.categories, userId],
     queryFn: async (): Promise<readonly Category[]> => {
-      // db 或 userId 不存在时返回空数组
-      /**
-       * 那就存在一种可能性,当用户登录时就应该有user id啊
-       */
       if (!db || !userId) return [];
-
-      //
-      const rows = await db.getAllAsync<Category>(
-        "SELECT * FROM categories WHERE deleted_at IS NULL AND (user_id = ? OR (user_id IS NULL AND is_default = 1)) ORDER BY type, name",
-        userId,
-      );
-      return rows.map((r) => ({ ...r, is_default: Boolean(r.is_default) }));
+      return fetchCategories(db, userId);
     },
     enabled: !!db && !!userId, // 只有 db 和 userId 都就绪时才执行查询，避免无效请求
   });
@@ -47,7 +39,7 @@ export function useCreateCategory() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: [QK.categories] });
     },
   });
 }
@@ -72,7 +64,7 @@ export function useUpdateCategory() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: [QK.categories] });
     },
   });
 }
@@ -92,7 +84,7 @@ export function useDeleteCategory() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: [QK.categories] });
     },
   });
 }

@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import { useOfflineContext } from "@/lib/offline-context";
+import { QK } from "@/lib/queryKeys";
 import type {
   Account,
   CreateAccountInput,
@@ -13,7 +14,7 @@ export function useAccounts() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["accounts", userId],
+    queryKey: [QK.accounts, userId],
     queryFn: async (): Promise<readonly Account[]> => {
       if (!db || !userId) return [];
       return db.getAllAsync<Account>(
@@ -29,7 +30,7 @@ export function useAccountBalance(accountId: string | undefined) {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["account-balance", accountId, userId],
+    queryKey: [QK.accountBalance, accountId, userId],
     queryFn: async (): Promise<number> => {
       if (!db || !accountId || !userId) return 0;
 
@@ -59,7 +60,7 @@ export function useTotalAssets() {
   const { db, userId } = useOfflineContext();
 
   return useQuery({
-    queryKey: ["total-assets", userId],
+    queryKey: [QK.totalAssets, userId],
     queryFn: async (): Promise<number> => {
       if (!db || !userId) return 0;
 
@@ -112,8 +113,8 @@ export function useCreateAccount() {
       return id;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["accounts"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.accounts] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
@@ -155,9 +156,9 @@ export function useUpdateAccount() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["accounts"] });
-      qc.invalidateQueries({ queryKey: ["account-balance"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.accounts] });
+      qc.invalidateQueries({ queryKey: [QK.accountBalance] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
@@ -177,8 +178,8 @@ export function useDeleteAccount() {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["accounts"] });
-      qc.invalidateQueries({ queryKey: ["total-assets"] });
+      qc.invalidateQueries({ queryKey: [QK.accounts] });
+      qc.invalidateQueries({ queryKey: [QK.totalAssets] });
     },
   });
 }
