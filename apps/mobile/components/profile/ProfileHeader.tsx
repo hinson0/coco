@@ -19,7 +19,7 @@ export function ProfileHeader({
   avatarType = "emoji",
   avatarValue = "🌿",
   onAvatarPress,
-  onSettingsPress,
+  onSettingsPress: _onSettingsPress,
 }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>

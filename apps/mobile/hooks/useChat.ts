@@ -178,7 +178,7 @@ export function useChat() {
       console.log("[sendOcr] → 调用 /record-ocr");
       setLoading(true);
       try {
-        const resp = await apiFetch<any>("/record-ocr", {
+        const resp = await apiFetch<ChatResponse>("/record-ocr", {
           method: "POST",
           body: JSON.stringify({ imageBase64 }),
         });

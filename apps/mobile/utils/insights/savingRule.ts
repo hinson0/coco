@@ -1,14 +1,13 @@
-import type { InsightContext, InsightItem } from "./types";
+import type {
+  InsightContext,
+  InsightItem,
+  SavingSuggestion,
+  CategoryChangeMeta,
+  FrequencyMeta,
+} from "./types";
 
 const MIN_SAVING = 50;
 const REDUCE_RATIO = 0.25;
-
-interface SavingSuggestion {
-  category: string;
-  emoji: string;
-  reduceCount: number;
-  saveAmount: number;
-}
 
 export function savingRule(
   ctx: InsightContext,
@@ -21,12 +20,12 @@ export function savingRule(
       r.type === "category-change" && r.badge?.direction === "up" && r.meta,
   );
   for (const change of upChanges) {
-    const catId = change.meta!.categoryId as string;
+    const meta = change.meta as CategoryChangeMeta;
     const txCount = ctx.currentMonth.filter(
-      (tx) => tx.type === "expense" && tx.category_id === catId,
+      (tx) => tx.type === "expense" && tx.category_id === meta.categoryId,
     ).length;
     if (txCount === 0) continue;
-    const avgPerTx = (change.meta!.currentAmount as number) / txCount;
+    const avgPerTx = meta.currentAmount / txCount;
     const reduceCount = Math.max(1, Math.round(txCount * REDUCE_RATIO));
     suggestions.push({
       category: change.emoji,
@@ -38,14 +37,13 @@ export function savingRule(
 
   const freqs = priorResults.filter((r) => r.type === "frequency" && r.meta);
   for (const freq of freqs) {
-    const count = freq.meta!.count as number;
-    const total = freq.meta!.totalAmount as number;
-    const avgPerTx = total / count;
-    const reduceCount = Math.max(1, Math.round(count * REDUCE_RATIO));
+    const meta = freq.meta as FrequencyMeta;
+    const avgPerTx = meta.totalAmount / meta.count;
+    const reduceCount = Math.max(1, Math.round(meta.count * REDUCE_RATIO));
     if (suggestions.some((s) => s.category === freq.emoji)) continue;
     suggestions.push({
-      category: freq.meta!.categoryName as string,
-      emoji: freq.meta!.categoryEmoji as string,
+      category: meta.categoryName,
+      emoji: meta.categoryEmoji,
       reduceCount,
       saveAmount: Math.round(reduceCount * avgPerTx),
     });

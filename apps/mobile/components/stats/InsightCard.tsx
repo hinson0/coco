@@ -1,10 +1,17 @@
 // apps/mobile/components/stats/InsightCard.tsx
 import { View, Pressable, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Card } from "../ui/Card";
 import { AppText } from "../ui/AppText";
 import { colors } from "../../constants/theme";
-import type { InsightItem } from "../../utils/insights/types";
+import type {
+  InsightItem,
+  CategoryChangeMeta,
+  AnomalyMeta,
+  PaceMeta,
+  FrequencyMeta,
+  SavingMeta,
+} from "../../utils/insights/types";
 
 interface InsightCardProps {
   readonly item: InsightItem;
@@ -61,7 +68,7 @@ function getAccent(item: InsightItem) {
   return ACCENT_COLORS[item.type] ?? ACCENT_COLORS["saving"];
 }
 
-function CompareRow({ meta }: { meta: Record<string, any> }) {
+function CompareRow({ meta }: { meta: CategoryChangeMeta }) {
   return (
     <View style={styles.compareRow}>
       <View style={styles.compareItem}>
@@ -84,8 +91,8 @@ function CompareRow({ meta }: { meta: Record<string, any> }) {
   );
 }
 
-function AnomalyDetail({ meta }: { meta: Record<string, any> }) {
-  const dateStr = meta.date as string;
+function AnomalyDetail({ meta }: { meta: AnomalyMeta }) {
+  const dateStr = meta.date;
   const d = new Date(dateStr);
   const formatted = `${d.getMonth() + 1}月${d.getDate()}日`;
   return (
@@ -105,8 +112,8 @@ function AnomalyDetail({ meta }: { meta: Record<string, any> }) {
   );
 }
 
-function PaceBar({ meta }: { meta: Record<string, any> }) {
-  const spendPct = Math.round((meta.spendProgress as number) * 100);
+function PaceBar({ meta }: { meta: PaceMeta }) {
+  const spendPct = Math.round(meta.spendProgress * 100);
   return (
     <View style={styles.paceWrap}>
       <View style={styles.paceTrack}>
@@ -129,8 +136,8 @@ function PaceBar({ meta }: { meta: Record<string, any> }) {
   );
 }
 
-function FrequencyDots({ meta }: { meta: Record<string, any> }) {
-  const count = meta.count as number;
+function FrequencyDots({ meta }: { meta: FrequencyMeta }) {
+  const count = meta.count;
   const maxDots = Math.min(count + 3, 20);
   return (
     <View style={styles.dotsRow}>
@@ -150,7 +157,7 @@ function FrequencyDots({ meta }: { meta: Record<string, any> }) {
   );
 }
 
-function SavingHighlight({ meta }: { meta: Record<string, any> }) {
+function SavingHighlight({ meta }: { meta: SavingMeta }) {
   return (
     <View style={styles.savingBox}>
       <AppText size="3xl" weight="bold" color={colors.honey}>
@@ -169,7 +176,7 @@ export function InsightCard({ item }: InsightCardProps) {
   const handlePress = () => {
     if (item.navigation) {
       router.push({
-        pathname: item.navigation.route as any,
+        pathname: item.navigation.route as Href,
         params: item.navigation.params,
       });
     }
@@ -207,19 +214,19 @@ export function InsightCard({ item }: InsightCardProps) {
           {item.type === "category-change" &&
           item.badge?.direction === "up" &&
           item.meta ? (
-            <CompareRow meta={item.meta} />
+            <CompareRow meta={item.meta as CategoryChangeMeta} />
           ) : null}
           {item.type === "anomaly" && item.meta ? (
-            <AnomalyDetail meta={item.meta} />
+            <AnomalyDetail meta={item.meta as AnomalyMeta} />
           ) : null}
           {item.type === "pace" && item.meta ? (
-            <PaceBar meta={item.meta} />
+            <PaceBar meta={item.meta as PaceMeta} />
           ) : null}
           {item.type === "frequency" && item.meta ? (
-            <FrequencyDots meta={item.meta} />
+            <FrequencyDots meta={item.meta as FrequencyMeta} />
           ) : null}
           {item.type === "saving" && item.meta ? (
-            <SavingHighlight meta={item.meta} />
+            <SavingHighlight meta={item.meta as SavingMeta} />
           ) : null}
         </View>
       </View>

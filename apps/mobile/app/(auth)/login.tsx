@@ -31,8 +31,8 @@ export default function LoginScreen() {
     try {
       await signIn(email.trim(), password);
       router.replace("/");
-    } catch (e: any) {
-      Alert.alert("登录失败", e.message);
+    } catch (e: unknown) {
+      Alert.alert("登录失败", e instanceof Error ? e.message : "未知错误");
     } finally {
       setLoading(false);
     }

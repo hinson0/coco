@@ -73,7 +73,10 @@ const BRAND_GUIDES: Record<string, readonly GuideStep[]> = {
 
 export function getDeviceBrand(): string {
   if (Platform.OS !== "android") return "default";
-  const brand = (Platform.constants as any)?.Brand?.toLowerCase() ?? "";
+  const constants = Platform.constants as Record<string, unknown>;
+  const brand = (
+    typeof constants.Brand === "string" ? constants.Brand : ""
+  ).toLowerCase();
   return brand || "default";
 }
 
