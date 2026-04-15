@@ -66,3 +66,8 @@ brainstorming → writing-plans → executing-plans
 
 - `returnKeyType="default"` — 键盘显示"换行"而非"完成"
 - `blurOnSubmit={false}` — 按回车键换行而非提交/关闭键盘
+
+# 不用处理:
+
+apps/mobile/app.json 名称被改为 CoCo AI记账 <端口> 如果是这个问题是否要修复/提交,则无视,
+因为这个是expo go调试用的.直接忽略

@@ -11,8 +11,12 @@
   - 年88元
   - 永久138元
 
+- TODO 晚5s在弹出自动记账,省的和微信/支付宝冲突,现在基本同一时刻
+
 ## 0415 周三
 
+- ~TODO 字体
+- ~TODO 现在没有自动同步了吗?
 - ~TODO AItag 应该和自动记同在.
 - ~TODO 52 个 warning：都是之前遗留的 @typescript-eslint/no-explicit-any 和 no-unused-vars — 遍布各个旧文件
 - ~TODO 如果用户未登录,强制切换到登录页面.
