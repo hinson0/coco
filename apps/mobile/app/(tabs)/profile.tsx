@@ -106,10 +106,7 @@ export default function ProfileScreen() {
       {
         text: "退出",
         style: "destructive",
-        onPress: async () => {
-          await signOut();
-          router.replace("/(auth)/login");
-        },
+        onPress: () => signOut(),
       },
     ]);
   };
