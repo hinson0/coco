@@ -20,7 +20,6 @@ const CN_MONTH = [
 const CN_DAY_TENS = ["", "十", "二十", "三十"];
 const CN_DAY_UNITS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const CN_WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-const WEATHER_EMOJI = ["☀️", "🌤️", "⛅", "🌦️", "🌧️", "❄️"];
 
 function cnDay(d: number): string {
   if (d <= 10) return CN_DAY_UNITS[d];

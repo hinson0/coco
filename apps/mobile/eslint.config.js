@@ -28,10 +28,10 @@ export default defineConfig([
       "@typescript-eslint/no-require-imports": "off", // RN 图片 require("./icon.png") 是框架强制的，不是代码坏味道
       "@typescript-eslint/no-unused-vars": [
         // 函数参数命名 _e 或 _unused/表示"我知道没用但需要占位"，这是社区约定
-        "warn",
+        "error",
         { argsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/no-explicit-any": "warn", // 存量 25 个 any，一次修完不现实，先警告提醒后续清理
+      "@typescript-eslint/no-explicit-any": "error", // 存量 25 个 any，一次修完不现实，先警告提醒后续清理
     },
   },
 

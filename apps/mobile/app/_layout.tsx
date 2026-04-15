@@ -2,7 +2,7 @@ import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
 import { push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, type Href } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import type * as SQLite from "expo-sqlite";
 import { useCallback, useEffect, useState } from "react";
@@ -122,7 +122,7 @@ function AppContent() {
       isReady,
       segments[0] as string | undefined,
     );
-    if (target) router.replace(target as any);
+    if (target) router.replace(target as Href);
   }, [isAuthenticated, isReady, segments, router]);
 
   const onLayoutRootView = useCallback(async () => {

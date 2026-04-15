@@ -122,7 +122,7 @@ export function useUpdateTransaction() {
     ) => {
       if (!db) throw new Error("Database not initialized");
       const fields: string[] = [];
-      const values: (string | number)[] = [];
+      const values: (string | number | null)[] = [];
       if (params.category_id !== undefined) {
         fields.push("category_id = ?");
         values.push(params.category_id);
@@ -145,7 +145,7 @@ export function useUpdateTransaction() {
       }
       if (params.account_id !== undefined) {
         fields.push("account_id = ?");
-        values.push(params.account_id as any);
+        values.push(params.account_id ?? null);
       }
       fields.push("updated_at = ?");
       values.push(new Date().toISOString());

@@ -6,6 +6,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { router } from "expo-router";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { colors } from "../../constants/theme";
 
 const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
@@ -49,8 +50,11 @@ function AIButton() {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function BottomTabBar({ state, descriptors, navigation }: any) {
+export function BottomTabBar({
+  state,
+  descriptors,
+  navigation,
+}: BottomTabBarProps) {
   return (
     <LinearGradient
       colors={[`${colors.cream}b3`, `${colors.cream}00`]}
@@ -58,7 +62,7 @@ export function BottomTabBar({ state, descriptors, navigation }: any) {
       end={{ x: 0, y: 0 }}
       style={styles.container}
     >
-      {state.routes.map((route: any, index: number) => {
+      {state.routes.map((route, index) => {
         const isAI = route.name === "ai-placeholder";
 
         if (isAI) {
