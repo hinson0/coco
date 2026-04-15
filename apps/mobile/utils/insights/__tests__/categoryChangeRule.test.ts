@@ -1,5 +1,5 @@
 import { categoryChangeRule } from "../categoryChangeRule";
-import type { InsightContext } from "../types";
+import type { InsightContext, CategoryChangeMeta } from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -90,7 +90,7 @@ describe("categoryChangeRule", () => {
     const up = items.find((i) => i.badge?.direction === "up");
     expect(up).toBeDefined();
     expect(up!.type).toBe("category-change");
-    expect(up!.meta!.changePercent).toBeCloseTo(20, 0);
+    expect((up!.meta as CategoryChangeMeta).changePercent).toBeCloseTo(20, 0);
   });
 
   it("最多返回 2 条（涨幅 + 降幅各一）", () => {

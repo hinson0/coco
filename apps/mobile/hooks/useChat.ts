@@ -33,8 +33,17 @@ type ChatNlData = {
   content: string;
 };
 
+type ChatErrorData = {
+  type: "error";
+  message: string;
+};
+
 type ChatResponse = {
   data: ChatBillData | ChatTextData | ChatNlData;
+};
+
+type OcrResponse = {
+  data: ChatBillData | ChatErrorData;
 };
 
 export function useChat() {
@@ -178,7 +187,7 @@ export function useChat() {
       console.log("[sendOcr] → 调用 /record-ocr");
       setLoading(true);
       try {
-        const resp = await apiFetch<ChatResponse>("/record-ocr", {
+        const resp = await apiFetch<OcrResponse>("/record-ocr", {
           method: "POST",
           body: JSON.stringify({ imageBase64 }),
         });

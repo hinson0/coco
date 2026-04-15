@@ -4,7 +4,7 @@ import Svg, { Circle } from "react-native-svg";
 import { Card } from "../ui/Card";
 import { AppText } from "../ui/AppText";
 import { colors } from "../../constants/theme";
-import type { InsightItem } from "../../utils/insights/types";
+import type { InsightItem, HealthScoreMeta } from "../../utils/insights/types";
 
 interface HealthScoreCardProps {
   readonly item: InsightItem;
@@ -21,8 +21,9 @@ function scoreColor(score: number): string {
 }
 
 export function HealthScoreCard({ item }: HealthScoreCardProps) {
-  const score = (item.meta?.score as number) ?? 0;
-  const level = (item.meta?.level as string) ?? "";
+  const meta = item.meta as HealthScoreMeta | undefined;
+  const score = meta?.score ?? 0;
+  const level = meta?.level ?? "";
   const strokeDashoffset = CIRCUMFERENCE * (1 - score / 100);
   const color = scoreColor(score);
 

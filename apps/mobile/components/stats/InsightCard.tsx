@@ -176,9 +176,9 @@ export function InsightCard({ item }: InsightCardProps) {
   const handlePress = () => {
     if (item.navigation) {
       router.push({
-        pathname: item.navigation.route as Href,
+        pathname: item.navigation.route,
         params: item.navigation.params,
-      });
+      } as Href);
     }
   };
 

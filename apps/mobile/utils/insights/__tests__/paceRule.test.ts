@@ -1,5 +1,5 @@
 import { paceRule } from "../paceRule";
-import type { InsightContext } from "../types";
+import type { InsightContext, PaceMeta } from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -65,7 +65,7 @@ describe("paceRule", () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe("pace");
     expect(result!.priority).toBe(4);
-    expect(result!.meta!.spendProgress).toBeCloseTo(0.7, 1);
+    expect((result!.meta as PaceMeta).spendProgress).toBeCloseTo(0.7, 1);
   });
 
   it("meta 包含 timeProgress 和 spendProgress", () => {
@@ -75,8 +75,8 @@ describe("paceRule", () => {
       currentMonth: [makeTx("income", 10000), makeTx("expense", 8000)],
     });
     const result = paceRule(ctx)!;
-    expect(result.meta!.timeProgress).toBeCloseTo(15 / 31, 2);
-    expect(result.meta!.spendProgress).toBeCloseTo(0.8, 1);
+    expect((result.meta as PaceMeta).timeProgress).toBeCloseTo(15 / 31, 2);
+    expect((result.meta as PaceMeta).spendProgress).toBeCloseTo(0.8, 1);
   });
 
   it("无收入时不触发", () => {

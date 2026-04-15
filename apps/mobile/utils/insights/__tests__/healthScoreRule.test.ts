@@ -1,6 +1,6 @@
 // apps/mobile/utils/insights/__tests__/healthScoreRule.test.ts
 import { healthScoreRule } from "../healthScoreRule";
-import type { InsightContext } from "../types";
+import type { InsightContext, HealthScoreMeta } from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -51,7 +51,7 @@ describe("healthScoreRule", () => {
       currentMonth: [makeTx("expense", 1000)],
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.score).toBeLessThanOrEqual(40);
+    expect((result.meta as HealthScoreMeta).score).toBeLessThanOrEqual(40);
   });
 
   it("高结余率（≥30%）得高分", () => {
@@ -61,7 +61,7 @@ describe("healthScoreRule", () => {
       daysElapsed: 31,
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.score).toBeGreaterThanOrEqual(60);
+    expect((result.meta as HealthScoreMeta).score).toBeGreaterThanOrEqual(60);
   });
 
   it("结余率 30% 刚好得满分（结余率维度）", () => {
@@ -71,7 +71,7 @@ describe("healthScoreRule", () => {
       daysElapsed: 31,
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.savingsRate).toBeCloseTo(0.3, 1);
+    expect((result.meta as HealthScoreMeta).savingsRate).toBeCloseTo(0.3, 1);
   });
 
   it("消费节奏偏快扣分", () => {
@@ -82,7 +82,7 @@ describe("healthScoreRule", () => {
       daysElapsed: 15,
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.score).toBeLessThan(80);
+    expect((result.meta as HealthScoreMeta).score).toBeLessThan(80);
   });
 
   it("评级映射正确", () => {
@@ -92,7 +92,7 @@ describe("healthScoreRule", () => {
       daysElapsed: 31,
     });
     const result = healthScoreRule(ctx)!;
-    const level = result.meta!.level as string;
+    const level = (result.meta as HealthScoreMeta).level;
     expect(["差", "一般", "良好", "优秀"]).toContain(level);
   });
 
@@ -102,7 +102,7 @@ describe("healthScoreRule", () => {
       previousMonth: [makeTx("income", 8000), makeTx("expense", 6000)],
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.prevSavingsRate).toBeDefined();
+    expect((result.meta as HealthScoreMeta).prevSavingsRate).toBeDefined();
   });
 
   it("无上月数据时 prevSavingsRate 为 undefined", () => {
@@ -111,6 +111,6 @@ describe("healthScoreRule", () => {
       previousMonth: [],
     });
     const result = healthScoreRule(ctx)!;
-    expect(result.meta!.prevSavingsRate).toBeUndefined();
+    expect((result.meta as HealthScoreMeta).prevSavingsRate).toBeUndefined();
   });
 });
