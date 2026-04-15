@@ -16,6 +16,9 @@
 - 🎯 **预算管理** — 分类预算 + 超支提醒
 - 📤 **数据导出** — 按时间范围导出 CSV
 - 🔌 **离线存储** — 本地 SQLite 持久化，数据查看与编辑无需联网
+- 🔔 **自动记账** — 监听微信/支付宝支付通知，自动解析记账（标注 [自动记] 来源标签）
+- 🔄 **多设备同步** — 本地数据每 30 秒自动同步云端，换机可一键 pull 还原
+- 🎁 **广告权益系统** — 观看激励视频解锁高级功能（语音记账、小票识别、CSV 导出）
 
 ## 架构概览
 
@@ -71,6 +74,10 @@ coco/
 │       └── main.py      # FastAPI 入口
 ├── packages/
 │   └── shared/          # 共享 TypeScript 类型 + 常量
+├── modules/
+│   └── expo-pangle/     # 穿山甲广告原生模块（保留备用）
+├── .github/
+│   └── workflows/       # GitHub Actions CI 流水线
 ├── scripts/             # 开发脚本（worktree 等）
 ├── justfile             # 任务运行器（just）
 └── docker-compose.yml   # 本地环境一键启动
@@ -88,16 +95,20 @@ coco/
 | 后端 | Python · FastAPI · uv · Docker |
 | 数据库 | PostgreSQL (Docker) + JWT 认证 · Alembic 迁移 |
 | AI | Qwen (SiliconFlow — 意图分类 / 账单提取 / text-to-SQL) · 腾讯云 OCR / ASR |
+| 广告 | Google AdMob（激励视频 + 开屏广告） |
+| CI/CD | GitHub Actions（前端 ESLint/TSC/Jest + 后端 ruff/pyright/pytest）|
+| 代码质量 | ruff（Python lint + format）· pyright · ESLint |
 | 工程化 | pnpm workspace · just（任务运行器）|
 | 测试 | Jest · ts-jest · pytest |
 
-## 离线架构
+## 离线与同步架构
 
 CoCo 采用本地 SQLite 持久化，离线时可查看和编辑已有数据：
 
-1. **本地 SQLite** — 所有数据（交易、分类、预算、聊天记录）持久化到 expo-sqlite，WAL 模式
+1. **本地 SQLite** — 所有数据持久化到 expo-sqlite（WAL 模式），6 张表均含 `updated_at` 字段
 2. **React Query** — 数据访问层，本地 CRUD 操作即时反映在界面
-3. **在线记账** — 文字 / 语音 / 拍照记账需联网，由后端 Qwen AI 解析后写入本地数据库
+3. **在线记账** — 文字 / 语音 / 拍照 / 自动（通知）记账，由后端 Qwen AI 解析后写入本地数据库
+4. **自动同步** — 前台每 30 秒静默 push 到 PostgreSQL；换机后手动 pull 还原，冲突采用 LWW 策略
 
 ## 快速启动
 
