@@ -24,7 +24,13 @@ describe("isNotificationSource", () => {
     expect(isNotificationSource("notification")).toBe(true);
   });
 
-  const nonNotificationSources: RecordSource[] = ["text", "asr", "ocr", "manual", "llm"];
+  const nonNotificationSources: RecordSource[] = [
+    "text",
+    "asr",
+    "ocr",
+    "manual",
+    "llm",
+  ];
   test.each(nonNotificationSources)("source '%s' 返回 false", (source) => {
     expect(isNotificationSource(source)).toBe(false);
   });
