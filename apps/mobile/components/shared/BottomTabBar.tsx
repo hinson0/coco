@@ -6,7 +6,16 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { router } from "expo-router";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { QK } from "../../lib/queryKeys";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useOfflineContext } from "../../lib/offline-context";
+import {
+  CHAT_INITIAL_LIMIT,
+  fetchChatMessages,
+  fetchCategories,
+} from "../../lib/db/queries";
 import { colors } from "../../constants/theme";
 
 const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
@@ -19,16 +28,39 @@ const TAB_CONFIG: Record<string, { emoji: string; label: string }> = {
 
 function AIButton() {
   const scale = useSharedValue(1);
+  const { db, userId } = useOfflineContext();
+  const queryClient = useQueryClient();
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  // onPressIn 比 onPress 提前 ~150ms，利用此窗口预取 AI 页数据
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.92, { damping: 15, stiffness: 200 });
+    if (!db || !userId) return;
+    // 缓存命中时跳过，避免每次 pressIn 都进入 prefetch 调度
+    const msgsKey = [QK.chatMessages, userId, CHAT_INITIAL_LIMIT] as const;
+    if (!queryClient.getQueryData(msgsKey)) {
+      queryClient.prefetchQuery({
+        queryKey: msgsKey,
+        queryFn: () => fetchChatMessages(db, userId, CHAT_INITIAL_LIMIT),
+        staleTime: Infinity,
+      });
+    }
+    const catsKey = [QK.categories, userId] as const;
+    if (!queryClient.getQueryData(catsKey)) {
+      queryClient.prefetchQuery({
+        queryKey: catsKey,
+        queryFn: () => fetchCategories(db, userId),
+        staleTime: Infinity,
+      });
+    }
+  }, [db, userId, queryClient]);
+
   return (
     <Pressable
-      onPressIn={() => {
-        scale.value = withSpring(0.92, { damping: 15, stiffness: 200 });
-      }}
+      onPressIn={handlePressIn}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 15, stiffness: 200 });
       }}

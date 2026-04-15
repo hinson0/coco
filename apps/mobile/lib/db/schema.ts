@@ -114,15 +114,30 @@ export async function createTables(db: SQLite.SQLiteDatabase): Promise<void> {
 
 // 增量迁移：给已有表添加新字段（幂等，重复执行不报错）
 async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
-  await addColumnIfNotExists(db, "categories", "deleted_at", "TEXT");
-  await addColumnIfNotExists(
-    db,
-    "transactions",
-    "account_id",
-    "TEXT REFERENCES accounts(id)",
-  );
-  // 清理已有重复分类（保留最早创建的，软删除其余），然后建唯一索引
-  // GROUP BY 包含 user_id，不同用户可以有同名分类
+  // ── 批量添加新列（每表一次 PRAGMA，5 次代替原先 11 次） ──
+  await addColumnsIfNotExist(db, "categories", [
+    { name: "deleted_at", definition: "TEXT" },
+    { name: "updated_at", definition: "TEXT" },
+  ]);
+  await addColumnsIfNotExist(db, "transactions", [
+    { name: "account_id", definition: "TEXT REFERENCES accounts(id)" },
+    { name: "updated_at", definition: "TEXT" },
+  ]);
+  await addColumnsIfNotExist(db, "chat_messages", [
+    { name: "audio_uri", definition: "TEXT" },
+    { name: "duration_seconds", definition: "INTEGER" },
+    { name: "updated_at", definition: "TEXT" },
+    { name: "deleted_at", definition: "TEXT" },
+  ]);
+  await addColumnsIfNotExist(db, "budgets", [
+    { name: "updated_at", definition: "TEXT" },
+    { name: "deleted_at", definition: "TEXT" },
+  ]);
+  await addColumnsIfNotExist(db, "accounts", [
+    { name: "updated_at", definition: "TEXT" },
+  ]);
+
+  // ── 重复分类清理 + 唯一索引 ──
   await db.execAsync(`
     UPDATE categories SET deleted_at = datetime('now')
     WHERE deleted_at IS NULL
@@ -132,20 +147,12 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
         GROUP BY name, type, user_id
       )
   `);
-  // 重建索引：加入 user_id 以支持多用户同名分类
   await db.execAsync("DROP INDEX IF EXISTS idx_categories_name_type");
   await db.execAsync(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_type ON categories(name, type, user_id) WHERE deleted_at IS NULL",
   );
-  // 语音消息字段
-  await addColumnIfNotExists(db, "chat_messages", "audio_uri", "TEXT");
-  await addColumnIfNotExists(
-    db,
-    "chat_messages",
-    "duration_seconds",
-    "INTEGER",
-  );
-  // user_id 索引（多用户数据隔离）
+
+  // ── 索引 ──
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)",
   );
@@ -161,37 +168,23 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id)",
   );
-  // 聊天消息按时间排序的索引，加速 ORDER BY created_at DESC LIMIT 查询
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)",
   );
 
-  // ── 同步支持：给各表加 updated_at ──
-  await addColumnIfNotExists(db, "transactions", "updated_at", "TEXT");
+  // ── 默认值回填（列已在上面批量添加） ──
   await db.execAsync(
     `UPDATE transactions SET updated_at = created_at WHERE updated_at IS NULL`,
   );
-
-  await addColumnIfNotExists(db, "categories", "updated_at", "TEXT");
   await db.execAsync(
     `UPDATE categories SET updated_at = datetime('now') WHERE updated_at IS NULL`,
   );
-
-  await addColumnIfNotExists(db, "budgets", "updated_at", "TEXT");
   await db.execAsync(
     `UPDATE budgets SET updated_at = datetime('now') WHERE updated_at IS NULL`,
   );
-
-  await addColumnIfNotExists(db, "budgets", "deleted_at", "TEXT");
-
-  await addColumnIfNotExists(db, "chat_messages", "updated_at", "TEXT");
   await db.execAsync(
     `UPDATE chat_messages SET updated_at = created_at WHERE updated_at IS NULL`,
   );
-
-  await addColumnIfNotExists(db, "chat_messages", "deleted_at", "TEXT");
-
-  await addColumnIfNotExists(db, "accounts", "updated_at", "TEXT");
   await db.execAsync(
     `UPDATE accounts SET updated_at = created_at WHERE updated_at IS NULL`,
   );
@@ -225,20 +218,26 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_pending_notifications_status ON pending_notifications(status, user_id)",
   );
+  // 部分索引（比单列 idx 更优，避免 user_id 过滤后还要全表 sort）
+  await db.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_chat_messages_user_active ON chat_messages(user_id, created_at DESC) WHERE deleted_at IS NULL",
+  );
 }
 
-async function addColumnIfNotExists(
+async function addColumnsIfNotExist(
   db: SQLite.SQLiteDatabase,
   table: string,
-  column: string,
-  definition: string,
+  columns: readonly { readonly name: string; readonly definition: string }[],
 ): Promise<void> {
   const info = await db.getAllAsync<{ name: string }>(
     `PRAGMA table_info(${table})`,
   );
-  if (!info.some((col) => col.name === column)) {
-    await db.execAsync(
-      `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`,
-    );
+  const existing = new Set(info.map((col) => col.name));
+  for (const col of columns) {
+    if (!existing.has(col.name)) {
+      await db.execAsync(
+        `ALTER TABLE ${table} ADD COLUMN ${col.name} ${col.definition}`,
+      );
+    }
   }
 }
