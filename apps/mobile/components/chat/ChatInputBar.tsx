@@ -269,7 +269,7 @@ export function ChatInputBar({
                 ref={inputRef}
                 value={text}
                 onChangeText={setText}
-                placeholder="记一笔或按住说话"
+                placeholder={focused ? "记一笔" : "记一笔或按住说话"}
                 placeholderTextColor={colors.textLighter}
                 returnKeyType="default"
                 style={[styles.input, { maxHeight: 100 }]}
