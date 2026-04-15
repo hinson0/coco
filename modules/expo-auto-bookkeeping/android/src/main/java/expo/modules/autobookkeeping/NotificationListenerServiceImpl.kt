@@ -143,9 +143,23 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
     }
   }
 
-  /** 发送"已自动记账"本地通知 */
+  /** 发送"已自动记账"本地通知（仅在金额提取成功时） */
   private fun showAutoBookkeepingNotification(pkg: String, text: String) {
     try {
+      val sourceLabel = if (pkg == "com.tencent.mm") "微信支付" else "支付宝"
+
+      // 金额提取是前置条件：失败则静默忽略，不发通知
+      // 这确保通知中总是包含真实的金额信息，避免误导用户
+      val amountMatch = Regex("[¥￥]([\\d]+\\.?\\d{0,2})").find(text)
+        ?: Regex("([\\d]+\\.?\\d{0,2})\\s*元").find(text)
+
+      if (amountMatch == null) {
+        Log.d(TAG, "No amount found in notification text: $text")
+        return  // 没有金额，不发送"已自动记账"通知
+      }
+
+      val body = "$sourceLabel ¥${amountMatch.groupValues[1]}"
+
       val channelId = "auto-bookkeeping"
       val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -156,16 +170,6 @@ class NotificationListenerServiceImpl : NotificationListenerService() {
           ).apply { description = "自动记账通知" }
           nm.createNotificationChannel(channel)
         }
-      }
-
-      val sourceLabel = if (pkg == "com.tencent.mm") "微信支付" else "支付宝"
-      // 尝试提取金额，失败则用原始文本
-      val amountMatch = Regex("[¥￥]([\\d]+\\.?\\d{0,2})").find(text)
-        ?: Regex("([\\d]+\\.?\\d{0,2})\\s*元").find(text)
-      val body = if (amountMatch != null) {
-        "$sourceLabel ¥${amountMatch.groupValues[1]}"
-      } else {
-        "$sourceLabel $text"
       }
 
       val launchIntent = packageManager.getLaunchIntentForPackage(packageName)

@@ -155,13 +155,13 @@ describe("parseNotification", () => {
       ).toBeNull();
     });
 
-    it("无收支关键词默认为支出", () => {
+    it("无收支关键词返回 null", () => {
       const result = parseNotification(
         "com.tencent.mm",
         "微信支付",
         "交易金额50.00元",
       );
-      expect(result?.type).toBe("expense");
+      expect(result).toBeNull();
     });
 
     it("整数金额（无小数点）", () => {
@@ -198,15 +198,40 @@ describe("parseNotification", () => {
       expect(result?.type).toBe("expense");
     });
 
-    it("title 中包含支付关键词", () => {
+    it("纯金额无语义上下文返回 null", () => {
       const result = parseNotification("com.tencent.mm", "微信支付", "¥0.01");
-      expect(result?.amount).toBe(0.01);
-      expect(result?.type).toBe("expense");
+      expect(result).toBeNull();
     });
 
     it("聊天消息不含金额返回 null", () => {
       expect(
         parseNotification("com.tencent.mm", "爆米花", "[2条]爆米花: 1"),
+      ).toBeNull();
+    });
+
+    it("含 URL 但无金额的微信消息返回 null", () => {
+      expect(
+        parseNotification(
+          "com.tencent.mm",
+          "微信",
+          "https://openrouter.ai/models?max_price=0&fmt=cards&input_modalities=text"
+        ),
+      ).toBeNull();
+    });
+
+    it("含「贵」等词汇但无金额格式的聊天消息返回 null", () => {
+      expect(
+        parseNotification(
+          "com.tencent.mm",
+          "微信",
+          "openrouter 这个网站有很多贵的 LLM API"
+        ),
+      ).toBeNull();
+    });
+
+    it("title 不在支付白名单返回 null", () => {
+      expect(
+        parseNotification("com.tencent.mm", "爆米花", "付款50.00元"),
       ).toBeNull();
     });
   });
