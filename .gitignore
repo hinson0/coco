@@ -4,6 +4,7 @@ dist/
 .env
 .env/
 .env.local
+.envfiles/
 .expo/
 *.tsbuildinfo
 .superpowers/
