@@ -116,3 +116,46 @@ cicd-be:
     uv run pytest -x -q
 
 cicd: cicd-be cicd-fe
+
+# ── 知识库查询 ────────────────────────────────
+
+# 查看知识文件（默认今天，传 1=昨天，2=前天，以此类推）
+# kb: knowledge base知识库
+show days="+0":
+    @target=$(date -v{{days}}d +%Y-%m-%d); \
+     next=$(date -v{{days}}d -v+1d +%Y-%m-%d); \
+     echo "📅 $target"; \
+     find ~/coco/docs/knowledges -name "*.md" -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00"
+
+# 镜像指定天的 .md 到 ~/kbs_pdf/kbs/，并把源文件标记为 .printed.md（默认今天，-1=昨天，以此类推）
+pr days="+0":
+    #!/usr/bin/env bash
+    target=$(date -v{{days}}d +%Y-%m-%d)
+    next=$(date -v{{days}}d -v+1d +%Y-%m-%d)
+    src="$HOME/coco/docs/knowledges"
+    echo "📅 $target"
+    find "$src" -name "*.md" ! -name "*.printed.md" \
+        -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00" | while read -r f; do
+        rel="${f#$src/}"
+        dest="$HOME/kbs_pdf/kbs/$rel"
+        mkdir -p "$(dirname "$dest")"
+        cp "$f" "$dest"
+        mv "$f" "${f%.md}.printed.md"
+        echo "✅ $rel  →  ~/kbs_pdf/kbs/$rel  +  原文件标记 .printed.md"
+    done
+
+# 还原：.printed.md → .md 并删除 ~/kbs_pdf/kbs/ 中的副本（默认今天，-1=昨天，以此类推）
+pr-reset days="+0":
+    #!/usr/bin/env bash
+    target=$(date -v{{days}}d +%Y-%m-%d)
+    next=$(date -v{{days}}d -v+1d +%Y-%m-%d)
+    src="$HOME/coco/docs/knowledges"
+    echo "↩️  还原日期：$target"
+    find "$src" -name "*.printed.md" \
+        -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00" | while read -r f; do
+        orig="${f%.printed.md}.md"
+        rel="${orig#$src/}"
+        mv "$f" "$orig"
+        rm -f "$HOME/kbs_pdf/kbs/$rel"
+        echo "↩️  $rel 已还原，~/kbs_pdf/kbs/$rel 已删除"
+    done
