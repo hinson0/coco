@@ -2,11 +2,7 @@
   "name": "coco",
   "version": "1.0.2",
   "scripts": {
-    "dev": "pnpm --filter mobile dev",
     "dev:infra": "docker compose up -d",
-    "dev:backend": "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
-    "dev:frontend": "pnpm --filter mobile dev",
-    "dev:all": "pnpm dev:infra && concurrently -n backend,frontend -c blue,green \"pnpm dev:backend\" \"pnpm dev:frontend\"",
     "db:migrate": "cd apps/backend && uv run alembic upgrade head",
     "db:reset": "docker compose down -v && docker compose up -d && sleep 2 && pnpm db:migrate",
     "w": "node scripts/worktree-dev.mjs",
@@ -14,7 +10,15 @@
     "test:scripts": "node --test scripts/__tests__/*.test.mjs",
     "cicd:frontend": "pnpm --filter mobile lint && pnpm --filter mobile format:check && pnpm --filter mobile typecheck && pnpm --filter @coco/shared lint && pnpm --filter mobile test",
     "cicd:backend": "cd apps/backend && uv run ruff check . && uv run ruff format --check . && uv run pyright && SILICON_API_KEY=test TENCENT_SECRET_ID=test TENCENT_SECRET_KEY=test DATABASE_URL=postgresql+asyncpg://test:test@localhost:5432/test JWT_SECRET=test uv run pytest -x -q",
-    "cicd": "pnpm cicd:frontend && pnpm cicd:backend"
+    "cicd": "pnpm cicd:frontend && pnpm cicd:backend",
+    "fe:env": "",
+    "be:env": "",
+    "fe:sync": "pnpm install",
+    "be:sync": "cd apps/backend && uv sync",
+    "sync": "pnpm fe:sync && pnpm be:sync",
+    "be:start": "cd apps/backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "fe:start": "pnpm --filter mobile dev",
+    "start": "pnpm fe:sync && pnpm be:sync && pnpm fe:start && pnpm be:start"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

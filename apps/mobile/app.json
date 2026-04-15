@@ -52,6 +52,12 @@
         }
       ],
       "expo-sqlite",
+      [
+        "react-native-iap",
+        {
+          "paymentProvider": "Apple"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "react-native-google-mobile-ads",
