@@ -9,7 +9,12 @@ import {
   type CategoryColorName,
 } from "../../constants/theme";
 import { formatAmount } from "../../lib/format";
-import { isAiSource, isNotificationSource } from "../../lib/badge-utils";
+import {
+  isAiSource,
+  isNotificationSource,
+  getSourceLabel,
+  getNotificationLabel,
+} from "../../lib/badge-utils";
 import { MAJOR_AMOUNT_THRESHOLD } from "@coco/shared";
 import type { Transaction } from "@coco/shared";
 
@@ -37,6 +42,7 @@ export function TransactionItem({
   const time = `${datePrefix} ${occurredDate.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
   const isAi = isAiSource(transaction.source);
   const isMajor = !isIncome && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
+  const sourceLabel = getSourceLabel(transaction.source);
 
   return (
     <TouchableOpacity
@@ -55,17 +61,10 @@ export function TransactionItem({
             {time} · {categoryName}
           </AppText>
           {isAi ? <Badge text="AI" variant="ai" /> : null}
+          {sourceLabel ? <Badge text={sourceLabel} variant="auto" /> : null}
           {isNotificationSource(transaction.source) ? (
             <Badge
-              text={
-                transaction.raw_input?.includes("com.tencent.mm")
-                  ? "微信·自动记"
-                  : transaction.raw_input?.includes(
-                        "com.eg.android.AlipayGphone",
-                      )
-                    ? "支付宝·自动记"
-                    : "自动记"
-              }
+              text={getNotificationLabel(transaction.raw_input)}
               variant="auto"
             />
           ) : null}
