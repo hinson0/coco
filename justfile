@@ -26,7 +26,7 @@ test:
 # ── 环境配置（worktree .env 软链接）──────────
 
 # 前端 .env 软链接
-fe-env:
+env-fe:
     #!/usr/bin/env bash
     MAIN=$(git worktree list --porcelain | head -1 | sed 's/^worktree //')
     if [ "$MAIN" != "$(pwd)" ]; then
@@ -37,7 +37,7 @@ fe-env:
     fi
 
 # 后端 .env 软链接
-be-env:
+env-be:
     #!/usr/bin/env bash
     MAIN=$(git worktree list --porcelain | head -1 | sed 's/^worktree //')
     if [ "$MAIN" != "$(pwd)" ]; then
@@ -48,35 +48,34 @@ be-env:
     fi
 
 # 全部 .env 软链接
-env: fe-env be-env
+env: env-fe env-be
 
 # ── 依赖同步 ──────────────────────────────────
-fe-sync:
+sync-fe:
     pnpm install
 
-be-sync:
+sync-be:
     cd {{ backend }} && uv sync
 
-sync: fe-sync be-sync
+sync: sync-fe sync-be
 
 # ── 开发服务器 ────────────────────────────────
-fe-start: fe-env fe-sync
+start-fe: env-fe sync-fe
     pnpm --filter {{ mobile }} dev
 
-be-start: be-env be-sync 
+be-start: env-be sync-be 
     cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 
 
 # ── CI/CD ─────────────────────────────────────
-fe-cicd:
+cicd-fe:
     pnpm --filter {{ mobile }} lint
     pnpm --filter {{ mobile }} format:check
     pnpm --filter {{ mobile }} typecheck
     pnpm --filter {{ shared }} lint
     pnpm --filter {{ mobile }} test
-
-be-cicd:
+cicd-be:
     #!/usr/bin/env bash
     cd {{ backend }} && \
     uv run ruff check . && \
@@ -89,4 +88,4 @@ be-cicd:
     JWT_SECRET=test \
     uv run pytest -x -q
 
-cicd: be-cicd fe-cicd
+cicd: cicd-be cicd-fe
