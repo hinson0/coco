@@ -170,7 +170,7 @@ export default function BudgetCategoryEditScreen() {
                 onPress={() => setSelectedCategoryId(item.id)}
                 activeOpacity={0.7}
               >
-                <AppText style={{ fontSize: 20 }}>{item.icon}</AppText>
+                <AppText style={{ fontSize: 21 }}>{item.icon}</AppText>
                 <AppText
                   size="md"
                   weight="medium"
@@ -305,12 +305,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   amountPrefix: {
-    fontSize: 28,
+    fontSize: 29,
     fontWeight: "700",
     color: colors.textLighter,
     marginRight: 4,
   },
-  amountInput: { flex: 1, fontSize: 36, fontWeight: "700", color: colors.text },
+  amountInput: { flex: 1, fontSize: 37, fontWeight: "700", color: colors.text },
   overBudgetCard: {
     marginHorizontal: spacing.xl,
     marginTop: spacing.lg,

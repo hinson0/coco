@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   scrollView: {
     flex: 1,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     height: 150,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
     textAlignVertical: "top",
   },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderColor: colors.creamDark,
     borderRadius: 12,
     padding: 14,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
   },
   bottomBar: {

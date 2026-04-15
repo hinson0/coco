@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   placeholder: { width: 36 },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   introSection: {

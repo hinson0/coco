@@ -172,7 +172,7 @@ export default function BudgetManageScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.budgetIcon}>
-                <AppText style={{ fontSize: 22 }}>{cat?.icon ?? "📦"}</AppText>
+                <AppText style={{ fontSize: 23 }}>{cat?.icon ?? "📦"}</AppText>
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.budgetInfo}>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   listContent: { padding: spacing.xl, paddingBottom: 40 },
   globalCard: { marginBottom: spacing.xl },
   overBudgetText: { marginTop: spacing.sm },
