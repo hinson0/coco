@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
     marginBottom: spacing.lg,
   },
@@ -268,6 +268,6 @@ const styles = StyleSheet.create({
     maxWidth: "16.666%",
   },
   emoji: {
-    fontSize: 28,
+    fontSize: 29,
   },
 });

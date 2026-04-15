@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   placeholder: { width: 36 },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   heroSection: {
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
   },
-  heroNumber: { fontSize: 56, fontWeight: "800", color: colors.honey },
+  heroNumber: { fontSize: 57, fontWeight: "800", color: colors.honey },
   sectionTitle: { paddingTop: 14, paddingBottom: 6, paddingHorizontal: 4 },
   ruleCard: { gap: 0 },
   ruleRow: {

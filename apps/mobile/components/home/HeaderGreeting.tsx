@@ -95,6 +95,6 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   avatarEmoji: {
-    fontSize: 22,
+    fontSize: 23,
   },
 });

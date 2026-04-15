@@ -113,7 +113,7 @@ export function DailyTrendCard({
   const shouldShowLabel = (day: number) =>
     day === 1 || (day - 1) % 5 === 0 || day === dailyData.length;
 
-  const yAxisTextStyle = { color: colors.textLighter, fontSize: 9 };
+  const yAxisTextStyle = { color: colors.textLighter, fontSize: 10 };
 
   const pointStep = BAR_WIDTH + barSpacing;
   const handleChartPress = useCallback(

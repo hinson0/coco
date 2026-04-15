@@ -310,12 +310,12 @@ export default function AccountEditScreen() {
                     resizeMode="contain"
                   />
                 ) : (
-                  <AppText style={{ fontSize: 26 }}>{icon}</AppText>
+                  <AppText style={{ fontSize: 27 }}>{icon}</AppText>
                 )}
               </LinearGradient>
               {selectedType.dbType === "custom" ? (
                 <View style={styles.editIconBadge}>
-                  <AppText style={{ fontSize: 8 }}>⚙️</AppText>
+                  <AppText style={{ fontSize: 9 }}>⚙️</AppText>
                 </View>
               ) : null}
             </TouchableOpacity>
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" as const,
     ...shadows.md,
   },
-  backArrow: { fontSize: 18, color: colors.text, lineHeight: 22 },
+  backArrow: { fontSize: 19, color: colors.text, lineHeight: 23 },
   body: { flex: 1, paddingHorizontal: spacing.xxl },
 
   // Section
@@ -506,19 +506,19 @@ const styles = StyleSheet.create({
 
   // Fields
   fieldLabel: { marginBottom: 2, letterSpacing: 0.3 },
-  fieldInput: { fontSize: 15, color: colors.text, fontWeight: "500" },
+  fieldInput: { fontSize: 16, color: colors.text, fontWeight: "500" },
 
   // Balance - 同行布局
   balanceRow: { flex: 1, flexDirection: "row", alignItems: "baseline" },
   balancePrefix: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "700",
     color: colors.textLighter,
     marginRight: 4,
   },
   balanceInput: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: "700",
     color: colors.text,
   },

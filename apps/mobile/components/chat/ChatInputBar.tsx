@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
   },
   holdToTalkBtn: {

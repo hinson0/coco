@@ -73,17 +73,17 @@ export const shadows = {
 
 export const typography = {
   sizes: {
-    xs: 9,
-    sm: 10,
-    base: 11,
-    md: 12,
-    lg: 13,
-    xl: 14,
-    "2xl": 16,
-    "3xl": 18,
-    "4xl": 20,
-    "5xl": 22,
-    "6xl": 26,
+    xs: 10,
+    sm: 11,
+    base: 12,
+    md: 13,
+    lg: 14,
+    xl: 15,
+    "2xl": 17,
+    "3xl": 19,
+    "4xl": 21,
+    "5xl": 23,
+    "6xl": 27,
   },
   weights: {
     regular: "400" as const,

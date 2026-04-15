@@ -136,7 +136,7 @@ export default function ProfileEditScreen() {
             {avatarType === "image" ? (
               <Image source={{ uri: avatarValue }} style={styles.avatarImage} />
             ) : (
-              <AppText style={{ fontSize: 40 }}>{avatarValue}</AppText>
+              <AppText style={{ fontSize: 41 }}>{avatarValue}</AppText>
             )}
           </LinearGradient>
         </TouchableOpacity>
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     padding: spacing.xl,
   },
-  input: { fontSize: 16, color: colors.text, fontWeight: "500" },
+  input: { fontSize: 17, color: colors.text, fontWeight: "500" },
   bottomBar: {
     paddingHorizontal: spacing.xl,
     paddingTop: 12,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
 });

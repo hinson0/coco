@@ -211,7 +211,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
             />
             {/* Date quick select */}
             <View style={{ marginTop: 16 }}>
-              <Text style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>
+              <Text style={{ color: "#94a3b8", fontSize: 13, marginBottom: 8 }}>
                 选择日期
               </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -284,9 +284,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  cancel: { color: "#94a3b8", fontSize: 16 },
-  title: { color: "#1e293b", fontSize: 16, fontWeight: "600" },
-  save: { color: "#2D9B83", fontSize: 16, fontWeight: "600" },
+  cancel: { color: "#94a3b8", fontSize: 17 },
+  title: { color: "#1e293b", fontSize: 17, fontWeight: "600" },
+  save: { color: "#2D9B83", fontSize: 17, fontWeight: "600" },
   body: { padding: 16 },
   typeRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   typeBtn: {
@@ -298,10 +298,10 @@ const styles = StyleSheet.create({
   },
   typeBtnActive: { backgroundColor: "#DC2626" },
   typeBtnIncome: { backgroundColor: "#059669" },
-  typeText: { color: "#64748b", fontSize: 14, fontWeight: "600" },
+  typeText: { color: "#64748b", fontSize: 15, fontWeight: "600" },
   typeTextActive: { color: "#fff" },
   amountInput: {
-    fontSize: 36,
+    fontSize: 37,
     fontWeight: "700",
     color: "#1e293b",
     textAlign: "left",
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     padding: 14,
     borderRadius: 12,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 16,
   },
 });
