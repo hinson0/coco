@@ -1,5 +1,5 @@
 import { frequencyRule } from "../frequencyRule";
-import type { InsightContext } from "../types";
+import type { InsightContext, FrequencyMeta } from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -64,8 +64,8 @@ describe("frequencyRule", () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe("frequency");
     expect(result!.priority).toBe(6);
-    expect(result!.meta!.count).toBe(10);
-    expect(result!.meta!.totalAmount).toBe(300);
+    expect((result!.meta as FrequencyMeta).count).toBe(10);
+    expect((result!.meta as FrequencyMeta).totalAmount).toBe(300);
   });
 
   it("取频次最高的分类", () => {
@@ -74,8 +74,8 @@ describe("frequencyRule", () => {
       ...Array.from({ length: 9 }, () => makeTx("c2", 50)),
     ];
     const result = frequencyRule(makeCtx({ currentMonth: txs }));
-    expect(result!.meta!.categoryId).toBe("c1");
-    expect(result!.meta!.count).toBe(12);
+    expect((result!.meta as FrequencyMeta).categoryId).toBe("c1");
+    expect((result!.meta as FrequencyMeta).count).toBe(12);
   });
 
   it("只统计支出", () => {

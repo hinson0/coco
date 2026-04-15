@@ -1,5 +1,5 @@
 import { anomalyRule } from "../anomalyRule";
-import type { InsightContext } from "../types";
+import type { InsightContext, AnomalyMeta } from "../types";
 
 function makeCtx(overrides: Partial<InsightContext> = {}): InsightContext {
   return {
@@ -70,7 +70,7 @@ describe("anomalyRule", () => {
     expect(result).not.toBeNull();
     expect(result!.type).toBe("anomaly");
     expect(result!.priority).toBe(3);
-    expect(result!.meta!.amount).toBe(3200);
+    expect((result!.meta as AnomalyMeta).amount).toBe(3200);
   });
 
   it("异常值 < ¥500 不触发", () => {
@@ -89,7 +89,7 @@ describe("anomalyRule", () => {
       ],
     });
     const result = anomalyRule(ctx);
-    expect(result!.meta!.amount).toBe(3200);
+    expect((result!.meta as AnomalyMeta).amount).toBe(3200);
   });
 
   it("包含 navigation", () => {
