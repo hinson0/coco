@@ -307,7 +307,7 @@ async function upsertChatMessages(
 
 export async function pull(
   db: SQLite.SQLiteDatabase,
-  userId: string,
+  _userId: string,
 ): Promise<void> {
   const data = await apiFetch<SyncPayload>("/sync/pull");
   const now = new Date().toISOString();

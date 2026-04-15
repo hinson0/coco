@@ -40,7 +40,7 @@ export function ChatInputBar({
   onCamera,
   onVoice,
   onQuickAction,
-  recordingState,
+  recordingState: _recordingState,
   onRecordingStateChange,
   onMeteringChange,
 }: ChatInputBarProps) {

@@ -1,3 +1,4 @@
+import type { Transaction } from "@coco/shared";
 import {
   formatMonthLabelPadded,
   buildDateRangeLabel,
@@ -54,7 +55,7 @@ describe("buildDailyData", () => {
     { occurred_at: "2026-03-01", type: "expense", amount: "100" },
     { occurred_at: "2026-03-01", type: "income", amount: "200" },
     { occurred_at: "2026-03-15", type: "expense", amount: "50" },
-  ] as any[];
+  ] as unknown as readonly Transaction[];
 
   it("returns one entry per day in the month", () => {
     const result = buildDailyData(txs, new Date(2026, 2, 1));
@@ -75,7 +76,7 @@ describe("buildDailyData", () => {
   it("handles amount of zero without error", () => {
     const zeroTx = [
       { occurred_at: "2026-03-01", type: "expense", amount: "0" },
-    ] as any[];
+    ] as unknown as readonly Transaction[];
     const result = buildDailyData(zeroTx, new Date(2026, 2, 1));
     expect(result[0].expense).toBe(0);
   });
@@ -84,15 +85,15 @@ describe("buildDailyData", () => {
 // ── buildCategoryStats ────────────────────────────────
 describe("buildCategoryStats", () => {
   const COLORS = ["#e8856c", "#7ba68a", "#d4a853"];
-  const catMap = {
+  const catMap: Record<string, { id: string; name: string; icon: string }> = {
     c1: { id: "c1", name: "餐饮", icon: "🍜" },
     c2: { id: "c2", name: "交通", icon: "🚌" },
-  } as any;
+  };
   const txs = [
     { type: "expense", category_id: "c1", amount: "300" },
     { type: "expense", category_id: "c1", amount: "200" },
     { type: "expense", category_id: "c2", amount: "100" },
-  ] as any[];
+  ] as unknown as readonly Transaction[];
 
   it("sorts by amount descending", () => {
     const result = buildCategoryStats(txs, "expense", catMap, COLORS);
@@ -115,9 +116,9 @@ describe("buildCategoryStats", () => {
 
 // ── buildTransactionRank ──────────────────────────────
 describe("buildTransactionRank", () => {
-  const catMap = {
+  const catMap: Record<string, { id: string; name: string; icon: string }> = {
     c1: { id: "c1", name: "餐饮", icon: "🍜" },
-  } as any;
+  };
   const txs = [
     {
       id: "t1",
@@ -135,7 +136,7 @@ describe("buildTransactionRank", () => {
       occurred_at: "2026-03-01",
       note: "外卖",
     },
-  ] as any[];
+  ] as unknown as readonly Transaction[];
 
   it("sorts by amount descending (absolute value)", () => {
     const result = buildTransactionRank(txs, "expense", catMap);

@@ -8,8 +8,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Keyboard,
 } from "react-native";
 import { CategoryPicker } from "./CategoryPicker";
@@ -20,7 +18,12 @@ import { useAddChatMessage } from "../hooks/useLocalChatMessages";
 interface Props {
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly onSuccess?: (tx: any) => void;
+  readonly onSuccess?: (tx: {
+    id: string;
+    amount: number;
+    type: "expense" | "income";
+    note: string;
+  }) => void;
 }
 
 export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
@@ -58,7 +61,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
   useEffect(() => {
     const defaultName = DEFAULT_NAMES[type];
     const match = categories.find(
-      (c: any) => c.type === type && c.name === defaultName,
+      (c) => c.type === type && c.name === defaultName,
     );
     if (match) setCategoryId(match.id);
   }, [type, categories]);
@@ -81,7 +84,7 @@ export function ManualEntryForm({ visible, onClose, onSuccess }: Props) {
       return;
     }
 
-    const category = categories.find((c: any) => c.id === categoryId);
+    const category = categories.find((c) => c.id === categoryId);
     const categoryName = category?.name ?? "其他";
 
     try {
