@@ -26,7 +26,7 @@ test:
 # ── 环境配置（worktree .env 软链接）──────────
 
 # 前端 .env 软链接
-fe-env:
+env-fe:
     #!/usr/bin/env bash
     MAIN=$(git worktree list --porcelain | head -1 | sed 's/^worktree //')
     if [ "$MAIN" != "$(pwd)" ]; then
@@ -37,7 +37,7 @@ fe-env:
     fi
 
 # 后端 .env 软链接
-be-env:
+env-be:
     #!/usr/bin/env bash
     MAIN=$(git worktree list --porcelain | head -1 | sed 's/^worktree //')
     if [ "$MAIN" != "$(pwd)" ]; then
@@ -48,62 +48,34 @@ be-env:
     fi
 
 # 全部 .env 软链接
-env: fe-env be-env
+env: env-fe env-be
 
 # ── 依赖同步 ──────────────────────────────────
-fe-sync:
+sync-fe:
     pnpm install
 
-be-sync:
+sync-be:
     cd {{ backend }} && uv sync
 
-sync: fe-sync be-sync
+sync: sync-fe sync-be
 
 # ── 开发服务器 ────────────────────────────────
-fe-start: fe-env fe-sync
-    #!/usr/bin/env bash
-    PORT=8081
-    while lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
-        PORT=$((PORT + 1))
-    done
-    APP_JSON="apps/mobile/app.json"
-    # 在 name 尾部追加 " :PORT"（不把中文存入变量，避免编码问题）
-    sed -i '' 's/\("name": ".*\)"/\1 :'"$PORT"'"/' "$APP_JSON"
-    cleanup() {
-        sed -i '' "s/ :$PORT\"/\"/" "$APP_JSON"
-        printf "♻️  app.json name 已还原\n"
-    }
-    trap cleanup EXIT
-    printf "🚀 Expo → 端口 %d\n" "$PORT"
-    pnpm --filter {{ mobile }} exec expo start --port "$PORT"
+start-fe: env-fe sync-fe
+    pnpm --filter {{ mobile }} dev
 
-be-start: be-env be-sync
-    #!/usr/bin/env bash
-    PORT=8000
-    while lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
-        NEXT=$((PORT + 1))
-        printf "⚠️  端口 %d 已被占用，使用 %d? [Y/n] " "$PORT" "$NEXT"
-        read -r ans
-        if [[ "$ans" =~ ^[Nn]$ ]]; then
-            echo "已取消"
-            exit 1
-        fi
-        PORT=$NEXT
-    done
-    echo "🚀 启动后端 → 0.0.0.0:$PORT"
-    cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port "$PORT"
+start-be: env-be sync-be 
+    cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 
 
 # ── CI/CD ─────────────────────────────────────
-fe-cicd:
+cicd-fe:
     pnpm --filter {{ mobile }} lint
     pnpm --filter {{ mobile }} format:check
     pnpm --filter {{ mobile }} typecheck
     pnpm --filter {{ shared }} lint
     pnpm --filter {{ mobile }} test
-
-be-cicd:
+cicd-be:
     #!/usr/bin/env bash
     cd {{ backend }} && \
     uv run ruff check . && \
@@ -116,4 +88,4 @@ be-cicd:
     JWT_SECRET=test \
     uv run pytest -x -q
 
-cicd: be-cicd fe-cicd
+cicd: cicd-be cicd-fe
