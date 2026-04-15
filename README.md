@@ -3,7 +3,7 @@
 一个聊天窗口 = 所有记账入口。语音、拍照、文字输入统一融合在 AI 对话界面中，支持离线优先架构。
 
 <p align="center">
-  <img src="ui/0310/design-final.png" width="280" alt="首页截图" />
+  <img src="docs/ui/app-screenshot.png" width="320" alt="App 界面截图" />
 </p>
 
 ## 功能亮点
