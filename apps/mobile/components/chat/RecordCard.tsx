@@ -3,6 +3,7 @@ import { AppText } from "../ui/AppText";
 import { Badge } from "../ui/Badge";
 import { colors, radii, spacing } from "../../constants/theme";
 import { formatAmount } from "../../lib/format";
+import { isAiSource, isNotificationSource } from "../../lib/badge-utils";
 import { MAJOR_AMOUNT_THRESHOLD } from "@coco/shared";
 import type { Transaction } from "@coco/shared";
 
@@ -43,11 +44,14 @@ export function RecordCard({
               {categoryName ?? "未知"}
             </AppText>
             {isMajor ? <Badge text="大宗" variant="pro" /> : null}
-            {transaction.source === "notification" ? (
+            {isAiSource(transaction.source) ? (
+              <Badge text="AI" variant="ai" />
+            ) : null}
+            {isNotificationSource(transaction.source) ? (
               <Badge text="自动记" variant="auto" />
             ) : null}
           </View>
-          {transaction.source === "notification" && transaction.raw_input ? (
+          {isNotificationSource(transaction.source) && transaction.raw_input ? (
             <View style={styles.sourceTagRow}>
               <Badge
                 text={
