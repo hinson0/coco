@@ -9,6 +9,7 @@ import {
   type CategoryColorName,
 } from "../../constants/theme";
 import { formatAmount } from "../../lib/format";
+import { isAiSource, isNotificationSource } from "../../lib/badge-utils";
 import { MAJOR_AMOUNT_THRESHOLD } from "@coco/shared";
 import type { Transaction } from "@coco/shared";
 
@@ -34,11 +35,7 @@ export function TransactionItem({
   const occurredDate = new Date(transaction.occurred_at);
   const datePrefix = `${occurredDate.getMonth() + 1}/${occurredDate.getDate()}`;
   const time = `${datePrefix} ${occurredDate.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
-  const isAi =
-    transaction.source === "text" ||
-    transaction.source === "asr" ||
-    transaction.source === "ocr";
-  const isAutoRecord = transaction.source === "notification";
+  const isAi = isAiSource(transaction.source);
   const isMajor = !isIncome && transaction.amount >= MAJOR_AMOUNT_THRESHOLD;
 
   return (
@@ -58,7 +55,7 @@ export function TransactionItem({
             {time} · {categoryName}
           </AppText>
           {isAi ? <Badge text="AI" variant="ai" /> : null}
-          {isAutoRecord ? (
+          {isNotificationSource(transaction.source) ? (
             <Badge
               text={
                 transaction.raw_input?.includes("com.tencent.mm")
