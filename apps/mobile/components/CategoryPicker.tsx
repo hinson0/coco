@@ -24,8 +24,8 @@ export function CategoryPicker({ selectedId, onSelect, type }: Props) {
   const router = useRouter();
   const { data: allCategories = [] } = useLocalCategories();
   const categories = allCategories
-    .filter((c: any) => c.type === type && !HIDDEN_CATEGORIES.has(c.name))
-    .sort((a: any, b: any) => {
+    .filter((c) => c.type === type && !HIDDEN_CATEGORIES.has(c.name))
+    .sort((a, b) => {
       if (type !== "expense") return 0;
       const ai = EXPENSE_ORDER.indexOf(a.name);
       const bi = EXPENSE_ORDER.indexOf(b.name);
@@ -42,7 +42,7 @@ export function CategoryPicker({ selectedId, onSelect, type }: Props) {
       contentContainerStyle={styles.row}
       style={styles.container}
     >
-      {categories.map((cat: any) => (
+      {categories.map((cat) => (
         <TouchableOpacity
           key={cat.id}
           style={[styles.item, selectedId === cat.id && styles.itemActive]}

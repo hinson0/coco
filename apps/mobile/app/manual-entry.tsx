@@ -15,7 +15,9 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { useLocalCategories } from "../hooks/useLocalCategories";
 import {
@@ -123,7 +125,7 @@ export default function ManualEntryScreen() {
       setDate(new Date(transaction.occurred_at));
     } else {
       const match = categories.find(
-        (c: any) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"],
+        (c) => c.type === "expense" && c.name === DEFAULT_NAMES["expense"],
       );
       if (match) setCategoryId(match.id);
     }
@@ -132,7 +134,7 @@ export default function ManualEntryScreen() {
   useEffect(() => {
     if (!isEdit) {
       const match = categories.find(
-        (c: any) => c.type === type && c.name === DEFAULT_NAMES[type],
+        (c) => c.type === type && c.name === DEFAULT_NAMES[type],
       );
       if (match) setCategoryId(match.id);
     }
@@ -150,7 +152,7 @@ export default function ManualEntryScreen() {
     setDate(next);
   }
 
-  function handleDateChange(_event: any, selectedDate?: Date) {
+  function handleDateChange(_event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS === "android") setShowDatePicker(false);
     if (selectedDate) setDate(selectedDate);
   }
@@ -169,7 +171,7 @@ export default function ManualEntryScreen() {
 
     setSubmitting(true);
     try {
-      const category = categories.find((c: any) => c.id === categoryId);
+      const category = categories.find((c) => c.id === categoryId);
       const categoryName = category?.name ?? "其他";
 
       if (isEdit) {

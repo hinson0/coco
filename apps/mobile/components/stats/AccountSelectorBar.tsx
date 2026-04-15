@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthCell: {
-    width: "30%" as any,
+    width: "30%",
     paddingVertical: 10,
     alignItems: "center",
     borderRadius: radii.sm,
