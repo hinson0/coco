@@ -151,10 +151,16 @@ async def sms_send(
     if count_result.scalar_one() >= 10:
         raise HTTPException(status_code=429, detail="今日发送次数已达上限")
 
-    code = f"{secrets.randbelow(1000000):06d}"
-
-    if not send_sms_code(body.phone, code):
-        raise HTTPException(status_code=500, detail="短信发送失败，请稍后重试")
+    # dev 模式：固定验证码，不调用腾讯云 SMS
+    if settings.app_env == "dev":
+        code = "123456"
+        log.info("sms_dev_mode", phone=body.phone[-4:], code=code)
+    else:
+        code = f"{secrets.randbelow(1000000):06d}"
+        if not send_sms_code(body.phone, code):
+            raise HTTPException(
+                status_code=500, detail="短信发送失败，请稍后重试"
+            )
 
     await db.execute(
         text("""
