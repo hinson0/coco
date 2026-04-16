@@ -11,18 +11,35 @@
   - 年88元
   - 永久138元
 
-- TODO 晚5s在弹出自动记账,省的和微信/支付宝冲突,现在基本同一时刻
+## 0416 周四
+
+- ECC的4个步骤:
+  /ecc:plan -> /ecc:tdd -> /ecc:code-review -> /ecc:verify
 
 ## 0415 周三
 
+- ~TODO 晚5s在弹出自动记账,省的和微信/支付宝冲突,现在基本同一时刻
 - ~TODO 字体
 - ~TODO 现在没有自动同步了吗?
 - ~TODO AItag 应该和自动记同在.
 - ~TODO 52 个 warning：都是之前遗留的 @typescript-eslint/no-explicit-any 和 no-unused-vars — 遍布各个旧文件
 - ~TODO 如果用户未登录,强制切换到登录页面.
   - 要在测试下
-- ~TODO 删除ecc 试试gsd
-  - 以后再说吧
+- TODO 删除ecc 试试gsd
+  - 删除了市场后 现在还有这些.
+    - ~TODO ~/.claude/ecc/ ← ECC 状态文件本体
+    - ~TODO ~/.claude/.agents/ ← ECC agent skills（openai.yaml 格式）
+    - ~TODO ~/.claude/agents/ ← 所有 reviewer/planner/tdd-guide 等 agent
+    - ~TODO ~/.claude/commands/ ← 70+ 个命令文件
+    - ~TODO ~/.claude/hooks/hooks.json ← hooks 配置
+    - ~TODO ~/.claude/scripts/hooks/ ← 30+ 个 hook 脚本
+    - ~TODO ~/.claude/scripts/lib/ ← ECC 运行时库
+    - ~TODO ~/.claude/rules/ ← 全套规则文件（common/web/python/ts 等）
+    - ~TODO ~/.claude/skills/ ← framework + workflow skills
+    - ~TODO ~/.claude/AGENTS.md ← ECC 装的
+    - ~TODO ~/.claude/PLUGIN_SCHEMA_NOTES.md ← ECC 装的
+    - ~TODO ~/.claude/plugin.json ← ECC 装的
+    - TODO ~/.claude/marketplace.json ← ECC 装的
 
 ## 0413 & 0414
 
