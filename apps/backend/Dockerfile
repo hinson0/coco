@@ -1,7 +1,10 @@
 FROM python:3.13-slim
 
 # 安装 uv（用腾讯云 PyPI 镜像，避免访问 ghcr.io 被墙）
-RUN pip install -i https://mirrors.tencent.com/pypi/simple/ uv
+ENV TENCENT_MIRROR=https://mirrors.tencent.com/pypi/simple/
+ENV UV_INDEX_URL=${TENCENT_MIRROR}
+
+RUN pip install -i ${TENCENT_MIRROR} uv
 
 WORKDIR /app
 
