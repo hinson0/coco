@@ -4,7 +4,7 @@
 FROM python:3.13-slim
 
 # 使用腾讯云内网镜像源（若宿主机在腾讯云内网）
-ENV UV_INDEX_URL=https://mirrors.tencentyun.com/pypi/simple/
+ENV UV_INDEX_URL=https://mirrors.tencent.com/pypi/simple/
 
 # 安装 uv，并利用 BuildKit 缓存 pip 下载
 RUN --mount=type=cache,target=/root/.cache/pip \
