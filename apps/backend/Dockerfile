@@ -1,7 +1,7 @@
 FROM python:3.13-slim
 
-# 安装 uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# 安装 uv（用腾讯云 PyPI 镜像，避免访问 ghcr.io 被墙）
+RUN pip install -i https://mirrors.tencent.com/pypi/simple/ uv
 
 WORKDIR /app
 
