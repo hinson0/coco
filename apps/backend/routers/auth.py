@@ -9,19 +9,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.config import settings
 from infra.database import get_db
-from infra.security import create_access_token, create_refresh_token
+from infra.security import create_access_token, create_refresh_token, get_current_user
 from schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
+    UserInfoResponse,
 )
 
 log = structlog.get_logger()
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=201)
+UserId = Annotated[str, Depends(get_current_user)]
+
+
+@router.post("/register", response_model=TokenResponse, status_code=201)
 async def register(
     body: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -34,12 +38,16 @@ async def register(
         raise HTTPException(status_code=400, detail="邮箱已经注册过了!")
 
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
-    await db.execute(
-        text("INSERT INTO users (email, password) VALUES (:email, :password)"),
+    result = await db.execute(
+        text("INSERT INTO users (email, password) VALUES (:email, :password) RETURNING id"),
         {"email": body.email, "password": hashed},
     )
+    user_id = str(result.scalar_one())
     await db.commit()
-    return {"message": "registered"}
+    return TokenResponse(
+        access_token=create_access_token(user_id),
+        refresh_token=create_refresh_token(user_id),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -80,3 +88,18 @@ async def refresh(body: RefreshRequest):
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
     )
+
+
+@router.get("/me", response_model=UserInfoResponse)
+async def me(
+    current_user_id: UserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    result = await db.execute(
+        text("SELECT id, email, phone FROM users WHERE id = :id"),
+        {"id": current_user_id},
+    )
+    row = result.mappings().one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return UserInfoResponse(id=str(row["id"]), email=row["email"], phone=row["phone"])

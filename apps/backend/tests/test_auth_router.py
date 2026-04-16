@@ -10,16 +10,24 @@ from main import app
 client = TestClient(app)
 
 
-def _make_db(scalar_result=None):
+def _make_db(scalar_result=None, insert_user_id="new-user-uuid"):
     """构造一个 mock AsyncSession。
 
     scalar_result: SELECT id 的返回值（None 表示用户不存在，uuid 表示用户已存在）
+    insert_user_id: INSERT ... RETURNING id 的返回值
     """
     db = AsyncMock()
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = scalar_result
-    result.mappings.return_value.one_or_none.return_value = None
-    db.execute = AsyncMock(return_value=result)
+
+    # 第一次 execute（SELECT 检查邮箱是否存在）
+    select_result = MagicMock()
+    select_result.scalar_one_or_none.return_value = scalar_result
+    select_result.mappings.return_value.one_or_none.return_value = None
+
+    # 第二次 execute（INSERT ... RETURNING id）
+    insert_result = MagicMock()
+    insert_result.scalar_one.return_value = insert_user_id
+
+    db.execute = AsyncMock(side_effect=[select_result, insert_result])
     db.commit = AsyncMock()
     return db
 
@@ -33,7 +41,7 @@ def reset_db_override():
 # ── /auth/register ────────────────────────────────────
 
 
-def test_register_success():
+def test_register_success_returns_tokens():
     async def mock_db():
         yield _make_db(scalar_result=None)  # 邮箱不存在
 
@@ -43,7 +51,10 @@ def test_register_success():
         "/auth/register", json={"email": "a@b.com", "password": "secret"}
     )
     assert resp.status_code == 201
-    assert resp.json()["message"] == "registered"
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
 
 
 def test_register_duplicate_email():
@@ -157,3 +168,41 @@ def test_login_success_returns_tokens():
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+
+
+# ── /auth/me ──────────────────────────────────────────
+
+
+def test_me_returns_user_info():
+    from datetime import datetime, timedelta
+
+    import jwt
+
+    from infra.config import settings
+
+    access_token = jwt.encode(
+        {"sub": "user-uuid", "type": "access", "exp": datetime.now(UTC) + timedelta(hours=1)},
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
+
+    db = AsyncMock()
+    result = MagicMock()
+    result.mappings.return_value.one_or_none.return_value = {
+        "id": "user-uuid",
+        "email": "a@b.com",
+        "phone": "13812345678",
+    }
+    db.execute = AsyncMock(return_value=result)
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.get("/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == "user-uuid"
+    assert data["email"] == "a@b.com"
+    assert data["phone"] == "13812345678"
