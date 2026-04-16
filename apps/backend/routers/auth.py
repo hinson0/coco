@@ -1,5 +1,5 @@
-import random
 import re
+import secrets
 from typing import Annotated
 
 import bcrypt
@@ -115,6 +115,15 @@ async def sms_send(
 ):
     _validate_phone(body.phone)
 
+    # 清理该手机号的过期记录
+    await db.execute(
+        text("""
+            DELETE FROM sms_codes
+            WHERE phone = :phone AND (expires_at < now() OR used = true)
+        """),
+        {"phone": body.phone},
+    )
+
     # 频率限制: 60秒内不能重复发送
     result = await db.execute(
         text("""
@@ -140,7 +149,7 @@ async def sms_send(
     if count_result.scalar_one() >= 10:
         raise HTTPException(status_code=429, detail="今日发送次数已达上限")
 
-    code = f"{random.randint(0, 999999):06d}"
+    code = f"{secrets.randbelow(1000000):06d}"
 
     if not send_sms_code(body.phone, code):
         raise HTTPException(status_code=500, detail="短信发送失败，请稍后重试")

@@ -20,6 +20,7 @@ type AuthState = {
   signOut: () => Promise<void>;
   sendSmsCode: (phone: string) => Promise<void>;
   smsSignIn: (phone: string, code: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -72,6 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(info);
   };
 
+  const refreshUser = async () => {
+    const info = await getUserInfo();
+    setUser(info);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -83,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         sendSmsCode,
         smsSignIn,
+        refreshUser,
       }}
     >
       {children}

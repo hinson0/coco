@@ -23,6 +23,7 @@ export async function register(email: string, password: string): Promise<void> {
   const payload = JSON.parse(atob(access_token.split(".")[1]));
   await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
   await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+  await fetchAndStoreUserInfo();
 }
 
 export async function login(email: string, password: string): Promise<void> {
@@ -43,6 +44,7 @@ export async function login(email: string, password: string): Promise<void> {
   const payload = JSON.parse(atob(access_token.split(".")[1]));
   await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
   await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+  await fetchAndStoreUserInfo();
 }
 
 export async function logout(): Promise<void> {
@@ -104,6 +106,28 @@ export async function smsLogin(phone: string, code: string): Promise<void> {
   const payload = JSON.parse(atob(access_token.split(".")[1]));
   await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
   await AsyncStorage.setItem(USER_PHONE_KEY, phone);
+  await fetchAndStoreUserInfo();
+}
+
+/**
+ * 调用 /auth/me 获取完整用户信息并存入 AsyncStorage。
+ * 在登录/注册/SMS登录成功后调用，确保本地存储有完整的 email+phone。
+ */
+async function fetchAndStoreUserInfo(): Promise<void> {
+  const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return;
+  try {
+    const resp = await fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return;
+    const { id, email, phone } = await resp.json();
+    await AsyncStorage.setItem(USER_ID_KEY, id);
+    if (email) await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+    if (phone) await AsyncStorage.setItem(USER_PHONE_KEY, phone);
+  } catch {
+    // 静默失败，不影响登录流程
+  }
 }
 
 export async function getUserInfo(): Promise<{

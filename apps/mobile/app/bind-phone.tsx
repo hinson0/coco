@@ -23,7 +23,7 @@ export default function BindPhoneScreen() {
   const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { sendSmsCode } = useAuth();
+  const { sendSmsCode, refreshUser } = useAuth();
 
   useEffect(() => {
     if (countdown <= 0) {
@@ -63,6 +63,7 @@ export default function BindPhoneScreen() {
         method: "POST",
         body: JSON.stringify({ phone: phone.trim(), code: code.trim() }),
       });
+      await refreshUser();
       Alert.alert("绑定成功", "手机号绑定成功", [
         { text: "好的", onPress: () => router.back() },
       ]);

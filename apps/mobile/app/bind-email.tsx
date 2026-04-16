@@ -13,9 +13,11 @@ import { AuthInput } from "../components/auth/AuthInput";
 import { AppText } from "../components/ui/AppText";
 import { Card } from "../components/ui/Card";
 import { colors } from "../constants/theme";
+import { useAuth } from "../hooks/useAuth";
 import { apiFetch } from "../lib/api";
 
 export default function BindEmailScreen() {
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,6 +38,7 @@ export default function BindEmailScreen() {
         method: "POST",
         body: JSON.stringify({ email: email.trim(), password }),
       });
+      await refreshUser();
       Alert.alert("绑定成功", "邮箱绑定成功", [
         { text: "好的", onPress: () => router.back() },
       ]);

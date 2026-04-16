@@ -183,7 +183,11 @@ def test_sms_send_success():
     count_result.scalar_one.return_value = 0
     # INSERT result
     insert_result = MagicMock()
-    db.execute = AsyncMock(side_effect=[result, count_result, insert_result])
+    # DELETE 清理 + SELECT 频率 + SELECT 计数 + INSERT
+    delete_result = MagicMock()
+    db.execute = AsyncMock(
+        side_effect=[delete_result, result, count_result, insert_result]
+    )
     db.commit = AsyncMock()
 
     async def mock_db():
@@ -199,9 +203,10 @@ def test_sms_send_success():
 
 def test_sms_send_rate_limit():
     db = AsyncMock()
+    delete_result = MagicMock()
     result = MagicMock()
     result.scalar_one_or_none.return_value = "some-id"
-    db.execute = AsyncMock(return_value=result)
+    db.execute = AsyncMock(side_effect=[delete_result, result])
 
     async def mock_db():
         yield db
@@ -239,7 +244,9 @@ def test_sms_verify_new_user():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "123456"})
+    resp = client.post(
+        "/auth/sms/verify", json={"phone": "13812345678", "code": "123456"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
@@ -252,9 +259,13 @@ def test_sms_verify_existing_user():
     code_result.scalar_one_or_none.return_value = "code-id"
     update_result = MagicMock()
     user_result = MagicMock()
-    user_result.mappings.return_value.one_or_none.return_value = {"id": "existing-user-uuid"}
+    user_result.mappings.return_value.one_or_none.return_value = {
+        "id": "existing-user-uuid"
+    }
 
-    db.execute = AsyncMock(side_effect=[code_result, update_result, user_result])
+    db.execute = AsyncMock(
+        side_effect=[code_result, update_result, user_result]
+    )
     db.commit = AsyncMock()
 
     async def mock_db():
@@ -262,7 +273,9 @@ def test_sms_verify_existing_user():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "123456"})
+    resp = client.post(
+        "/auth/sms/verify", json={"phone": "13812345678", "code": "123456"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
@@ -279,7 +292,9 @@ def test_sms_verify_invalid_code():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "000000"})
+    resp = client.post(
+        "/auth/sms/verify", json={"phone": "13812345678", "code": "000000"}
+    )
     assert resp.status_code == 401
     assert "验证码" in resp.json()["detail"]
 
@@ -295,7 +310,11 @@ def test_me_returns_user_info():
     from infra.config import settings
 
     access_token = jwt.encode(
-        {"sub": "user-uuid", "type": "access", "exp": datetime.now(UTC) + timedelta(hours=1)},
+        {
+            "sub": "user-uuid",
+            "type": "access",
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+        },
         settings.jwt_secret,
         algorithm="HS256",
     )
@@ -314,7 +333,9 @@ def test_me_returns_user_info():
 
     app.dependency_overrides[get_db] = mock_db
 
-    resp = client.get("/auth/me", headers={"Authorization": f"Bearer {access_token}"})
+    resp = client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {access_token}"}
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["id"] == "user-uuid"
@@ -334,7 +355,11 @@ def _make_auth_header():
     from infra.config import settings
 
     token = jwt.encode(
-        {"sub": "user-uuid", "type": "access", "exp": datetime.now(UTC) + timedelta(hours=1)},
+        {
+            "sub": "user-uuid",
+            "type": "access",
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+        },
         settings.jwt_secret,
         algorithm="HS256",
     )
@@ -350,7 +375,9 @@ def test_bind_phone_success():
     phone_check.scalar_one_or_none.return_value = None  # 未被占用
     update_user = MagicMock()
 
-    db.execute = AsyncMock(side_effect=[code_result, update_code, phone_check, update_user])
+    db.execute = AsyncMock(
+        side_effect=[code_result, update_code, phone_check, update_user]
+    )
     db.commit = AsyncMock()
 
     async def mock_db():
