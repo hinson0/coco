@@ -48,5 +48,4 @@ Monorepo (pnpm workspace)：
 
 # 不用处理:
 
-apps/mobile/app.json 名称被改为 CoCo AI记账 <端口> 如果是这个问题是否要修复/提交,则无视,
-因为这个是expo go调试用的.直接忽略
+- apps/mobile/app.json 名称被改为 CoCo AI记账 <端口> 如果是这个问题是否要修复/提交,则无视,

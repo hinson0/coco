@@ -7,14 +7,89 @@
   - 月10元
   - 年88元
   - 永久138元
-- TODO 为什么没有 app.json的version的变更.
 
 ## 0416 周四
 
-- TODO 接下来给coco-ai的功能做个收尾,主要涉及:
-  - TODO 上云
-  - TODO 发布
+- ~TODO 为什么没有 app.json的version的变更.
 
+- 查看后端服务
+  backend 1 root 126268 126243 0 15:35 ? 00:00:00 uv run gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 126411 126268 0 15:35 ? 00:00:01 /app/.venv/bin/python /app/.venv/bin/gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 126414 126411 0 15:35 ? 00:00:12 /app/.venv/bin/python /app/.venv/bin/gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 126415 126411 0 15:35 ? 00:00:13 /app/.venv/bin/python /app/.venv/bin/gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 126416 126411 0 15:35 ? 00:00:13 /app/.venv/bin/python /app/.venv/bin/gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 126417 126411 0 15:35 ? 00:00:12 /app/.venv/bin/python /app/.venv/bin/gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120 --graceful-timeout 30 --access-logfile - --error-logfile -
+  backend 1 root 229695 126243 0 19:11 pts/0 00:00:00 bash
+
+是 1 master + 4 worker = 5 个 gunicorn 进程，这是正常的：
+
+PID 126268 → uv run（只是启动器，不算）
+PID 126411 → gunicorn master（管理进程，不处理请求）
+PID 126414 → worker 1 ←┐
+PID 126415 → worker 2 │ 这 4 个才是真正处理请求的
+PID 126416 → worker 3 │
+PID 126417 → worker 4 ←┘
+看父子关系（PPID）就能区分：
+
+126411 的父进程是 126268（uv）→ 它是 master
+126414-126417 的父进程都是 126411 → 它们是 worker
+--workers 4 配置的是处理请求的 worker 数，master 是额外的管理进程，负责监控 worker、处理信号（reload/graceful restart）等。
+
+- 打包
+  cd apps/mobile
+  npx expo prebuild --platform android --clean
+  cd android
+  ./gradlew clean
+  ./gradlew assembleRelease
+  adb install -r app/build/outputs/apk/release/app-release.apk
+
+- docker compose logs backend
+  ubuntu@VM-0-2-ubuntu:~/coco$ docker compose logs backend
+  backend-1 | 运行数据库迁移...
+  backend-1 | Downloading ruff (10.7MiB)
+  backend-1 | Downloading pygments (1.2MiB)
+  backend-1 | Downloading pyright (6.1MiB)
+  backend-1 | Downloaded pygments
+  backend-1 | Downloaded ruff
+  backend-1 | Downloaded pyright
+  backend-1 | Installed 8 packages in 160ms
+  backend-1 | INFO [alembic.runtime.migration] Context impl PostgresqlImpl.
+  backend-1 | INFO [alembic.runtime.migration] Will assume transactional DDL.
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade -> 88e885d59ac9, initial schema
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 88e885d59ac9 -> 494dc00061d3, 新增同步支持
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 494dc00061d3 -> 19cc71dd8594, 新增deleted_at字段
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 19cc71dd8594 -> 1372fba00625, budgets_add_deleted_at
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 1372fba00625 -> 02aba126b7f3, categories_add_deleted_at
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 02aba126b7f3 -> 70cf418e1cad, transactions_add_account_id
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade 70cf418e1cad -> fd484f85b8db, chat_messages_add_audio_fields
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade fd484f85b8db -> f90273a4d519, record_source_add_llm
+  backend-1 | INFO [alembic.runtime.migration] Running upgrade f90273a4d519 -> f39e00b5e1e0, record_source_add_notification
+  backend-1 | 启动 FastAPI 服务...
+  backend-1 | [2026-04-16 07:35:09 +0000] [38] [INFO] Starting gunicorn 25.3.0
+  backend-1 | [2026-04-16 07:35:09 +0000] [38] [INFO] Listening at: http://0.0.0.0:8000 (38)
+  backend-1 | [2026-04-16 07:35:09 +0000] [38] [INFO] Using worker: uvicorn.workers.UvicornWorker
+  backend-1 | [2026-04-16 07:35:09 +0000] [39] [INFO] Booting worker with pid: 39
+  backend-1 | [2026-04-16 07:35:09 +0000] [40] [INFO] Booting worker with pid: 40
+  backend-1 | [2026-04-16 07:35:09 +0000] [41] [INFO] Booting worker with pid: 41
+  backend-1 | [2026-04-16 07:35:09 +0000] [42] [INFO] Booting worker with pid: 42
+  backend-1 | [2026-04-16 07:35:09 +0000] [38] [INFO] Control socket listening at /root/.gunicorn/gunicorn.ctl
+  backend-1 | [2026-04-16 07:35:14 +0000] [42] [INFO] Started server process [42]
+  backend-1 | [2026-04-16 07:35:14 +0000] [39] [INFO] Started server process [39]
+  backend-1 | [2026-04-16 07:35:14 +0000] [39] [INFO] Waiting for application startup.
+  backend-1 | [2026-04-16 07:35:14 +0000] [41] [INFO] Started server process [41]
+  backend-1 | [2026-04-16 07:35:14 +0000] [39] [INFO] Application startup complete.
+  backend-1 | [2026-04-16 07:35:14 +0000] [41] [INFO] Waiting for application startup.
+  backend-1 | [2026-04-16 07:35:14 +0000] [42] [INFO] Waiting for application startup.
+  backend-1 | [2026-04-16 07:35:14 +0000] [40] [INFO] Started server process [40]
+  backend-1 | [2026-04-16 07:35:14 +0000] [42] [INFO] Application startup complete.
+  backend-1 | [2026-04-16 07:35:14 +0000] [40] [INFO] Waiting for application startup.
+  backend-1 | [2026-04-16 07:35:14 +0000] [40] [INFO] Application startup complete.
+  backend-1 | [2026-04-16 07:35:14 +0000] [41] [INFO] Application startup complete.
+
+- ~TODO 接下来给coco-ai的功能做个收尾,主要涉及:
+  - ~TODO 上云
+  - TODO 发布
+    - ICP 备案（正规途径，需要 2-4 周）
 - expo 注册:
   - 通过google注册
   - 点右边 "Migrate your existing app"（你已有项目），
