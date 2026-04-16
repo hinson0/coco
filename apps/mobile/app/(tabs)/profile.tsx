@@ -99,7 +99,9 @@ export default function ProfileScreen() {
   }, []);
 
   const userName =
-    profile?.nickname ?? user?.email?.split("@")[0] ?? "CoCo 用户";
+    profile?.nickname ??
+    user?.email?.split("@")[0] ??
+    (user?.phone ? `用户${user.phone.slice(-4)}` : "CoCo 用户");
 
   const handleSignOut = () => {
     Alert.alert("退出登录", "确定要退出吗？", [
@@ -143,6 +145,49 @@ export default function ProfileScreen() {
       <StatsStrip items={statsItems} />
 
       <AiAssistantCard />
+
+      {/* 账户安全 */}
+      <AppText
+        size="base"
+        color={colors.textLighter}
+        weight="semibold"
+        style={styles.sectionTitle}
+      >
+        账户安全
+      </AppText>
+      <Card padding={0} style={styles.menuCard}>
+        {user?.phone ? (
+          <MenuItem
+            icon="📱"
+            iconBg={colors.sagePale}
+            title="手机号"
+            desc={user.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")}
+          />
+        ) : (
+          <MenuItem
+            icon="📱"
+            iconBg={colors.sagePale}
+            title="绑定手机号"
+            onPress={() => router.push("/bind-phone")}
+          />
+        )}
+        <View style={styles.separator} />
+        {user?.email ? (
+          <MenuItem
+            icon="📧"
+            iconBg={colors.honeyPale}
+            title="邮箱"
+            desc={user.email}
+          />
+        ) : (
+          <MenuItem
+            icon="📧"
+            iconBg={colors.honeyPale}
+            title="绑定邮箱"
+            onPress={() => router.push("/bind-email")}
+          />
+        )}
+      </Card>
 
       {/* 资产管理 */}
       <AppText

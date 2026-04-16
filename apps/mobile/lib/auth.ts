@@ -5,6 +5,7 @@ const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const USER_ID_KEY = "user_id";
 const USER_EMAIL_KEY = "user_email";
+const USER_PHONE_KEY = "user_phone";
 
 export async function register(email: string, password: string): Promise<void> {
   const resp = await fetch(`${API_BASE}/auth/register`, {
@@ -12,10 +13,17 @@ export async function register(email: string, password: string): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
+  const data = await resp.json();
   if (!resp.ok) {
-    const data = await resp.json();
     throw new Error(data.detail ?? "Registration failed");
   }
+  const { access_token, refresh_token } = data;
+  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+  await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
+  const payload = JSON.parse(atob(access_token.split(".")[1]));
+  await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
+  await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+  await fetchAndStoreUserInfo();
 }
 
 export async function login(email: string, password: string): Promise<void> {
@@ -36,6 +44,7 @@ export async function login(email: string, password: string): Promise<void> {
   const payload = JSON.parse(atob(access_token.split(".")[1]));
   await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
   await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+  await fetchAndStoreUserInfo();
 }
 
 export async function logout(): Promise<void> {
@@ -43,6 +52,7 @@ export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
   await AsyncStorage.removeItem(USER_ID_KEY);
   await AsyncStorage.removeItem(USER_EMAIL_KEY);
+  await AsyncStorage.removeItem(USER_PHONE_KEY);
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -68,12 +78,66 @@ export async function refreshAccessToken(): Promise<string | null> {
   return access_token;
 }
 
+export async function sendSmsCode(phone: string): Promise<void> {
+  const resp = await fetch(`${API_BASE}/auth/sms/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json();
+    throw new Error(data.detail ?? "发送失败");
+  }
+}
+
+export async function smsLogin(phone: string, code: string): Promise<void> {
+  const resp = await fetch(`${API_BASE}/auth/sms/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, code }),
+  });
+  if (!resp.ok) {
+    const data = await resp.json();
+    throw new Error(data.detail ?? "验证失败");
+  }
+  const { access_token, refresh_token } = await resp.json();
+  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+  await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
+  const payload = JSON.parse(atob(access_token.split(".")[1]));
+  await AsyncStorage.setItem(USER_ID_KEY, payload.sub);
+  await AsyncStorage.setItem(USER_PHONE_KEY, phone);
+  await fetchAndStoreUserInfo();
+}
+
+/**
+ * 调用 /auth/me 获取完整用户信息并存入 AsyncStorage。
+ * 在登录/注册/SMS登录成功后调用，确保本地存储有完整的 email+phone。
+ */
+async function fetchAndStoreUserInfo(): Promise<void> {
+  const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return;
+  try {
+    const resp = await fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return;
+    const { id, email, phone } = await resp.json();
+    await AsyncStorage.setItem(USER_ID_KEY, id);
+    if (email) await AsyncStorage.setItem(USER_EMAIL_KEY, email);
+    if (phone) await AsyncStorage.setItem(USER_PHONE_KEY, phone);
+  } catch {
+    // 静默失败，不影响登录流程
+  }
+}
+
 export async function getUserInfo(): Promise<{
   id: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
 } | null> {
   const id = await AsyncStorage.getItem(USER_ID_KEY);
+  if (!id) return null;
   const email = await AsyncStorage.getItem(USER_EMAIL_KEY);
-  if (!id || !email) return null;
-  return { id, email };
+  const phone = await AsyncStorage.getItem(USER_PHONE_KEY);
+  return { id, email: email || null, phone: phone || null };
 }
