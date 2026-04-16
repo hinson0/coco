@@ -8,6 +8,8 @@
   - 年88元
   - 永久138元
 
+- TODO 加一个main代码merge的时候,docker 可以同步代码
+
 ## 0416 周四
 
 - ~TODO 为什么没有 app.json的version的变更.
