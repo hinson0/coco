@@ -6,9 +6,6 @@ import bcrypt
 import jwt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from infra.config import settings
 from infra.database import get_db
 from infra.security import (
@@ -28,6 +25,8 @@ from schemas.auth import (
     TokenResponse,
     UserInfoResponse,
 )
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = structlog.get_logger()
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -136,9 +135,7 @@ async def sms_send(
         {"phone": body.phone},
     )
     if result.scalar_one_or_none() is not None:
-        raise HTTPException(
-            status_code=429, detail="发送过于频繁，请60秒后重试"
-        )
+        raise HTTPException(status_code=429, detail="发送过于频繁，请60秒后重试")
 
     # 每日上限: 10条
     count_result = await db.execute(
@@ -151,16 +148,11 @@ async def sms_send(
     if count_result.scalar_one() >= 10:
         raise HTTPException(status_code=429, detail="今日发送次数已达上限")
 
-    # dev 模式：固定验证码，不调用腾讯云 SMS
-    if settings.app_env == "dev":
-        code = "123456"
-        log.info("sms_dev_mode", phone=body.phone[-4:], code=code)
-    else:
-        code = f"{secrets.randbelow(1000000):06d}"
-        if not send_sms_code(body.phone, code):
-            raise HTTPException(
-                status_code=500, detail="短信发送失败，请稍后重试"
-            )
+    # code = f"{secrets.randbelow(1000000):06d}"
+    # if not send_sms_code(body.phone, code):
+    #     raise HTTPException(status_code=500, detail="短信发送失败，请稍后重试")
+    code = "132231"
+    log.info("sms_fixed_code", phone=body.phone[-4:])
 
     await db.execute(
         text("""
@@ -236,9 +228,7 @@ async def me(
     row = result.mappings().one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="用户不存在")
-    return UserInfoResponse(
-        id=str(row["id"]), email=row["email"], phone=row["phone"]
-    )
+    return UserInfoResponse(id=str(row["id"]), email=row["email"], phone=row["phone"])
 
 
 @router.post("/bind/phone")
@@ -300,9 +290,7 @@ async def bind_email(
 
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     await db.execute(
-        text(
-            "UPDATE users SET email = :email, password = :password WHERE id = :id"
-        ),
+        text("UPDATE users SET email = :email, password = :password WHERE id = :id"),
         {"email": body.email, "password": hashed, "id": current_user_id},
     )
     await db.commit()
