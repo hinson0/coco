@@ -6,12 +6,11 @@ Monorepo (pnpm workspace)：
 - `apps/backend` — Python FastAPI 后端（ASR、OCR、文本记账），包管理用 `uv`
 - `packages/shared` — 共享类型、规则引擎（`parse()`）
 - `apps/backend/alembic/` — 数据库迁移（Alembic + PostgreSQL）
-- `docs/ecc/` — ECC 工作流产出文档（PRD、plans）
+- `docs/` — 插件工作流产出文档（详见「插件产出物路径」章节）
 
 # 常用命令
 
 - `pnpm dev` — 启动 Expo 开发服务器（等价于 `pnpm --filter mobile dev`）
-- `pnpm worktree` — worktree 开发模式
 - `uv add <pkg>` — 后端添加 Python 依赖（在 `apps/backend/` 下执行）
 
 # Git 工作流（必须遵守）
@@ -27,10 +26,16 @@ Monorepo (pnpm workspace)：
 - push 时只推到当前分支：`git push origin HEAD` 或 `git push -u origin <branch-name>`
 - 如果在main执行了commit/push/pr等命令,必须询问用户是否,使用`AskUserQuestion`工具,得到明确的答复执行.
 
-## ECC(everything-claude-code插件) 工作流文档路径
+# 插件产出物路径（必须遵守）
 
-- PRD 文档：必须放在`docs/ecc/prds/`
-- 实现计划：必须放在`docs/ecc/plans/`
+不同 Claude Code 插件的工作流文档，统一存放在**仓库根目录** `docs/<插件名>/` 下：
+
+| 插件 | 根目录 | 子目录 |
+|------|--------|--------|
+| **Superpowers**（当前使用） | `docs/superpowers/` | `brainstorm/`、`plans/`、`specs/` |
+| **ECC** (everything-claude-code) | `docs/ecc/` | `prds/`、`plans/`、`reports/` |
+
+规则：**哪个插件生成的文档就放到对应的 `docs/<插件名>/` 目录下**，不要混放。如果未来使用新插件，同理新建 `docs/<新插件名>/`。
 
 # UI 规范（必须遵守）
 
