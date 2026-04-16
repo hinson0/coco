@@ -36,6 +36,7 @@ export async function apiFetch<T>(
   }
 
   const json = await response.json();
-  if (!response.ok) throw new Error(json?.error ?? `HTTP ${response.status}`);
+  if (!response.ok)
+    throw new Error(json?.detail ?? json?.error ?? `HTTP ${response.status}`);
   return json;
 }

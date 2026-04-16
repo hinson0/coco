@@ -73,8 +73,10 @@ async def login(
         {"email": body.email},
     )
     row = result.mappings().one_or_none()
-    if row is None or not bcrypt.checkpw(
-        body.password.encode(), row["password"].encode()
+    if (
+        row is None
+        or row["password"] is None
+        or not bcrypt.checkpw(body.password.encode(), row["password"].encode())
     ):
         raise HTTPException(status_code=401, detail="邮箱或密码错误")
 

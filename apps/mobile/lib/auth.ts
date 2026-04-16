@@ -13,11 +13,11 @@ export async function register(email: string, password: string): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
+  const data = await resp.json();
   if (!resp.ok) {
-    const data = await resp.json();
     throw new Error(data.detail ?? "Registration failed");
   }
-  const { access_token, refresh_token } = await resp.json();
+  const { access_token, refresh_token } = data;
   await AsyncStorage.setItem(ACCESS_TOKEN_KEY, access_token);
   await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refresh_token);
   const payload = JSON.parse(atob(access_token.split(".")[1]));
