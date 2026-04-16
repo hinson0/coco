@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -70,6 +71,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await smsSignIn(phone.trim(), code.trim());
+      Keyboard.dismiss();
       router.replace("/");
     } catch (e: unknown) {
       Alert.alert("登录失败", e instanceof Error ? e.message : "未知错误");
@@ -86,6 +88,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
+      Keyboard.dismiss();
       router.replace("/");
     } catch (e: unknown) {
       Alert.alert("登录失败", e instanceof Error ? e.message : "未知错误");
