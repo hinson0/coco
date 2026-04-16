@@ -10,4 +10,6 @@ os.environ["JWT_SECRET"] = "test-secret-key-for-pytest-only-32bytes!"
 os.environ.setdefault("SILICON_API_KEY", "test-silicon-key")
 os.environ.setdefault("TENCENT_SECRET_ID", "test-secret-id")
 os.environ.setdefault("TENCENT_SECRET_KEY", "test-secret-key")
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/test"
+)
