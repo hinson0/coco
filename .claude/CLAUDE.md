@@ -27,32 +27,6 @@ Monorepo (pnpm workspace)：
 - push 时只推到当前分支：`git push origin HEAD` 或 `git push -u origin <branch-name>`
 - 如果在main执行了commit/push/pr等命令,必须询问用户是否,使用`AskUserQuestion`工具,得到明确的答复执行.
 
-# 开发流程（必须遵守）
-
-## 完整流程
-
-每次功能开发必须走完整流程，**不得跳过任何步骤**：
-
-```
-brainstorming → writing-plans → executing-plans
-  ↓ (每个 Task 内)
-  TDD：先写测试，再写实现
-  ↓ (全部 Task 完成后)
-  superpowers:requesting-code-review
-  ↓
-  finishing-a-development-branch
-```
-
-## 测试基础设施缺失时
-
-项目目前**没有**测试框架（无 pytest 配置、无 `tests/` 目录、无 jest）。
-若开始新功能，第一个 Task 必须先搭测试环境，再写业务代码。
-
-## 禁止遗漏的步骤
-
-- `executing-plans` 全部 Task 完成后，**必须**调用 `superpowers:requesting-code-review`
-- Learning 模式不是跳过 code review 和测试的理由
-
 ## ECC(everything-claude-code插件) 工作流文档路径
 
 - PRD 文档：必须放在`docs/ecc/prds/`
