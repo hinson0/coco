@@ -1,5 +1,7 @@
 # Docker 生产部署知识点
 
+> **文件职责：** 通用原理与配置参数解释。腾讯云完整部署流程（Dockerfile、docker-compose.yml、HTTPS 配置）见 `tencent-cloud-deployment.md`。
+
 ## 1. Uvicorn vs Gunicorn — 工业标准
 
 | 方案 | 适用场景 | 说明 |
@@ -24,7 +26,9 @@ workers = CPU核心数 × 2
 | 2C4G | 4 |
 | 4C8G | 8 |
 
-**注意：** workers 数量不应超过 Docker `--cpus` 配额，否则造成 CPU 竞争反而降低性能。
+**注意：**
+- workers 数量不应超过 Docker `--cpus` 配额，否则造成 CPU 竞争反而降低性能
+- 此公式适用于 **IO 密集型**（网络请求、数据库查询）；CPU 密集型任务（AI 推理、图像处理）反而建议 workers ≤ 核心数，避免进程争抢
 
 ## 3. Gunicorn 生产配置
 
@@ -39,7 +43,7 @@ exec gunicorn main:app \
   --error-logfile -
 ```
 
-- `--timeout 120`：worker 超时时间（秒），防止 worker 卡死
+- `--timeout 120`：worker 超时时间（秒）。超时后 Gunicorn 发 SIGKILL 强杀 worker，正在处理的请求直接丢失（非优雅退出），调大此值可避免长任务被误杀
 - `--graceful-timeout 30`：优雅关闭等待时间
 - `--access-logfile -`：访问日志输出到 stdout（Docker 可用 `docker logs` 查看）
 
@@ -66,13 +70,8 @@ RUN uv sync --frozen --no-dev --index-url ${TENCENT_MIRROR}
 ## 5. Docker Layer 缓存策略
 
 ```dockerfile
-# 1. 先复制依赖声明文件（变动少）
 COPY pyproject.toml uv.lock ./
-
-# 2. 安装依赖（只有依赖变动时才重新执行）
 RUN uv sync --frozen --no-dev --index-url ${TENCENT_MIRROR}
-
-# 3. 最后复制源码（变动频繁）
 COPY . .
 ```
 
@@ -99,3 +98,5 @@ docker compose down
 - `--build`：强制重新构建镜像（不加则用旧镜像）
 - `-d`：后台运行（detached）
 - build 的是你的应用镜像（Dockerfile 定义），不是基础镜像（如 `python:3.13-slim`）
+
+> 腾讯云完整部署步骤（含 git pull、down/up 流程）见 `tencent-cloud-deployment.md §部署命令速查`。
