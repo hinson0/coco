@@ -1,8 +1,5 @@
 # todo-list
 
-- TODO 接下来给coco-ai的功能做个收尾,主要涉及:
-  - TODO 上云
-  - TODO 发布
 - TODO 刷面试题
   - 刷2-3个这样的面试题,主要涵盖: python+fastapi+redis+postgres等
 - TODO 体验下`知识图谱`
@@ -12,6 +9,16 @@
   - 永久138元
 
 ## 0416 周四
+
+- TODO 接下来给coco-ai的功能做个收尾,主要涉及:
+  - TODO 上云
+  - TODO 发布
+
+- expo 注册:
+  - 通过google注册
+  - 点右边 "Migrate your existing app"（你已有项目），
+  - npm install -g eas-cli
+  - eas login
 
 - ECC的4个步骤:
   /ecc:plan -> /ecc:tdd -> /ecc:code-review -> /ecc:verify

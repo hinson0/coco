@@ -5,8 +5,8 @@ Revises:
 Create Date: 2026-04-09 14:44:36.422915
 
 """
-from alembic import op
 
+from alembic import op
 
 revision: str = "88e885d59ac9"
 down_revision: str | None = None
@@ -17,11 +17,11 @@ depends_on: str | None = None
 def upgrade() -> None:
     op.execute("""
         -- Enums
-        CREATE TYPE IF NOT EXISTS transaction_type AS ENUM ('income', 'expense');
-        CREATE TYPE IF NOT EXISTS record_source AS ENUM ('manual', 'ocr', 'asr', 'text');
-        CREATE TYPE IF NOT EXISTS budget_period AS ENUM ('weekly', 'monthly', 'yearly');
-        CREATE TYPE IF NOT EXISTS chat_role AS ENUM ('user', 'assistant');
-        CREATE TYPE IF NOT EXISTS chat_content_type AS ENUM ('text', 'audio', 'image', 'bill_card', 'nl_result');
+        CREATE TYPE transaction_type AS ENUM ('income', 'expense');
+        CREATE TYPE record_source AS ENUM ('manual', 'ocr', 'asr', 'text');
+        CREATE TYPE budget_period AS ENUM ('weekly', 'monthly', 'yearly');
+        CREATE TYPE chat_role AS ENUM ('user', 'assistant');
+        CREATE TYPE chat_content_type AS ENUM ('text', 'audio', 'image', 'bill_card', 'nl_result');
 
         -- Users
         CREATE TABLE IF NOT EXISTS users (
