@@ -1,7 +1,7 @@
 import structlog
 from tencentcloud.common import credential
-from tencentcloud.sms.v20210111 import sms_client as sms_client_module
 from tencentcloud.sms.v20210111 import models as sms_models
+from tencentcloud.sms.v20210111 import sms_client as sms_client_module
 
 from infra.config import settings
 
@@ -34,7 +34,9 @@ def send_sms_code(phone: str, code: str) -> bool:
         log.warning(
             "sms_send_failed",
             phone=phone[-4:],
-            code=resp.SendStatusSet[0].Code if resp.SendStatusSet else "unknown",
+            code=resp.SendStatusSet[0].Code
+            if resp.SendStatusSet
+            else "unknown",
         )
         return False
     except Exception:

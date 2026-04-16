@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.config import settings
 from infra.database import get_db
-from infra.security import create_access_token, create_refresh_token, get_current_user
+from infra.security import (
+    create_access_token,
+    create_refresh_token,
+    get_current_user,
+)
 from infra.sms import send_sms_code
 from schemas.auth import (
     BindEmailRequest,
@@ -46,7 +50,9 @@ async def register(
 
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     result = await db.execute(
-        text("INSERT INTO users (email, password) VALUES (:email, :password) RETURNING id"),
+        text(
+            "INSERT INTO users (email, password) VALUES (:email, :password) RETURNING id"
+        ),
         {"email": body.email, "password": hashed},
     )
     user_id = str(result.scalar_one())
@@ -119,7 +125,9 @@ async def sms_send(
         {"phone": body.phone},
     )
     if result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=429, detail="发送过于频繁，请60秒后重试")
+        raise HTTPException(
+            status_code=429, detail="发送过于频繁，请60秒后重试"
+        )
 
     # 每日上限: 10条
     count_result = await db.execute(
@@ -211,7 +219,9 @@ async def me(
     row = result.mappings().one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="用户不存在")
-    return UserInfoResponse(id=str(row["id"]), email=row["email"], phone=row["phone"])
+    return UserInfoResponse(
+        id=str(row["id"]), email=row["email"], phone=row["phone"]
+    )
 
 
 @router.post("/bind/phone")
@@ -273,7 +283,9 @@ async def bind_email(
 
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
     await db.execute(
-        text("UPDATE users SET email = :email, password = :password WHERE id = :id"),
+        text(
+            "UPDATE users SET email = :email, password = :password WHERE id = :id"
+        ),
         {"email": body.email, "password": hashed, "id": current_user_id},
     )
     await db.commit()

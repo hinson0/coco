@@ -161,7 +161,7 @@ export default function ProfileScreen() {
             icon="📱"
             iconBg={colors.sagePale}
             title="手机号"
-            subtitle={user.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")}
+            desc={user.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")}
           />
         ) : (
           <MenuItem
@@ -177,7 +177,7 @@ export default function ProfileScreen() {
             icon="📧"
             iconBg={colors.honeyPale}
             title="邮箱"
-            subtitle={user.email}
+            desc={user.email}
           />
         ) : (
           <MenuItem
