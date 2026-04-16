@@ -1,5 +1,5 @@
 from datetime import UTC
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -168,6 +168,120 @@ def test_login_success_returns_tokens():
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+
+
+# ── /auth/me ──────────────────────────────────────────
+
+
+def test_sms_send_success():
+    db = AsyncMock()
+    # 模拟没有最近发送记录
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    # 模拟当日发送次数为 0
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 0
+    # INSERT result
+    insert_result = MagicMock()
+    db.execute = AsyncMock(side_effect=[result, count_result, insert_result])
+    db.commit = AsyncMock()
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    with patch("routers.auth.send_sms_code", return_value=True):
+        resp = client.post("/auth/sms/send", json={"phone": "13812345678"})
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "验证码已发送"
+
+
+def test_sms_send_rate_limit():
+    db = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = "some-id"
+    db.execute = AsyncMock(return_value=result)
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/sms/send", json={"phone": "13812345678"})
+    assert resp.status_code == 429
+    assert "60" in resp.json()["detail"]
+
+
+def test_sms_send_invalid_phone():
+    resp = client.post("/auth/sms/send", json={"phone": "123"})
+    assert resp.status_code == 400
+    assert "手机号" in resp.json()["detail"]
+
+
+def test_sms_verify_new_user():
+    db = AsyncMock()
+    code_result = MagicMock()
+    code_result.scalar_one_or_none.return_value = "code-id"
+    update_result = MagicMock()
+    user_result = MagicMock()
+    user_result.mappings.return_value.one_or_none.return_value = None
+    insert_result = MagicMock()
+    insert_result.scalar_one.return_value = "new-user-uuid"
+
+    db.execute = AsyncMock(
+        side_effect=[code_result, update_result, user_result, insert_result]
+    )
+    db.commit = AsyncMock()
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "123456"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+
+def test_sms_verify_existing_user():
+    db = AsyncMock()
+    code_result = MagicMock()
+    code_result.scalar_one_or_none.return_value = "code-id"
+    update_result = MagicMock()
+    user_result = MagicMock()
+    user_result.mappings.return_value.one_or_none.return_value = {"id": "existing-user-uuid"}
+
+    db.execute = AsyncMock(side_effect=[code_result, update_result, user_result])
+    db.commit = AsyncMock()
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "123456"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data
+
+
+def test_sms_verify_invalid_code():
+    db = AsyncMock()
+    code_result = MagicMock()
+    code_result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=code_result)
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post("/auth/sms/verify", json={"phone": "13812345678", "code": "000000"})
+    assert resp.status_code == 401
+    assert "验证码" in resp.json()["detail"]
 
 
 # ── /auth/me ──────────────────────────────────────────

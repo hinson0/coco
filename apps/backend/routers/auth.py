@@ -1,3 +1,5 @@
+import random
+import re
 from typing import Annotated
 
 import bcrypt
@@ -10,10 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from infra.config import settings
 from infra.database import get_db
 from infra.security import create_access_token, create_refresh_token, get_current_user
+from infra.sms import send_sms_code
 from schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    SmsSendRequest,
+    SmsVerifyRequest,
     TokenResponse,
     UserInfoResponse,
 )
@@ -84,6 +89,108 @@ async def refresh(body: RefreshRequest):
     except Exception:
         raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
 
+    return TokenResponse(
+        access_token=create_access_token(user_id),
+        refresh_token=create_refresh_token(user_id),
+    )
+
+
+def _validate_phone(phone: str) -> None:
+    if not re.match(r"^1[3-9]\d{9}$", phone):
+        raise HTTPException(status_code=400, detail="手机号格式不正确")
+
+
+@router.post("/sms/send")
+async def sms_send(
+    body: SmsSendRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _validate_phone(body.phone)
+
+    # 频率限制: 60秒内不能重复发送
+    result = await db.execute(
+        text("""
+            SELECT id FROM sms_codes
+            WHERE phone = :phone AND created_at > now() - interval '60 seconds'
+            ORDER BY created_at DESC LIMIT 1
+        """),
+        {"phone": body.phone},
+    )
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=429, detail="发送过于频繁，请60秒后重试")
+
+    # 每日上限: 10条
+    count_result = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM sms_codes
+            WHERE phone = :phone AND created_at > now() - interval '1 day'
+        """),
+        {"phone": body.phone},
+    )
+    if count_result.scalar_one() >= 10:
+        raise HTTPException(status_code=429, detail="今日发送次数已达上限")
+
+    code = f"{random.randint(0, 999999):06d}"
+
+    if not send_sms_code(body.phone, code):
+        raise HTTPException(status_code=500, detail="短信发送失败，请稍后重试")
+
+    await db.execute(
+        text("""
+            INSERT INTO sms_codes (phone, code, expires_at)
+            VALUES (:phone, :code, now() + interval '5 minutes')
+        """),
+        {"phone": body.phone, "code": code},
+    )
+    await db.commit()
+    return {"message": "验证码已发送"}
+
+
+@router.post("/sms/verify", response_model=TokenResponse)
+async def sms_verify(
+    body: SmsVerifyRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _validate_phone(body.phone)
+
+    # 查找有效验证码
+    result = await db.execute(
+        text("""
+            SELECT id FROM sms_codes
+            WHERE phone = :phone AND code = :code
+              AND expires_at > now() AND used = false
+            ORDER BY created_at DESC LIMIT 1
+        """),
+        {"phone": body.phone, "code": body.code},
+    )
+    code_id = result.scalar_one_or_none()
+    if code_id is None:
+        raise HTTPException(status_code=401, detail="验证码错误或已过期")
+
+    # 标记已使用
+    await db.execute(
+        text("UPDATE sms_codes SET used = true WHERE id = :id"),
+        {"id": code_id},
+    )
+
+    # 查用户
+    result = await db.execute(
+        text("SELECT id FROM users WHERE phone = :phone"),
+        {"phone": body.phone},
+    )
+    row = result.mappings().one_or_none()
+
+    if row:
+        user_id = str(row["id"])
+    else:
+        # 自动注册
+        result = await db.execute(
+            text("INSERT INTO users (phone) VALUES (:phone) RETURNING id"),
+            {"phone": body.phone},
+        )
+        user_id = str(result.scalar_one())
+
+    await db.commit()
     return TokenResponse(
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
