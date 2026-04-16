@@ -320,3 +320,95 @@ def test_me_returns_user_info():
     assert data["id"] == "user-uuid"
     assert data["email"] == "a@b.com"
     assert data["phone"] == "13812345678"
+
+
+# ── /auth/bind/phone & /auth/bind/email ───────────────
+
+
+def _make_auth_header():
+    """生成有效的 access token header。"""
+    from datetime import datetime, timedelta
+
+    import jwt
+
+    from infra.config import settings
+
+    token = jwt.encode(
+        {"sub": "user-uuid", "type": "access", "exp": datetime.now(UTC) + timedelta(hours=1)},
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_bind_phone_success():
+    db = AsyncMock()
+    code_result = MagicMock()
+    code_result.scalar_one_or_none.return_value = "code-id"
+    update_code = MagicMock()
+    phone_check = MagicMock()
+    phone_check.scalar_one_or_none.return_value = None  # 未被占用
+    update_user = MagicMock()
+
+    db.execute = AsyncMock(side_effect=[code_result, update_code, phone_check, update_user])
+    db.commit = AsyncMock()
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post(
+        "/auth/bind/phone",
+        json={"phone": "13812345678", "code": "123456"},
+        headers=_make_auth_header(),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "绑定成功"
+
+
+def test_bind_phone_already_taken():
+    db = AsyncMock()
+    code_result = MagicMock()
+    code_result.scalar_one_or_none.return_value = "code-id"
+    update_code = MagicMock()
+    phone_check = MagicMock()
+    phone_check.scalar_one_or_none.return_value = "other-user-id"  # 已被占用
+
+    db.execute = AsyncMock(side_effect=[code_result, update_code, phone_check])
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post(
+        "/auth/bind/phone",
+        json={"phone": "13812345678", "code": "123456"},
+        headers=_make_auth_header(),
+    )
+    assert resp.status_code == 400
+    assert "已被" in resp.json()["detail"]
+
+
+def test_bind_email_success():
+    db = AsyncMock()
+    email_check = MagicMock()
+    email_check.scalar_one_or_none.return_value = None
+    update_user = MagicMock()
+
+    db.execute = AsyncMock(side_effect=[email_check, update_user])
+    db.commit = AsyncMock()
+
+    async def mock_db():
+        yield db
+
+    app.dependency_overrides[get_db] = mock_db
+
+    resp = client.post(
+        "/auth/bind/email",
+        json={"email": "new@test.com", "password": "secret"},
+        headers=_make_auth_header(),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["message"] == "绑定成功"

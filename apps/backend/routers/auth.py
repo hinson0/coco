@@ -14,6 +14,8 @@ from infra.database import get_db
 from infra.security import create_access_token, create_refresh_token, get_current_user
 from infra.sms import send_sms_code
 from schemas.auth import (
+    BindEmailRequest,
+    BindPhoneRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -210,3 +212,69 @@ async def me(
     if row is None:
         raise HTTPException(status_code=404, detail="用户不存在")
     return UserInfoResponse(id=str(row["id"]), email=row["email"], phone=row["phone"])
+
+
+@router.post("/bind/phone")
+async def bind_phone(
+    body: BindPhoneRequest,
+    current_user_id: UserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    _validate_phone(body.phone)
+
+    # 验证验证码
+    result = await db.execute(
+        text("""
+            SELECT id FROM sms_codes
+            WHERE phone = :phone AND code = :code
+              AND expires_at > now() AND used = false
+            ORDER BY created_at DESC LIMIT 1
+        """),
+        {"phone": body.phone, "code": body.code},
+    )
+    code_id = result.scalar_one_or_none()
+    if code_id is None:
+        raise HTTPException(status_code=401, detail="验证码错误或已过期")
+
+    await db.execute(
+        text("UPDATE sms_codes SET used = true WHERE id = :id"),
+        {"id": code_id},
+    )
+
+    # 检查手机号是否已被其他用户占用
+    result = await db.execute(
+        text("SELECT id FROM users WHERE phone = :phone AND id != :user_id"),
+        {"phone": body.phone, "user_id": current_user_id},
+    )
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="该手机号已被其他账户绑定")
+
+    await db.execute(
+        text("UPDATE users SET phone = :phone WHERE id = :id"),
+        {"phone": body.phone, "id": current_user_id},
+    )
+    await db.commit()
+    return {"message": "绑定成功"}
+
+
+@router.post("/bind/email")
+async def bind_email(
+    body: BindEmailRequest,
+    current_user_id: UserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    # 检查邮箱是否已被占用
+    result = await db.execute(
+        text("SELECT id FROM users WHERE email = :email AND id != :user_id"),
+        {"email": body.email, "user_id": current_user_id},
+    )
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=400, detail="该邮箱已被其他账户注册")
+
+    hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
+    await db.execute(
+        text("UPDATE users SET email = :email, password = :password WHERE id = :id"),
+        {"email": body.email, "password": hashed, "id": current_user_id},
+    )
+    await db.commit()
+    return {"message": "绑定成功"}
