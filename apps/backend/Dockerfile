@@ -9,10 +9,10 @@ RUN pip install -i ${TENCENT_MIRROR} uv
 WORKDIR /app
 
 # 先复制依赖文件（利用 Docker layer 缓存）
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock ./
 
 # 安装依赖（不安装 dev 依赖）
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --index-url ${UV_INDEX_URL}
 
 # 复制源码
 COPY . .
