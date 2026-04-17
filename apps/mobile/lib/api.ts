@@ -1,8 +1,7 @@
 import * as Localization from "expo-localization";
 
 import { getAccessToken, refreshAccessToken } from "./auth";
-
-const API_BASE = process.env.EXPO_PUBLIC_API_URL;
+import { API_BASE } from "./config";
 
 async function fetchWithToken(
   token: string,
