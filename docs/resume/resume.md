@@ -115,8 +115,9 @@
 
 **DevOps：**
 
-- 通过 Docker 容器化 PostgreSQL、Redis 等服务，使用 systemctl 管理生产环境进程，配置日志追踪与自动重启
-- 搭建 GitHub Actions CI/CD 流水线实现自动化部署，先后部署于阿里云 ECS 与 AWS EC2
+- **混合架构选型**：自建云服务器（阿里云国际站 ECS，后迁移至 AWS EC2）+ Supabase BaaS（PostgreSQL / Edge Functions / Auth / Storage），在基础设施可控性与开发交付效率之间取得平衡
+- 基于 Docker Compose 容器化 PostgreSQL、Redis 等服务，通过 systemctl 托管 compose 进程实现开机自启与崩溃自恢复，落地结构化日志追踪
+- 基于 GitHub Actions 搭建 CI/CD 流水线实现推送即部署，并主导从阿里云 ECS 到 AWS EC2 的跨云迁移
 
 ---
 
@@ -142,6 +143,10 @@
 - 集成腾讯云 ASR 实现语音转文字、腾讯云 OCR 实现票据识别，识别结果经 Qwen 提取结构化账单字段（金额、分类、备注、时间）
 - 实现自然语言查账功能，通过 Qwen text-to-SQL 将用户问题转换为 SQL 查询，添加安全校验防止 SQL 注入，并将查询结果以自然语言摘要返回
 - 使用 SQLAlchemy ORM + Alembic 管理数据模型与数据库迁移，实现 JWT 认证体系；通过 Docker Compose 编排 PostgreSQL 与后端服务
+
+**DevOps：**
+
+- **独立完成生产环境全链路落地**：域名注册 → ICP 备案 → 腾讯云 CVM 购置 → Docker 容器化部署 → SSL 证书签发与 HTTPS 配置 → OCR / ASR / SMS 云服务开通 → Qwen 大模型 API 接入，覆盖从 0 到 1 的云端部署与合规上线全流程
 
 ---
 

@@ -10,6 +10,8 @@
 
 - TODO 加一个main代码merge的时候,docker 可以同步代码
 - TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
+- TODO 修复动画的bug
+- TODO 第一次进来AI页 看不到旧的chat message.
 
 ## 0417
 
@@ -17,16 +19,16 @@
 - ~TODO Prompt 工程
 - ~TODO AI 代码审核标准
 
-- TODO
+- ~TODO
   - 现在 ai-native/ 目录已经有两篇互相呼应的笔记：
     ~/coco/docs/knowledges/ai-native/
     ├── what-is-ai-native.md # 概念 + 核心能力
     └── context-engineering.md # 上下文工程实践
 
   下次想扩展这个知识簇时，可以考虑补充：
-  - TODO prompt-patterns.md — 常用 prompt 模板（Chain of Thought、Few-Shot 等）
+  - ~TODO prompt-patterns.md — 常用 prompt 模板（Chain of Thought、Few-Shot 等）
   - ~TODO ai-code-review-standards.md — AI 生成代码的审核标准
-  - TODO agentic-workflow-design.md — 让 AI 自主工作的架构范式
+  - ~TODO agentic-workflow-design.md — 让 AI 自主工作的架构范式
 
 - ~TODO 为什么code review我没有这个command
   - 没有找到!!!我估计是cc自带的内部command.
@@ -37,13 +39,13 @@
   - ~TODO "code-review@claude-plugins-official": true,有什么区别.
     - 我感觉没什么好大的作用这个.完全没上面的功能强大啊.
 
-- TODO "playwright@claude-plugins-official": true, 是什么鬼
-- TODO "frontend-design@claude-plugins-official": 和 "playground@claude-plugins-official": true,
+- ~TODO "playwright@claude-plugins-official": true, 是什么鬼
+- ~TODO "frontend-design@claude-plugins-official": 和 "playground@claude-plugins-official": true,
 - ~TODO 修复声音叠声的bug
-- TODO 修复动画的bug
+
 - ~TODO 发现就有的声音播放不了声音了.
-- TODO 第一次进来AI页 看不到旧的chat message.
-- TODO 开发的时候 我老是要去改这个"EXPO_PUBLIC_API_URL=http://119.45.41.158:8000
+
+- ~TODO 开发的时候 我老是要去改这个"EXPO_PUBLIC_API_URL=http://119.45.41.158:8000
   - 怎么可以做到兼容
 
 ### justfile

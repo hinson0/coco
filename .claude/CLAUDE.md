@@ -3,15 +3,16 @@
 Monorepo (pnpm workspace)：
 
 - `apps/mobile` — Expo React Native 移动端（主应用）
+  - 使用pnpm做包管理,而不是npm
 - `apps/backend` — Python FastAPI 后端（ASR、OCR、文本记账），包管理用 `uv`
+  - `uv add <pkg>` — 后端添加 Python 依赖（在 `apps/backend/` 下执行）
 - `packages/shared` — 共享类型、规则引擎（`parse()`）
 - `apps/backend/alembic/` — 数据库迁移（Alembic + PostgreSQL）
 - `docs/` — 插件工作流产出文档（详见「插件产出物路径」章节）
 
-# 常用命令
+# 禁止行为:
 
-- `pnpm dev` — 启动 Expo 开发服务器（等价于 `pnpm --filter mobile dev`）
-- `uv add <pkg>` — 后端添加 Python 依赖（在 `apps/backend/` 下执行）
+- 如果是在`Ask`模式,比如`Ask before edits`,则严格**禁止**修改任何文件,**禁止**落盘任何文件.
 
 # Git 工作流（必须遵守）
 
@@ -30,10 +31,10 @@ Monorepo (pnpm workspace)：
 
 不同 Claude Code 插件的工作流文档，统一存放在**仓库根目录** `docs/<插件名>/` 下：
 
-| 插件 | 根目录 | 子目录 |
-|------|--------|--------|
-| **Superpowers**（当前使用） | `docs/superpowers/` | `brainstorm/`、`plans/`、`specs/` |
-| **ECC** (everything-claude-code) | `docs/ecc/` | `prds/`、`plans/`、`reports/` |
+| 插件                             | 根目录              | 子目录                            |
+| -------------------------------- | ------------------- | --------------------------------- |
+| **Superpowers**（当前使用）      | `docs/superpowers/` | `brainstorm/`、`plans/`、`specs/` |
+| **ECC** (everything-claude-code) | `docs/ecc/`         | `prds/`、`plans/`、`reports/`     |
 
 规则：**哪个插件生成的文档就放到对应的 `docs/<插件名>/` 目录下**，不要混放。如果未来使用新插件，同理新建 `docs/<新插件名>/`。
 
@@ -48,4 +49,4 @@ Monorepo (pnpm workspace)：
 
 # 不用处理:
 
-- apps/mobile/app.json 名称被改为 CoCo AI记账 <端口> 如果是这个问题是否要修复/提交,则无视,
+- 检查apps/mobile/app.json的expo.name字段被修改被改为 `CoCo AI记账 <端口>`,如果只有这一个diff内容,则不提交该文件,但如果其他字段修改了,则使用`AskUserQuestion`,是否提交`app.json`文件)
