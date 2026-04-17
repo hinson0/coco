@@ -12,6 +12,24 @@
 
 ## 0417
 
+- ~TODO 为什么code review我没有这个command
+  - 没有找到!!!我估计是cc自带的内部command.
+  - 确定了 是在 vim /Users/a114514/.local/share/claude/versions/2.1.112 内置的skill
+    而且是二进制文件编译在里面的
+- ~TODO pr-review-toolkit Plugin · claude-plugins-official · ✔ enabled这个插件和
+  - 我现在明白了这个插件.这个插件说白了就是在pr之前给进行全面doctor
+  - TODO "code-review@claude-plugins-official": true,有什么区别.
+    - 我感觉没什么好大的作用这个.完全没上面的功能强大啊.
+
+- TODO "playwright@claude-plugins-official": true, 是什么鬼
+- TODO "frontend-design@claude-plugins-official": 和 "playground@claude-plugins-official": true,
+- ~TODO 修复声音叠声的bug
+- TODO 修复动画的bug
+- ~TODO 发现就有的声音播放不了声音了.
+- TODO 第一次进来AI页 看不到旧的chat message.
+- TODO 开发的时候 我老是要去改这个"EXPO_PUBLIC_API_URL=http://119.45.41.158:8000
+  - 怎么可以做到兼容
+
 ### justfile
 
 - 应该是直接按照天,来创建文件夹,然后把源文件+.printed
