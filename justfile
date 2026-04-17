@@ -122,13 +122,14 @@ cicd: cicd-be cicd-fe
 knowledges_dir := env_var('HOME') + "/coco/docs/knowledges"
 pdfs_dir := env_var('HOME') + "/coco/docs/pdfs"
 
+
 # 查看知识文件（默认今天，传 1=昨天，2=前天，以此类推）
 # kb: knowledge base知识库
 show days="+0":
     @target=$(date -v{{days}}d +%Y-%m-%d); \
      next=$(date -v{{days}}d -v+1d +%Y-%m-%d); \
      echo "📅 $target"; \
-     find {{knowledges_dir}} -name "*.md" -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00"
+     find {{knowledges_dir}} -name "*.md" ! -name "*.printed.md" -newermt "$target 00:00:00" ! -newermt "$next 00:00:00"
 
 mv days="+0":
     #!/usr/bin/env bash
@@ -145,12 +146,12 @@ mv days="+0":
         echo "✅ $fname → pdfs/$target/$fname"
         count=$((count + 1))
     done < <(find "{{knowledges_dir}}" -name "*.md" ! -name "*.printed.md" \
-        -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00")
+        -newermt "$target 00:00:00" ! -newermt "$next 00:00:00")
     if [ "$count" -eq 0 ]; then
         echo "ℹ️  $target 没有新文件"
     else
         echo ""
-        echo "📄 请打开 $dest_dir 手动将 .md 转为 PDF"
+        echo "ℹ️ ℹ️ ℹ️ 请打开 $dest_dir 手动将 .md 转为 PDF ℹ️ ℹ️ ℹ️ "
     fi
 
 # 镜像指定天的 .md 到 ~/kbs_pdf/kbs/，并把源文件标记为 .printed.md（默认今天，-1=昨天，以此类推）
