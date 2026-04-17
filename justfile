@@ -119,16 +119,43 @@ cicd: cicd-be cicd-fe
 
 # ── 知识库查询 ────────────────────────────────
 
+knowledges_dir := env_var('HOME') + "/coco/docs/knowledges"
+pdfs_dir := env_var('HOME') + "/coco/docs/pdfs"
+
 # 查看知识文件（默认今天，传 1=昨天，2=前天，以此类推）
 # kb: knowledge base知识库
 show days="+0":
     @target=$(date -v{{days}}d +%Y-%m-%d); \
      next=$(date -v{{days}}d -v+1d +%Y-%m-%d); \
      echo "📅 $target"; \
-     find ~/coco/docs/knowledges -name "*.md" -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00"
+     find {{knowledges_dir}} -name "*.md" -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00"
+
+mv days="+0":
+    #!/usr/bin/env bash
+    target=$(date -v{{days}}d +%Y-%m-%d)
+    next=$(date -v{{days}}d -v+1d +%Y-%m-%d)
+    dest_dir="{{pdfs_dir}}/$target"
+    mkdir -p "$dest_dir"
+    echo "📁 $dest_dir"
+    count=0
+    while IFS= read -r f; do
+        fname=$(basename "$f")
+        cp "$f" "$dest_dir/$fname"
+        mv "$f" "${f%.md}.printed.md"
+        echo "✅ $fname → pdfs/$target/$fname"
+        count=$((count + 1))
+    done < <(find "{{knowledges_dir}}" -name "*.md" ! -name "*.printed.md" \
+        -newerBt "$target 00:00:00" ! -newerBt "$next 00:00:00")
+    if [ "$count" -eq 0 ]; then
+        echo "ℹ️  $target 没有新文件"
+    else
+        echo ""
+        echo "📄 请打开 $dest_dir 手动将 .md 转为 PDF"
+    fi
 
 # 镜像指定天的 .md 到 ~/kbs_pdf/kbs/，并把源文件标记为 .printed.md（默认今天，-1=昨天，以此类推）
-pr days="+0":
+# 废弃 2026-04-17
+_pr days="+0":
     #!/usr/bin/env bash
     target=$(date -v{{days}}d +%Y-%m-%d)
     next=$(date -v{{days}}d -v+1d +%Y-%m-%d)
@@ -145,7 +172,8 @@ pr days="+0":
     done
 
 # 还原：.printed.md → .md 并删除 ~/kbs_pdf/kbs/ 中的副本（默认今天，-1=昨天，以此类推）
-pr-reset days="+0":
+# 废弃 2026-04-17
+_pr-reset days="+0":
     #!/usr/bin/env bash
     target=$(date -v{{days}}d +%Y-%m-%d)
     next=$(date -v{{days}}d -v+1d +%Y-%m-%d)

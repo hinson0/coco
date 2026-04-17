@@ -10,6 +10,15 @@
 
 - TODO 加一个main代码merge的时候,docker 可以同步代码
 
+## 0417
+
+### justfile
+
+- 应该是直接按照天,来创建文件夹,然后把源文件+.printed
+- 然后我去天的文件夹,转换为pdf
+- 然后打印
+- 一个show + 一个mv(提示,请手动转pdf) +
+
 ## 0416 周四
 
 - ~TODO 为什么没有 app.json的version的变更.
@@ -41,7 +50,7 @@ PID 126417 → worker 4 ←┘
   cd apps/mobile
   npx expo prebuild --platform android --clean
   cd android
-  ./gradlew clean
+  ./gradlew clean (http要加: android:usesCleartextTraffic="true")
   ./gradlew assembleRelease
   adb install -r app/build/outputs/apk/release/app-release.apk
 
