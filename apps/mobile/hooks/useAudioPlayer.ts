@@ -1,55 +1,61 @@
-import { useRef, useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createAudioPlayer } from "expo-audio";
 
 export function useAudioPlayer() {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  // 镜像 state，避免 useCallback 闭包捕获过期 playingId 导致连点重复创建 player
+  const playingIdRef = useRef<string | null>(null);
   const playerRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
-  const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const subscriptionRef = useRef<{ remove: () => void } | null>(null);
 
   const cleanup = useCallback(() => {
-    if (checkIntervalRef.current) {
-      clearInterval(checkIntervalRef.current);
-      checkIntervalRef.current = null;
+    if (subscriptionRef.current) {
+      subscriptionRef.current.remove();
+      subscriptionRef.current = null;
     }
     if (playerRef.current) {
+      // remove() 仅释放对象，不停止 native 音频流，必须先 pause
+      if (playerRef.current.playing) {
+        playerRef.current.pause();
+      }
       playerRef.current.remove();
       playerRef.current = null;
     }
   }, []);
 
+  const setPlaying = useCallback((id: string | null) => {
+    playingIdRef.current = id;
+    setPlayingId(id);
+  }, []);
+
   const play = useCallback(
     (messageId: string, uri: string) => {
-      if (playingId === messageId) {
-        // 点击正在播放的 → 停止
+      if (playingIdRef.current === messageId) {
         cleanup();
-        setPlayingId(null);
+        setPlaying(null);
         return;
       }
 
-      // 停止旧的
       cleanup();
 
-      // 播放新的
       const player = createAudioPlayer({ uri });
       playerRef.current = player;
+      subscriptionRef.current = player.addListener(
+        "playbackStatusUpdate",
+        (status) => {
+          if (status.didJustFinish) {
+            cleanup();
+            setPlaying(null);
+          }
+        },
+      );
       player.play();
-      setPlayingId(messageId);
-
-      // 播放结束后清除状态
-      checkIntervalRef.current = setInterval(() => {
-        if (player.currentTime >= player.duration && player.duration > 0) {
-          cleanup();
-          setPlayingId(null);
-        }
-      }, 300);
+      setPlaying(messageId);
     },
-    [playingId, cleanup],
+    [cleanup, setPlaying],
   );
 
-  const stop = useCallback(() => {
-    cleanup();
-    setPlayingId(null);
-  }, [cleanup]);
+  useEffect(() => cleanup, [cleanup]);
 
-  return { playingId, play, stop };
+  return { playingId, play };
 }
