@@ -1,6 +1,6 @@
 {
   "name": "coco",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "scripts": {
     "dev:infra": "docker compose up -d",
     "db:migrate": "cd apps/backend && uv run alembic upgrade head",
