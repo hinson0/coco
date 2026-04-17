@@ -9,8 +9,24 @@
   - 永久138元
 
 - TODO 加一个main代码merge的时候,docker 可以同步代码
+- TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
 
 ## 0417
+
+- ~TODO 如 Context Engineering、
+- ~TODO Prompt 工程
+- ~TODO AI 代码审核标准
+
+- TODO
+  - 现在 ai-native/ 目录已经有两篇互相呼应的笔记：
+    ~/coco/docs/knowledges/ai-native/
+    ├── what-is-ai-native.md # 概念 + 核心能力
+    └── context-engineering.md # 上下文工程实践
+
+  下次想扩展这个知识簇时，可以考虑补充：
+  - TODO prompt-patterns.md — 常用 prompt 模板（Chain of Thought、Few-Shot 等）
+  - ~TODO ai-code-review-standards.md — AI 生成代码的审核标准
+  - TODO agentic-workflow-design.md — 让 AI 自主工作的架构范式
 
 - ~TODO 为什么code review我没有这个command
   - 没有找到!!!我估计是cc自带的内部command.
@@ -18,7 +34,7 @@
     而且是二进制文件编译在里面的
 - ~TODO pr-review-toolkit Plugin · claude-plugins-official · ✔ enabled这个插件和
   - 我现在明白了这个插件.这个插件说白了就是在pr之前给进行全面doctor
-  - TODO "code-review@claude-plugins-official": true,有什么区别.
+  - ~TODO "code-review@claude-plugins-official": true,有什么区别.
     - 我感觉没什么好大的作用这个.完全没上面的功能强大啊.
 
 - TODO "playwright@claude-plugins-official": true, 是什么鬼
