@@ -1,4 +1,5 @@
 export * from "./constants/categories";
+export * from "./constants/keywords";
 export * from "./constants/transaction";
 export * from "./types/account";
 export * from "./types/api";

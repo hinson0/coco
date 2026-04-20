@@ -7,7 +7,10 @@ import os
 os.environ["JWT_SECRET"] = "test-secret-key-for-pytest-only-32bytes!"
 
 # 为 Settings 必填字段提供测试用占位值（避免无 .env 时初始化失败）
-os.environ.setdefault("SILICON_API_KEY", "test-silicon-key")
+# SILICON_API_KEY 特例：live eval 模式下不设占位，让 .env 里的真 key 生效
+# （pydantic-settings 的 os.environ 优先级高于 .env，这里 setdefault 会屏蔽 .env）
+if os.getenv("RUN_LIVE_EVAL") != "1":
+    os.environ.setdefault("SILICON_API_KEY", "test-silicon-key")
 os.environ.setdefault("TENCENT_SECRET_ID", "test-secret-id")
 os.environ.setdefault("TENCENT_SECRET_KEY", "test-secret-key")
 os.environ.setdefault(
