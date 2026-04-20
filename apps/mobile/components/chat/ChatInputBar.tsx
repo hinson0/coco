@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { AppText } from "../ui/AppText";
+import { ImageSourceSheet } from "./ImageSourceSheet";
 import { QuickActions } from "./QuickActions";
 import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
 import { colors, radii, spacing, shadows } from "../../constants/theme";
@@ -27,7 +28,8 @@ export type { RecordingState };
 // ─── Props ───
 interface ChatInputBarProps {
   readonly onSendText: (text: string) => void;
-  readonly onCamera: () => void;
+  readonly onPickCamera: () => void;
+  readonly onPickLibrary: () => void;
   readonly onVoice: (base64: string, durationSeconds: number) => void;
   readonly onQuickAction: (text: string) => void;
   readonly recordingState: RecordingState;
@@ -37,7 +39,8 @@ interface ChatInputBarProps {
 
 export function ChatInputBar({
   onSendText,
-  onCamera,
+  onPickCamera,
+  onPickLibrary,
   onVoice,
   onQuickAction,
   recordingState: _recordingState,
@@ -46,6 +49,7 @@ export function ChatInputBar({
 }: ChatInputBarProps) {
   const [text, setText] = useState("");
   const [plusExpanded, setPlusExpanded] = useState(false);
+  const [sourceSheetOpen, setSourceSheetOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const hasText = text.trim().length > 0;
@@ -84,12 +88,24 @@ export function ChatInputBar({
 
   // ─── + 按钮 ───
   function handlePlus() {
+    setSourceSheetOpen(false);
     setPlusExpanded((prev) => !prev);
   }
 
   function handleQuickAction(actionText: string) {
     setPlusExpanded(false);
     onQuickAction(actionText);
+  }
+
+  // ─── 📷 按钮：切换来源选择面板 ───
+  function handleCameraToggle() {
+    setPlusExpanded(false);
+    setVoiceMode(false);
+    setSourceSheetOpen((prev) => !prev);
+  }
+
+  function closeSourceSheet() {
+    setSourceSheetOpen(false);
   }
 
   // ─── 切换语音/文字模式 ───
@@ -107,6 +123,7 @@ export function ChatInputBar({
         // 切到语音模式，收起键盘
         Keyboard.dismiss();
         setPlusExpanded(false);
+        setSourceSheetOpen(false);
       }
       return !prev;
     });
@@ -238,11 +255,17 @@ export function ChatInputBar({
   return (
     <View>
       <QuickActions visible={plusExpanded} onSelect={handleQuickAction} />
+      <ImageSourceSheet
+        visible={sourceSheetOpen}
+        onClose={closeSourceSheet}
+        onPickCamera={onPickCamera}
+        onPickLibrary={onPickLibrary}
+      />
 
       <View style={styles.container}>
         {/* 📷 相机按钮 */}
         <Pressable
-          onPress={onCamera}
+          onPress={handleCameraToggle}
           style={({ pressed }) => [
             styles.iconBtn,
             pressed && styles.btnPressed,
