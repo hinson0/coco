@@ -43,7 +43,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "允许 Coco 使用相机拍摄小票进行记账"
+          "cameraPermission": "允许 Coco 使用相机拍摄小票进行记账",
+          "photosPermission": "允许 Coco 访问相册以选择小票图片进行记账"
         }
       ],
       [

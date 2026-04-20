@@ -135,7 +135,7 @@ export default function ChatScreen() {
 
   const insets = useSafeAreaInsets();
   const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
-  const { pickImage } = useCamera();
+  const { pickImage, pickFromLibrary } = useCamera();
   const [failedOcrIds, setFailedOcrIds] = useState<Set<string>>(new Set());
 
   function onOcrFail(imageMessageId: string) {
@@ -401,8 +401,12 @@ export default function ChatScreen() {
         <ChatToolBar onSelectTool={handleSelectTool} />
         <ChatInputBar
           onSendText={sendText}
-          onCamera={async () => {
+          onPickCamera={async () => {
             const base64 = await pickImage();
+            if (base64) sendOcr(base64, onOcrFail);
+          }}
+          onPickLibrary={async () => {
+            const base64 = await pickFromLibrary();
             if (base64) sendOcr(base64, onOcrFail);
           }}
           onVoice={(base64, durationSeconds) =>

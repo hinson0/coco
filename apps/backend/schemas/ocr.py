@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OcrRequest(BaseModel):
@@ -9,7 +9,10 @@ class Transaction(BaseModel):
     amount: float
     category: str
     note: str
-    occurred_at: str
+    occurred_at: str = Field(
+        min_length=1,
+        description="ISO 8601 时间戳；由 router 保证非空（LLM 返回空则回退当前时间）",
+    )
     type: str  # expense | income
 
 

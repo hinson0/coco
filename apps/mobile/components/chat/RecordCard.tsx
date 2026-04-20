@@ -2,7 +2,7 @@ import { View, StyleSheet, Pressable, Alert } from "react-native";
 import { AppText } from "../ui/AppText";
 import { Badge } from "../ui/Badge";
 import { colors, radii, spacing } from "../../constants/theme";
-import { formatAmount } from "../../lib/format";
+import { formatAmount, formatDate } from "../../lib/format";
 import {
   isAiSource,
   isNotificationSource,
@@ -18,11 +18,6 @@ interface RecordCardProps {
   readonly categoryIcon?: string;
   readonly onEdit?: () => void;
   readonly onDelete?: () => void;
-}
-
-function formatDate(isoString: string): string {
-  const d = new Date(isoString);
-  return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日`;
 }
 
 export function RecordCard({

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator
@@ -22,6 +22,16 @@ class TransactionRow(BaseModel):
     updated_at: datetime
     deleted_at: datetime | None = None
     account_id: UUID | None = None
+
+    @field_validator("occurred_at", mode="before")
+    @classmethod
+    def coerce_empty_occurred_at(cls, v):
+        # 历史数据里 OCR 写入的 occurred_at 可能是空串/None（早期 bug），
+        # 直接拒绝会让整批 sync push 返回 422。用当前时间兜底。
+        # 不能用 info.data["created_at"]，因为字段顺序 occurred_at 在 created_at 之前。
+        if not v:
+            return datetime.now(UTC)
+        return v
 
 
 class CategoryRow(BaseModel):

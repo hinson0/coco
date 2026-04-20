@@ -59,6 +59,14 @@ async function getChangedRows(
   );
 }
 
+// 历史 OCR bug 在本地 SQLite 留下 occurred_at=""/null 的 transaction 行，后端 Pydantic
+// 会把这种行整批 422 拒掉。push 前用 created_at 兜底，保证 payload 合法。
+function sanitizeTransactions(rows: readonly Row[]): readonly Row[] {
+  return rows.map((row) =>
+    row.occurred_at ? row : { ...row, occurred_at: row.created_at },
+  );
+}
+
 /** 正在执行 push 的互斥锁，防止定时 push 和即时 push 并发 */
 let pushInFlight: Promise<void> | null = null;
 
@@ -103,7 +111,8 @@ async function pushInternal(
       ? null
       : (await getWatermark(db, table)).last_push_at;
     const rows = await getChangedRows(db, userId, table, lastPushAt);
-    payload[table] = rows;
+    payload[table] =
+      table === "transactions" ? sanitizeTransactions(rows) : rows;
     totalRows += rows.length;
     if (rows.length > 0) {
       console.info(`[Sync]   ${table}: ${rows.length} 条`);
