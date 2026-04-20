@@ -12,9 +12,42 @@
 - TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
 - TODO 修复动画的bug
 - TODO 第一次进来AI页 看不到旧的chat message.
+- TODO 这个header的alias是什么意思
+  - def get_current_user_id(authorization: Annotated[str, Header(alias="Authorization")]):
+    pass
+- TODO 当用户通过语音/OCR的时候,先输出一段话,类似与流式的对话,然后在变成一个卡片,让用户没有等待的感觉
+- TODO 可以修改手机号
+- TODO 6.4+6.5继续
+- TODO 第8章节
+  - TODO sqlite3原生操作
+  - TODO View视图
+  - TODO sqlalchemy的demo
+    - “alchemy”常见读音：
+    - **英式读音**：[ˈælkəmi]
+    - **美式读音**：[ˈælkəmi]
+      它的基本含义为“炼金术”，在计算机领域，SQLAlchemy 借用这个词，寓意其能像炼金术一样，把数据库操作变得更具魔力、更高效，它是一个强大的数据库抽象层库，方便 Python 开发者操作各种数据库。
+
+    - sql [ˈsiːkwəl]
+
+- TODO just start-fe 8080 + 8000 就连后端
+  just start-be 8081 + 8001
+
+## 0418
+
+- ~TODO 微信收款,有加有减
+- ~TODO 拍照支持`相册`
+- feature-dev -> /review -> /security-review -> /simplify
+- Fastapi的注入实践
+  - 全局/路由组/路径函数/参数
+  - 类/函数的实现
+  - 多个注入/带参数的注入
+  - 多层的注入
 
 ## 0417
 
+- 本地模拟线上的命令:
+  本地用 `pnpm --filter mobile exec expo start --no-dev --minify` 启动，
+  真机/模拟器连上确认走生产 URL（119.45.41.158）
 - ~TODO 如 Context Engineering、
 - ~TODO Prompt 工程
 - ~TODO AI 代码审核标准
@@ -135,7 +168,7 @@ PID 126417 → worker 4 ←┘
 
 - ~TODO 接下来给coco-ai的功能做个收尾,主要涉及:
   - ~TODO 上云
-  - TODO 发布
+  - ~TODO 发布
     - ICP 备案（正规途径，需要 2-4 周）
 - expo 注册:
   - 通过google注册
@@ -155,7 +188,7 @@ PID 126417 → worker 4 ←┘
 - ~TODO 52 个 warning：都是之前遗留的 @typescript-eslint/no-explicit-any 和 no-unused-vars — 遍布各个旧文件
 - ~TODO 如果用户未登录,强制切换到登录页面.
   - 要在测试下
-- TODO 删除ecc 试试gsd
+- ~TODO 删除ecc 试试gsd[不实践了.垃圾一般的存在GSD]
   - 删除了市场后 现在还有这些.
     - ~TODO ~/.claude/ecc/ ← ECC 状态文件本体
     - ~TODO ~/.claude/.agents/ ← ECC agent skills（openai.yaml 格式）
@@ -169,7 +202,7 @@ PID 126417 → worker 4 ←┘
     - ~TODO ~/.claude/AGENTS.md ← ECC 装的
     - ~TODO ~/.claude/PLUGIN_SCHEMA_NOTES.md ← ECC 装的
     - ~TODO ~/.claude/plugin.json ← ECC 装的
-    - TODO ~/.claude/marketplace.json ← ECC 装的
+    - ~TODO ~/.claude/marketplace.json ← ECC 装的
 
 ## 0413 & 0414
 

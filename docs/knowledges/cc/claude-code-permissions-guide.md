@@ -161,17 +161,70 @@ deny 规则**永远优先**于 allow，即使 allow 中有更精确的匹配。
 
 ## 5. defaultMode 权限模式
 
-`defaultMode` 控制**未匹配到 allow/deny 规则时**的默认行为：
+`defaultMode` 控制 Claude Code **会话启动时**进入的权限模式，也决定了未匹配到 allow/deny 规则时的默认行为。
+
+### 配置位置
+
+字段嵌套在 `permissions` 对象下，与 `allow`、`deny` 平级（**容易写错成顶级字段**）：
 
 ```json
-{ "permissions": { "defaultMode": "default" } }
+{
+  "permissions": {
+    "defaultMode": "plan"
+  }
+}
 ```
 
-| Mode | 行为 | 适用场景 |
-|------|------|---------|
-| `default` | 提示用户确认，可选择"允许并记住" | 日常开发（推荐） |
-| `plan` | 只读模式，可以读取文件但不能修改或执行 | 代码审查、规划阶段 |
-| `bypassPermissions` | 跳过所有权限检查，自动允许一切 | **仅限隔离环境（容器/VM），极度危险** |
+### 支持的所有值
+
+| Mode                 | 行为                                                    | 适用场景                                             |
+| -------------------- | ------------------------------------------------------- | ---------------------------------------------------- |
+| `default`            | 提示用户确认，可选择"允许并记住"                        | 日常开发（系统默认）                                 |
+| `acceptEdits`        | 自动接受文件编辑，其他操作仍提示                        | 已信任 Claude 做代码改动、只想管住 Bash              |
+| `plan`               | 只读模式——可读取但不能修改文件或执行命令；产出 plan      | 代码审查、重构前规划、不想让它乱动手的场景           |
+| `auto`               | 接近 `acceptEdits`，但更宽松                            | 已深度验证过的重复性任务                             |
+| `dontAsk`            | 不再弹出确认提示，按 allow/deny 静默处理                | 已完整配置好权限列表、嫌提示烦                       |
+| `bypassPermissions`  | 跳过所有权限检查，自动允许一切                          | **仅限隔离环境（容器/VM），极度危险**                |
+
+### 优先级（由高到低）
+
+```
+CLI 参数 (--permission-mode plan)
+  > 项目级 .claude/settings.json
+    > 全局 ~/.claude/settings.json
+      > 系统默认 (default)
+```
+
+**实用推论：**
+- 项目级需要特殊策略时，可以覆盖全局的 `defaultMode`
+- CLI 参数永远是最终兜底——单次会话想临时进入 plan 模式不用改配置：`claude --permission-mode plan`
+
+### 默认启用 Plan 模式
+
+想让每次启动 Claude Code 自动进入 Plan 模式（先出计划再动手），在 `~/.claude/settings.json` 中把 `permissions.defaultMode` 改成 `plan`：
+
+```diff
+  "permissions": {
+    "allow": [...],
+-   "defaultMode": "default"
++   "defaultMode": "plan"
+  }
+```
+
+**Plan 模式的适用判断：**
+
+| 场景                                     | 是否适合 Plan 默认              |
+| ---------------------------------------- | ------------------------------- |
+| 复杂任务（需先梳理思路再动手）           | ✅ 适合                         |
+| 希望在 AI 动手前先看到"它打算怎么做"      | ✅ 适合                         |
+| 琐碎小改动、一句话能说清的任务             | ❌ 不适合（每次都要先 plan 拖慢节奏）|
+
+**折中方案**：全局保持 `default`，只在需要长流程的项目里用项目级 settings 覆盖为 `plan`。
+
+### 相关官方文档
+
+- [Settings documentation](https://code.claude.com/docs/en/settings.md)
+- [Permission modes](https://code.claude.com/docs/en/permission-modes.md)
 
 ---
 
