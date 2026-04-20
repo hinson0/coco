@@ -1,7 +1,5 @@
 # todo-list
 
-- TODO 刷面试题
-  - 刷2-3个这样的面试题,主要涵盖: python+fastapi+redis+postgres等
 - TODO 体验下`知识图谱`
 - TODO (要企业资质) 取消广告功能.就用21天免费.然后之后可以手动记账,语音/OCR/自然语言等功能需购买VIP
   - 月10元
@@ -33,6 +31,11 @@
   just start-be 8081 + 8001
 
 ## 0418
+
+- ~TODO 刷面试题
+  - 刷2-3个这样的面试题,主要涵盖: python+fastapi+redis+postgres等
+
+做过，可以说参与过一些 GitHub 上的 issue 讨论或正在学习贡献流程）
 
 - ~TODO 微信收款,有加有减
 - ~TODO 拍照支持`相册`

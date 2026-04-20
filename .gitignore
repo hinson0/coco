@@ -43,5 +43,7 @@ apps/backend/**/__pycache__/
 apps/backend/**/*.pyc
 
 docs/pdfs/
-docs/resume/resume4.md
-docs/resume/resume4.pdf
+
+
+docs/**/*.pdf
+.gitignore
