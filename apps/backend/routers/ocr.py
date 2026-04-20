@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import structlog
 from fastapi import APIRouter
 
@@ -34,7 +36,8 @@ async def record_ocr(body: OcrRequest):
             category=str(bill.get("category", "其他支出")),
             note=bill.get("note") or "",
             type="income" if bill.get("type") == "income" else "expense",
-            occurred_at=bill.get("occurred_at", ""),
+            occurred_at=bill.get("occurred_at")
+            or datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         )
         log.info(
             "ocr.parsed",

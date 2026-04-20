@@ -212,7 +212,7 @@ export function useChat() {
             category_id: category?.id ?? "",
             type: tx.type,
             note: tx.note ?? "",
-            occurred_at: tx.occurred_at ?? new Date().toISOString(),
+            occurred_at: tx.occurred_at || new Date().toISOString(),
             source: "ocr",
           });
           console.log(
@@ -230,7 +230,7 @@ export function useChat() {
               type: tx.type,
               note: tx.note ?? "",
               category_id: category?.id,
-              occurred_at: tx.occurred_at ?? new Date().toISOString(),
+              occurred_at: tx.occurred_at || new Date().toISOString(),
               source: "ocr",
             }),
             transaction_id: txId,
