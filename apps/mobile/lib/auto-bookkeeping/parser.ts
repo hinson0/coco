@@ -1,3 +1,8 @@
+import {
+  NOTIFICATION_INCOME_REGEX,
+  NOTIFICATION_EXPENSE_REGEX,
+} from "@coco/shared";
+
 export type NotificationSource = "wechat" | "alipay";
 
 export interface ParsedNotification {
@@ -20,8 +25,6 @@ const PAYMENT_TITLE_KEYWORDS = /微信支付|支付宝/;
 // 匹配两种格式：「25.00元」和「¥25.00」
 const AMOUNT_REGEX_SUFFIX = /([\d]+\.?\d{0,2})\s*元/;
 const AMOUNT_REGEX_PREFIX = /[¥￥]([\d]+\.?\d{0,2})/;
-const INCOME_KEYWORDS = /收款|到账|转入|收到/;
-const EXPENSE_KEYWORDS = /付款|消费|支出|扣款|扣费|已支付/;
 
 export function parseNotification(
   packageName: string,
@@ -43,8 +46,8 @@ export function parseNotification(
   const amount = parseFloat(amountMatch[1]);
   if (!amount || amount <= 0) return null;
 
-  const isIncome = INCOME_KEYWORDS.test(combined);
-  const isExpense = EXPENSE_KEYWORDS.test(combined);
+  const isIncome = NOTIFICATION_INCOME_REGEX.test(combined);
+  const isExpense = NOTIFICATION_EXPENSE_REGEX.test(combined);
 
   // 收入关键词更明确（收款/到账），优先判断
   // 如果都不匹配，返回 null 而非默认为支出
