@@ -2,7 +2,7 @@
 
 - TODO 体验下`知识图谱`
 - TODO 加一个main代码merge的时候,docker 可以同步代码
-- TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
+
 - TODO 修复动画的bug
 - TODO 第一次进来AI页 看不到旧的chat message.
 - TODO 这个header的alias是什么意思
@@ -13,6 +13,11 @@
 
 ## 0419
 
+- TODO 在文件夹中进行操作,然后得到pdf,然后可以mv,把原文件改成printed
+  - mv做2件事情,一个是移动pdf,二个是重名对应的文件名字
+  - show 显示当前要pdf文件有哪些.
+- TODO aysnc/await的底层机制是什么? 和generator的关系是什么?
+  - TODO 如果**await**方法返回的是generator,那就可以迭代了.
 - TODO 6.4+6.5继续
 - TODO 第8章节
   - TODO sqlite3原生操作
@@ -25,11 +30,12 @@
 
     - sql [ˈsiːkwəl]
 
-- TODO just start-fe 8080 + 8000 就连后端
+- ~TODO just start-fe 8080 + 8000 就连后端
   just start-be 8081 + 8001
 
 ## 0418
 
+- ~TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
 - ~TODO 这个功能不做了.
   - (要企业资质) 取消广告功能.就用21天免费.然后之后可以手动记账,语音/OCR/自然语言等功能需购买VIP
   - 月10元
