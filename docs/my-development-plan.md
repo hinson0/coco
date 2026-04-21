@@ -4,12 +4,11 @@
 - TODO 加一个main代码merge的时候,docker 可以同步代码
 
 - TODO 修复动画的bug
-- TODO 第一次进来AI页 看不到旧的chat message.
+
 - TODO 这个header的alias是什么意思
   - def get_current_user_id(authorization: Annotated[str, Header(alias="Authorization")]):
     pass
-- TODO 当用户通过语音/OCR的时候,先输出一段话,类似与流式的对话,然后在变成一个卡片,让用户没有等待的感觉
-- TODO 可以修改手机号
+- TODO /review /code-review /pr-review-toolkit 这几个多实践下
 
 ## 0420
 
@@ -17,6 +16,12 @@
 
 ## 0419
 
+- TODO 如何在/feature-dev用tdd方式开发?
+- TODO 降低用户自动记账的心智
+- ~TODO 第一次进来AI页 看不到旧的chat message.
+- ~TODO 当用户通过语音/OCR的时候,先输出一段话,类似与流式的对话,然后在变成一个卡片,让用户没有等待的感觉
+- ~TODO 可以修改手机号
+  - 不做了
 - ~TODO 在文件夹中进行操作,然后得到pdf,然后可以mv,把原文件改成printed
   - mv做2件事情,一个是移动pdf,二个是重名对应的文件名字
   - show 显示当前要pdf文件有哪些.
