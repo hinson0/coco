@@ -80,18 +80,19 @@ start-fe: env-fe sync-fe
 start-be: env-be sync-be
     #!/usr/bin/env bash
     PORT=8000
-    while lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; do
-        NEXT=$((PORT + 1))
-        printf "⚠️  端口 %d 已被占用，使用 %d? [Y/n] " "$PORT" "$NEXT"
-        read -r ans
-        if [[ "$ans" =~ ^[Nn]$ ]]; then
-            echo "已取消"
-            exit 1
-        fi
-        PORT=$NEXT
-    done
+    PIDS=$(lsof -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)
+    if [ -n "$PIDS" ]; then
+        printf "❌ 端口 %d 已被占用，后端拒绝启动（端口是契约，不漂移）\n\n" "$PORT"
+        printf "占用进程：\n"
+        lsof -iTCP:"$PORT" -sTCP:LISTEN -n -P
+        printf "\n处理方式：\n"
+        printf "  • 若是旧后端：kill %s\n" "$(echo "$PIDS" | tr '\n' ' ')"
+        printf "  • 若是其他进程：自行处置后重试\n"
+        exit 1
+    fi
     echo "🚀 启动后端 → 0.0.0.0:$PORT"
     cd {{ backend }} && uv run uvicorn main:app --reload --host 0.0.0.0 --port "$PORT"
+
 
 
 

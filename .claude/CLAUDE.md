@@ -10,10 +10,6 @@ Monorepo (pnpm workspace)：
 - `apps/backend/alembic/` — 数据库迁移（Alembic + PostgreSQL）
 - `docs/` — 插件工作流产出文档（详见「插件产出物路径」章节）
 
-# 禁止行为:
-
-- 如果是在`Ask`模式,比如`Ask before edits`,则严格**禁止**修改任何文件,**禁止**落盘任何文件.
-
 # Git 工作流（必须遵守）
 
 ## Commit Message 语言

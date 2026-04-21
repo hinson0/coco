@@ -1,7 +1,6 @@
 # todo-list
 
 - TODO 体验下`知识图谱`
-
 - TODO 加一个main代码merge的时候,docker 可以同步代码
 - TODO just mv 在日期文件夹下面在创建 文件夹放置的功能.避免我后来整理的知识点就全放在一起了.
 - TODO 修复动画的bug
