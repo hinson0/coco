@@ -9,10 +9,13 @@ import { Card } from "../components/ui/Card";
 import { colors, radii, spacing } from "../constants/theme";
 import { useOfflineContext } from "@/lib/offline-context";
 import { pull, push, getPendingCount } from "@/lib/sync/sync-service";
+import { invalidateSyncedQueries } from "@/lib/queryKeys";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function SyncHelpScreen() {
   const insets = useSafeAreaInsets();
   const { db, userId } = useOfflineContext();
+  const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +51,8 @@ export default function SyncHelpScreen() {
     setSuccess(null);
     try {
       await pull(db, userId);
+      // pull 直接写本地表，staleTime: Infinity 的查询不会自行感知，须手动 invalidate
+      invalidateSyncedQueries(queryClient);
       setSuccess("同步完成 ✓");
     } catch {
       setError("同步失败，请检查网络后重试");
