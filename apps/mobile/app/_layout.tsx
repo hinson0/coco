@@ -1,6 +1,7 @@
 import { initDatabase, migrateNullUserData } from "@/lib/db";
 import { OfflineContext } from "@/lib/offline-context";
-import { push } from "@/lib/sync/sync-service";
+import { invalidateSyncedQueries } from "@/lib/queryKeys";
+import { pull, push } from "@/lib/sync/sync-service";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments, type Href } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -73,11 +74,42 @@ function AppContent() {
     setupNotifications();
   }, []);
 
-  // 用户登录后，迁移 NULL 数据
+  // 用户登录后：先迁移 NULL user_id 旧数据，再从云端拉一次历史。
+  // 每步完成后主动 invalidate 相关 query，否则 staleTime: Infinity 下
+  // 早于迁移/拉取完成的 UI 查询会把空结果永久缓存，导致首次进入 AI 页看不到旧消息。
   useEffect(() => {
-    if (db && user?.id) {
-      migrateNullUserData(db, user.id);
-    }
+    if (!db || !user?.id) return;
+    const userId = user.id;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await migrateNullUserData(db, userId);
+      } catch (err: unknown) {
+        // 如果 NULL 数据迁移失败，后续 pull 的 LWW upsert 会把远端版本写进来，
+        // 而本地 user_id IS NULL 的记录依然不属于任何用户，会被 UI 查询永久忽略
+        // （相当于数据丢失）。所以 migration 失败时不继续 pull，等下次启动重试。
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[Migration] migrateNullUserData 失败，跳过 pull:", msg);
+        return;
+      }
+      if (cancelled) return;
+      invalidateSyncedQueries(queryClient);
+
+      try {
+        await pull(db, userId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[Sync] 启动 pull 失败:", msg);
+        return;
+      }
+      if (cancelled) return;
+      invalidateSyncedQueries(queryClient);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [db, user?.id]);
 
   // 自动 push：30s 基准间隔，失败时指数退避（60s → 120s → 240s），成功后恢复 30s
