@@ -12,6 +12,94 @@
 
 ## 0422
 
+- TODO nginx
+  ⏺ Nginx 配置与运维速查
+
+  一 · 目录结构（Ubuntu/Debian 标准）
+
+  /etc/nginx/
+  ├── nginx.conf # 主配置(全局、http 块)
+  ├── conf.d/ # 站点配置(推荐放这里)
+  │ └── cocoai.chat.conf
+  ├── sites-available/ # 备用方案(Debian 风格,和 conf.d 二选一)
+  ├── sites-enabled/ # sites-available 的软链
+  ├── snippets/ # 可复用片段
+  └── ssl/ # (可选)证书存放目录
+
+  # 静态文件根
+
+  /home/ubuntu/coco/apps/web/
+
+  # 日志
+
+  /var/log/nginx/access.log
+  /var/log/nginx/error.log
+
+  # Let's Encrypt 证书(certbot 申请后)
+
+  /etc/letsencrypt/live/cocoai.chat/fullchain.pem
+  /etc/letsencrypt/live/cocoai.chat/privkey.pem
+
+  二 · 本站完整 server block
+
+  文件路径：/etc/nginx/conf.d/cocoai.chat.conf
+
+  # HTTP → HTTPS 跳转(certbot 执行后会自动生成)
+
+  server {
+  listen 80;
+  listen [::]:80;
+  server_name cocoai.chat www.cocoai.chat;
+  return 301 https://$host$request_uri;
+  }
+
+  # HTTPS 主站
+
+  server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name cocoai.chat www.cocoai.chat;
+
+      ssl_certificate     /etc/letsencrypt/live/cocoai.chat/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/cocoai.chat/privkey.pem;
+      ssl_protocols       TLSv1.2 TLSv1.3;
+      ssl_ciphers         HIGH:!aNULL:!MD5;
+
+      root  /home/ubuntu/coco/apps/web;
+      index index.html;
+
+      # 原型目录不对外暴露
+      location ^~ /design-preview/ {
+          return 404;
+      }
+
+      # 静态站路由
+      location / {
+          try_files $uri $uri/ =404;
+      }
+
+      # 压缩
+      gzip on;
+      gzip_vary on;
+      gzip_min_length 1024;
+      gzip_types text/plain text/css application/javascript image/svg+xml application/xml+rss;
+
+      # 缓存策略
+      location ~* \.(png|jpg|jpeg|ico|woff2?|svg)$ {
+          expires 30d;
+          add_header Cache-Control "public, immutable";
+      }
+      location ~* \.(html|css)$ {
+          expires 10m;
+      }
+
+      # 屏蔽点文件(.git / .env 等)
+      location ~ /\. { deny all; }
+
+  }
+
+  ▎ 首次部署时，只用写 HTTPS 部分的主体（先只写 listen 80），certbot --nginx 会帮你自动补全跳转和 SSL 指令。
+
 - ~TODO 题目：解释 GIL 对 FastAPI 并发模型的影响。既然有 GIL，FastAPI 为何还能实现高并发？
 - TODO 降低用户自动记账的心智
 - TODO 6.4+6.5继续
