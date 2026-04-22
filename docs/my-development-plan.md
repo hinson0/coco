@@ -10,23 +10,10 @@
     pass
 - TODO /review /code-review /pr-review-toolkit 这几个多实践下
 
-## 0420
+## 0422
 
-- TODO 题目：解释 GIL 对 FastAPI 并发模型的影响。既然有 GIL，FastAPI 为何还能实现高并发？
-
-## 0419
-
-- TODO 如何在/feature-dev用tdd方式开发?
+- ~TODO 题目：解释 GIL 对 FastAPI 并发模型的影响。既然有 GIL，FastAPI 为何还能实现高并发？
 - TODO 降低用户自动记账的心智
-- ~TODO 第一次进来AI页 看不到旧的chat message.
-- ~TODO 当用户通过语音/OCR的时候,先输出一段话,类似与流式的对话,然后在变成一个卡片,让用户没有等待的感觉
-- ~TODO 可以修改手机号
-  - 不做了
-- ~TODO 在文件夹中进行操作,然后得到pdf,然后可以mv,把原文件改成printed
-  - mv做2件事情,一个是移动pdf,二个是重名对应的文件名字
-  - show 显示当前要pdf文件有哪些.
-- ~TODO aysnc/await的底层机制是什么? 和generator的关系是什么?
-  - ~~TODO 如果**await**方法返回的是generator,那就可以迭代了.
 - TODO 6.4+6.5继续
 - TODO 第8章节
   - TODO sqlite3原生操作
@@ -38,6 +25,64 @@
       它的基本含义为“炼金术”，在计算机领域，SQLAlchemy 借用这个词，寓意其能像炼金术一样，把数据库操作变得更具魔力、更高效，它是一个强大的数据库抽象层库，方便 Python 开发者操作各种数据库。
 
     - sql [ˈsiːkwəl]
+
+- ~TODO VSCODE导入时的选择词汇的排序
+  这是 VSCode/Pylance 的补全排序问题，属于配置调整，不是代码修改任务。我直接说明方案，不动文件。
+
+★ Insight ─────────────────────────────────────
+
+VSCode 补全本身大小写不敏感匹配，输小写能匹到大写变量。问题在于"排序权重"：自动导入项把局部定义淹没了。
+关键开关：editor.suggest.localityBonus（本地作用域加权）+ python.analysis.autoImportCompletions（Pylance 导入建议总开关）。
+editor.suggestSelection 决定"默认选中项"，和排序是两回事 —— 排序控制谁在前，选中控制光标默认落在哪一条。
+─────────────────────────────────────────────────
+推荐配置
+打开 settings.json（Cmd+Shift+P → "Preferences: Open User Settings (JSON)"），加入：
+
+{
+// 局部/近处定义优先：同名情况下局部变量排在导入建议之前
+"editor.suggest.localityBonus": true,
+
+// 默认选中第一项（配合 localityBonus，局部变量会自动高亮在顶部）
+"editor.suggestSelection": "first",
+
+// 允许非词首匹配（输 "foo" 能匹到 "MyFoo"）
+"editor.suggest.matchOnWordStartOnly": false,
+
+// Python 专用：按需决定是否保留自动导入
+// 方案 A：保留但降低干扰(推荐)
+"python.analysis.autoImportCompletions": true,
+"python.analysis.indexing": true,
+
+// 方案 B：彻底关闭导入噪音，需要时用 Ctrl+. (quick fix) 手动导入
+// "python.analysis.autoImportCompletions": false,
+}
+关于大小写
+你的局部变量是大写（如 DEMO），输入小写 demo：
+
+匹配：VSCode 默认 fuzzy match，大小写不敏感，一定能匹到
+排序：靠 editor.suggest.localityBonus: true 让它排在导入项之前
+如果还是不够靠前，按下补全列表后直接看 —— 局部定义会有特殊图标（方框 abc），而导入项是包图标
+如果干扰仍然严重
+直接关掉自动导入，改用"按需触发"：
+
+"python.analysis.autoImportCompletions": false
+然后需要导入时，在未定义符号上按 Cmd+. 触发 Quick Fix 手动添加 import。这是很多 Python 老手的偏好 —— 补全列表干净，导入可控。
+
+改完后重启 VSCode 或 Cmd+Shift+P → "Developer: Reload Window" 生效。测一下你那个大写局部变量是否排在前面，如果还不行告诉我变量名和上下文，我看是不是 Pylance 索引的问题。
+
+## 0419
+
+- ~TODO 单例模式
+- ~TODO 如何在/feature-dev用tdd方式开发?
+- ~TODO 第一次进来AI页 看不到旧的chat message.
+- ~TODO 当用户通过语音/OCR的时候,先输出一段话,类似与流式的对话,然后在变成一个卡片,让用户没有等待的感觉
+- ~TODO 可以修改手机号
+  - 不做了
+- ~TODO 在文件夹中进行操作,然后得到pdf,然后可以mv,把原文件改成printed
+  - mv做2件事情,一个是移动pdf,二个是重名对应的文件名字
+  - show 显示当前要pdf文件有哪些.
+- ~TODO aysnc/await的底层机制是什么? 和generator的关系是什么?
+  - ~~TODO 如果**await**方法返回的是generator,那就可以迭代了.
 
 - ~TODO just start-fe 8080 + 8000 就连后端
   just start-be 8081 + 8001
