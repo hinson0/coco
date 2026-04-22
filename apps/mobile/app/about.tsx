@@ -158,14 +158,14 @@ export default function AboutScreen() {
               icon="📋"
               iconBg={colors.honeyPale}
               title="用户协议"
-              onPress={() => Linking.openURL("https://example.com/terms")}
+              onPress={() => Linking.openURL("https://cocoai.chat/terms.html")}
             />
             <View style={styles.divider} />
             <MenuItem
               icon="🔒"
               iconBg={colors.lavenderPale}
               title="隐私政策"
-              onPress={() => Linking.openURL("https://example.com/privacy")}
+              onPress={() => Linking.openURL("https://cocoai.chat/privacy.html")}
             />
           </Card>
         </View>
@@ -173,14 +173,14 @@ export default function AboutScreen() {
         {/* 底部版权信息 */}
         <View style={styles.footer}>
           <AppText size="sm" color={colors.textLighter}>
-            联系我们: feedback@example.com
+            联系我们: hinson0@qq.com
           </AppText>
           <AppText
             size="sm"
             color={colors.textLighter}
             style={{ marginTop: 4 }}
           >
-            © 2025 CoCo
+            © 2026 CoCo AI
           </AppText>
         </View>
       </ScrollView>
