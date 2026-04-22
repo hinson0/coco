@@ -165,7 +165,9 @@ export default function AboutScreen() {
               icon="🔒"
               iconBg={colors.lavenderPale}
               title="隐私政策"
-              onPress={() => Linking.openURL("https://cocoai.chat/privacy.html")}
+              onPress={() =>
+                Linking.openURL("https://cocoai.chat/privacy.html")
+              }
             />
           </Card>
         </View>
