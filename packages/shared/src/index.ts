@@ -7,4 +7,5 @@ export * from "./types/budget";
 export * from "./types/category";
 export * from "./types/chat";
 export * from "./types/profile";
+export * from "./types/stream";
 export * from "./types/transaction";
