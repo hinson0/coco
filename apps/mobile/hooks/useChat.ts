@@ -1,51 +1,19 @@
-import { useAddChatMessage } from "@/hooks/useLocalChatMessages";
+import {
+  useAddChatMessage,
+  useDeleteChatMessage,
+} from "@/hooks/useLocalChatMessages";
 import { useCreateTransaction } from "@/hooks/useLocalTransactions";
 import { useOfflineContext } from "@/lib/offline-context";
 import { QK } from "@/lib/queryKeys";
+import { openStream, type StreamEvent } from "@/lib/sse";
 import type { Category } from "@coco/shared";
 import NetInfo from "@react-native-community/netinfo";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Crypto from "expo-crypto";
 import * as FileSystem from "expo-file-system/legacy";
 import { useCallback, useState } from "react";
-import { apiFetch } from "../lib/api";
 
-type ChatBillData = {
-  type: "bill";
-  asrText?: string;
-  transaction: {
-    amount: number;
-    category: string;
-    note: string;
-    occurred_at: string;
-    type: "expense" | "income";
-  };
-};
-
-type ChatTextData = {
-  type: "text";
-  asrText?: string;
-  content: string;
-};
-
-type ChatNlData = {
-  type: "nl_result";
-  asrText?: string;
-  content: string;
-};
-
-type ChatErrorData = {
-  type: "error";
-  message: string;
-};
-
-type ChatResponse = {
-  data: ChatBillData | ChatTextData | ChatNlData;
-};
-
-type OcrResponse = {
-  data: ChatBillData | ChatErrorData;
-};
+const CONNECTION_ABORTED_MSG = "连接异常，以上内容已保存，可以再试一次~";
 
 export function useChat() {
   const { db, userId } = useOfflineContext();
@@ -54,120 +22,199 @@ export function useChat() {
     skipInvalidate: true,
   });
   const { mutateAsync: createTransaction } = useCreateTransaction();
+  const { mutateAsync: deleteMessage } = useDeleteChatMessage();
   const [isLoading, setLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState<string | null>(null);
 
-  // ─── 核心处理逻辑：直接调 /chat ───
-  // sendText 共享此逻辑
-  const processText = useCallback(
-    async (text: string) => {
-      console.log("[processText] 输入:", text);
+  const resolveCategoryId = useCallback(
+    (categoryName: string, txType: "expense" | "income") => {
+      const list = qc.getQueryData<readonly Category[]>([
+        QK.categories,
+        userId,
+      ]);
+      const otherName = txType === "income" ? "其他收入" : "其他支出";
+      const matched = categoryName
+        ? list?.find((c) => c.name === categoryName && c.type === txType)
+        : undefined;
+      return (matched ?? list?.find((c) => c.name === otherName))?.id ?? "";
+    },
+    [qc, userId],
+  );
+
+  const runStream = useCallback(
+    async (
+      path: string,
+      body: object,
+      options?: {
+        source: "llm" | "asr" | "ocr";
+        onAsrText?: (text: string) => Promise<void> | void;
+      },
+    ): Promise<{
+      hadBill: boolean;
+      hadError: boolean;
+      hadServerText: boolean;
+    }> => {
+      const source = options?.source ?? "llm";
       setLoading(true);
+      setStreamingText("");
 
-      try {
-        const resp = await apiFetch<ChatResponse>("/chat", {
-          method: "POST",
-          body: JSON.stringify({ text }),
-        });
+      // 闭包局部变量：每次 runStream 独立，天然防止并发调用互相覆盖累积缓冲。
+      let accumulated = "";
+      let unhandledError: string | null = null;
+      let hadBill = false;
+      let hadServerText = false;
 
-        console.log("[processText] /chat 返回:", JSON.stringify(resp.data));
-
-        if (resp.data.type === "bill") {
-          const tx = resp.data.transaction;
-          const categoriesData = qc.getQueryData<readonly Category[]>([
-            QK.categories,
-            userId,
-          ]);
-          const otherName = tx.type === "income" ? "其他收入" : "其他支出";
-          const category =
-            (tx.category
-              ? categoriesData?.find(
-                  (c) => c.name === tx.category && c.type === tx.type,
-                )
-              : null) ?? categoriesData?.find((c) => c.name === otherName);
-
-          const occurredAt = tx.occurred_at || new Date().toISOString();
-          const txId = await createTransaction({
-            amount: tx.amount,
-            category_id: category?.id ?? "",
-            type: tx.type,
-            note: tx.note,
-            occurred_at: occurredAt,
-            source: "llm",
-          });
-
-          await addMessage({
-            role: "assistant",
-            content_type: "bill_card",
-            content: JSON.stringify({
-              id: txId,
-              amount: tx.amount,
-              type: tx.type,
-              note: tx.note,
-              category_id: category?.id ?? "",
-              occurred_at: occurredAt,
-              source: "llm",
-            }),
-            transaction_id: txId,
-          });
-          qc.invalidateQueries({ queryKey: [QK.transactions] });
-        } else {
-          await addMessage({
-            role: "assistant",
-            content_type: "text",
-            content: resp.data.content,
-          });
-        }
-      } catch (err) {
-        console.error("[processText] /chat 异常:", err);
+      const flushAccumulatedAsText = async () => {
+        if (!accumulated) return;
+        const content = accumulated;
+        accumulated = "";
         await addMessage({
           role: "assistant",
           content_type: "text",
-          content: "处理失败，请稍后再试。",
+          content,
         });
+      };
+
+      try {
+        await new Promise<void>((resolve) => {
+          openStream(path, body, {
+            onEvent: async (event: StreamEvent) => {
+              if (event.type === "chunk") {
+                accumulated += event.text;
+                setStreamingText(accumulated);
+                return;
+              }
+              if (event.type === "asr") {
+                await options?.onAsrText?.(event.text);
+                return;
+              }
+              if (event.type === "bill") {
+                hadBill = true;
+                const tx = event.transaction;
+                const occurredAt = tx.occurred_at || new Date().toISOString();
+                const categoryId = resolveCategoryId(tx.category, tx.type);
+                // 把累积的流式文字落成独立 text 消息；不动 streamingText
+                // 这个 React state——StreamingBubble 由 buildListItems 通过
+                // 「内容匹配」自然隐藏，避免 streaming 消失→真实消息出现的空白帧。
+                await flushAccumulatedAsText();
+                const txId = await createTransaction({
+                  amount: tx.amount,
+                  category_id: categoryId,
+                  type: tx.type,
+                  note: tx.note,
+                  occurred_at: occurredAt,
+                  source,
+                });
+                await addMessage({
+                  role: "assistant",
+                  content_type: "bill_card",
+                  content: JSON.stringify({
+                    id: txId,
+                    amount: tx.amount,
+                    type: tx.type,
+                    note: tx.note,
+                    category_id: categoryId,
+                    occurred_at: occurredAt,
+                    source,
+                  }),
+                  transaction_id: txId,
+                });
+                qc.invalidateQueries({ queryKey: [QK.transactions] });
+                // 立刻刷新 chatMessages，让真实 text + bill_card 尽快进入
+                // messages 数组，使 buildListItems 在下一帧完成接棒。
+                qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+                return;
+              }
+              if (event.type === "text") {
+                // 服务端终态文本（query 结果 / 错误兜底等），与累积流式合并
+                // 落成一条消息；仍不动 streamingText，靠 buildListItems 接棒。
+                const combined =
+                  accumulated && event.content
+                    ? `${accumulated}\n${event.content}`
+                    : accumulated || event.content;
+                accumulated = "";
+                if (combined) {
+                  hadServerText = true;
+                  await addMessage({
+                    role: "assistant",
+                    content_type: "text",
+                    content: combined,
+                  });
+                  qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+                }
+                return;
+              }
+              if (event.type === "error") {
+                unhandledError = event.message;
+              }
+            },
+            onDone: () => resolve(),
+            onError: (msg) => {
+              unhandledError = msg;
+              resolve();
+            },
+          }).catch((err) => {
+            console.error("[useChat] openStream threw:", err);
+            unhandledError = "连接失败，请稍后再试。";
+            resolve();
+          });
+        });
+
+        // 流正常结束：闲聊分支只发 chunk 不发终态 text 事件，这里把残余
+        // chunk 作为 assistant text 消息入库；同样不动 streamingText，
+        // 由 buildListItems 的内容匹配完成接棒。
+        if (!unhandledError && accumulated) {
+          await flushAccumulatedAsText();
+          qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+        }
+
+        if (unhandledError) {
+          // 断连保留已流出的内容 + 追加一条"连接异常"提示。
+          await flushAccumulatedAsText();
+          await addMessage({
+            role: "assistant",
+            content_type: "text",
+            content: CONNECTION_ABORTED_MSG,
+          });
+        }
       } finally {
         setLoading(false);
-        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+        // 先 await invalidate 让 SQLite refetch 完成、真实消息进入 messages,
+        // 再清 streamingText。否则 StreamingBubble 瞬间消失时 bill_card/text
+        // 还没落到 messages 里, user 消息会短暂从视觉中间下沉到底部再闪回
+        // 上方 —— 正是用户感知到的"消息闪一下"bug。
+        await qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+        setStreamingText(null);
       }
+      return { hadBill, hadError: !!unhandledError, hadServerText };
     },
-    [qc, addMessage, createTransaction, db],
+    [addMessage, createTransaction, qc, resolveCategoryId],
   );
 
   const sendText = useCallback(
     async (text: string) => {
       if (!db) return;
-      console.log("[sendText] 文字输入:", text);
       await addMessage({ role: "user", content_type: "text", content: text });
       qc.invalidateQueries({ queryKey: [QK.chatMessages] });
-      try {
-        await processText(text);
-      } catch (err) {
-        console.error("[sendText] ❌ processText 异常:", err);
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: "网络错误，请重试。",
-        });
-        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
-      }
+      await runStream("/chat/stream", { text }, { source: "llm" });
     },
-    [db, qc, addMessage, processText],
+    [db, qc, addMessage, runStream],
   );
 
   const sendOcr = useCallback(
     async (imageBase64: string, onFail?: (imageMessageId: string) => void) => {
       if (!db) return;
-      console.log("[sendOcr] 拍照记账");
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        console.log("[sendOcr] ❌ 离线");
         await addMessage({
           role: "assistant",
           content_type: "text",
           content: "拍照记账需要联网才能使用，请连接网络后重试。",
         });
+        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
         return;
       }
-      // 保存图片到本地文件系统
+
       let imageContent = "[拍照]";
       try {
         const dir = `${FileSystem.documentDirectory}ocr-images/`;
@@ -180,93 +227,48 @@ export function useChat() {
       } catch (err) {
         console.error("[sendOcr] 图片保存失败:", err);
       }
+
       const imageMessageId = await addMessage({
         role: "user",
         content_type: "image",
         content: imageContent,
       });
       qc.invalidateQueries({ queryKey: [QK.chatMessages] });
-      console.log("[sendOcr] → 调用 /record-ocr");
-      setLoading(true);
-      try {
-        const resp = await apiFetch<OcrResponse>("/record-ocr", {
-          method: "POST",
-          body: JSON.stringify({ imageBase64 }),
-        });
-        console.log("[sendOcr] OCR 返回:", JSON.stringify(resp.data));
-        if (resp.data?.type === "bill") {
-          const tx = resp.data.transaction;
-          const categoriesData = qc.getQueryData<readonly Category[]>([
-            QK.categories,
-            userId,
-          ]);
-          const otherName = tx.type === "income" ? "其他收入" : "其他支出";
-          const category =
-            (tx.category
-              ? categoriesData?.find(
-                  (c) => c.name === tx.category && c.type === tx.type,
-                )
-              : null) ?? categoriesData?.find((c) => c.name === otherName);
-          const txId = await createTransaction({
-            amount: tx.amount,
-            category_id: category?.id ?? "",
-            type: tx.type,
-            note: tx.note ?? "",
-            occurred_at: tx.occurred_at || new Date().toISOString(),
-            source: "ocr",
-          });
-          console.log(
-            "[sendOcr] ✅ OCR 记账 → 分类:",
-            category?.name,
-            "| 金额:",
-            tx.amount,
-          );
-          await addMessage({
-            role: "assistant",
-            content_type: "bill_card",
-            content: JSON.stringify({
-              id: txId,
-              amount: tx.amount,
-              type: tx.type,
-              note: tx.note ?? "",
-              category_id: category?.id,
-              occurred_at: tx.occurred_at || new Date().toISOString(),
-              source: "ocr",
-            }),
-            transaction_id: txId,
-          });
-          qc.invalidateQueries({ queryKey: [QK.transactions] });
-        } else {
-          // error
-          console.log("[sendOcr] ⚠️ OCR 失败:", resp.data?.message);
-          await addMessage({
-            role: "assistant",
-            content_type: "text",
-            content: resp.data?.message ?? "小票识别失败，请手动记账。",
-          });
+
+      const hintMessageId = await addMessage({
+        role: "assistant",
+        content_type: "text",
+        content: "小票拍到了，正在识别...",
+      });
+      qc.invalidateQueries({ queryKey: [QK.chatMessages] });
+
+      const { hadBill, hadServerText } = await runStream(
+        "/record-ocr/stream",
+        { imageBase64 },
+        { source: "ocr" },
+      );
+
+      if (!hadBill) {
+        // 识别失败：移除"正在识别"提示。若服务端已经下发了具体的失败文案
+        // （hadServerText），就不再触发 onFail 的通用重试 hint,避免出现
+        // 两条语义重复的失败提示。
+        try {
+          await deleteMessage(hintMessageId);
+        } catch (err) {
+          console.error("[sendOcr] 清理提示消息失败:", err);
+        }
+        if (!hadServerText) {
           onFail?.(imageMessageId);
         }
-      } catch (err) {
-        console.error("[sendOcr] ❌ OCR 异常:", err);
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: "网络错误，OCR 识别失败。",
-        });
-        onFail?.(imageMessageId);
-      } finally {
-        setLoading(false);
-        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
       }
     },
-    [db, qc, addMessage, createTransaction],
+    [db, qc, addMessage, deleteMessage, runStream],
   );
 
   const sendAsr = useCallback(
     async (audioBase64: string, durationSeconds: number) => {
       if (!db) return;
 
-      // 1. 保存音频文件到本地
       let audioUri: string | null = null;
       try {
         const dir = `${FileSystem.documentDirectory}voice-messages/`;
@@ -279,7 +281,6 @@ export function useChat() {
         console.error("[sendAsr] 音频保存失败:", err);
       }
 
-      // 2. 乐观渲染：立即显示语音气泡
       const msgId = await addMessage({
         role: "user",
         content_type: "audio",
@@ -289,7 +290,6 @@ export function useChat() {
       });
       qc.invalidateQueries({ queryKey: [QK.chatMessages] });
 
-      // 3. 检查网络
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
         await addMessage({
@@ -301,88 +301,29 @@ export function useChat() {
         return;
       }
 
-      // 4. 调用 /chat（后端做 ASR + classify_intent）
-      console.log("[sendAsr] → 调用 /chat (语音)");
-      setLoading(true);
-
-      try {
-        const resp = await apiFetch<ChatResponse>("/chat", {
-          method: "POST",
-          body: JSON.stringify({ audioBase64 }),
-        });
-
-        console.log("[sendAsr] /chat 返回:", JSON.stringify(resp.data));
-
-        // 更新语音气泡的转写文字
-        const asrText = resp.data.asrText;
-        if (asrText) {
-          await db.runAsync(
-            "UPDATE chat_messages SET content = ? WHERE id = ?",
-            asrText,
-            msgId,
-          );
-        }
-
-        if (resp.data.type === "bill") {
-          const tx = resp.data.transaction;
-          const categoriesData = qc.getQueryData<readonly Category[]>([
-            QK.categories,
-            userId,
-          ]);
-          const otherName = tx.type === "income" ? "其他收入" : "其他支出";
-          const category =
-            (tx.category
-              ? categoriesData?.find(
-                  (c) => c.name === tx.category && c.type === tx.type,
-                )
-              : null) ?? categoriesData?.find((c) => c.name === otherName);
-
-          const occurredAt = tx.occurred_at || new Date().toISOString();
-          const txId = await createTransaction({
-            amount: tx.amount,
-            category_id: category?.id ?? "",
-            type: tx.type,
-            note: tx.note,
-            occurred_at: occurredAt,
-            source: "asr",
-          });
-
-          await addMessage({
-            role: "assistant",
-            content_type: "bill_card",
-            content: JSON.stringify({
-              id: txId,
-              amount: tx.amount,
-              type: tx.type,
-              note: tx.note,
-              category_id: category?.id ?? "",
-              occurred_at: occurredAt,
-              source: "asr",
-            }),
-            transaction_id: txId,
-          });
-          qc.invalidateQueries({ queryKey: [QK.transactions] });
-        } else {
-          await addMessage({
-            role: "assistant",
-            content_type: "text",
-            content: resp.data.content,
-          });
-        }
-      } catch (err) {
-        console.error("[sendAsr] ❌ 异常:", err);
-        await addMessage({
-          role: "assistant",
-          content_type: "text",
-          content: "没听清，要不再说一次？",
-        });
-      } finally {
-        setLoading(false);
-        qc.invalidateQueries({ queryKey: [QK.chatMessages] });
-      }
+      await runStream(
+        "/chat/stream",
+        { audioBase64 },
+        {
+          source: "asr",
+          onAsrText: async (asrText: string) => {
+            await db.runAsync(
+              "UPDATE chat_messages SET content = ? WHERE id = ?",
+              asrText,
+              msgId,
+            );
+          },
+        },
+      );
     },
-    [db, qc, addMessage, createTransaction],
+    [db, qc, addMessage, runStream],
   );
 
-  return { sendText, sendOcr, sendAsr, isLoading };
+  return {
+    sendText,
+    sendOcr,
+    sendAsr,
+    isLoading,
+    streamingText,
+  };
 }
