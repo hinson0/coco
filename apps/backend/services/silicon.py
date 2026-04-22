@@ -1,5 +1,6 @@
 import json
 import re
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
 import httpx
@@ -202,3 +203,124 @@ async def chat_reply(text: str) -> str:
         不要主动提供记账帮助，只回应用户说的内容。回复在 50 字以内。
     """
     return await _call_silicon(system, text)
+
+
+# ── 流式生成 ─────────────────────────────────────────
+
+
+async def _call_silicon_stream(system: str, user: str) -> AsyncGenerator[str]:
+    async with httpx.AsyncClient(timeout=300) as client:
+        async with client.stream(
+            "POST",
+            "https://api.siliconflow.cn/v1/chat/completions",
+            headers={"Authorization": f"Bearer {settings.silicon_api_key}"},
+            json={
+                "model": "Qwen/Qwen3-8B",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "enable_thinking": False,
+                "stream": True,
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if payload == "[DONE]":
+                    return
+                try:
+                    parsed = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                # 上游错误帧（rate-limit、鉴权失败等）不走 HTTP 状态码，而是
+                # 以 `{"error": {...}}` 形式穿插在 SSE 里。必须显式抛出,
+                # 否则会被调用方当成"流正常结束但零输出"，用户完全无感知。
+                if isinstance(parsed, dict) and "error" in parsed:
+                    err = parsed["error"]
+                    message = (
+                        err.get("message")
+                        if isinstance(err, dict)
+                        else str(err)
+                    ) or "SiliconFlow stream error"
+                    raise RuntimeError(f"silicon_stream_error: {message}")
+                try:
+                    delta = parsed["choices"][0]["delta"].get("content", "")
+                except (KeyError, IndexError, TypeError):
+                    continue
+                if delta:
+                    yield delta
+
+
+async def narrate_record_stream(text: str) -> AsyncGenerator[str]:
+    """记账意图的流式话术：轻松俏皮的 CoCo 口吻，友好陪伴而非消费评判。"""
+    system = """
+        你是 CoCo——一个轻松俏皮的记账小助手,像用户的贴心朋友。用户刚记录了
+        一笔消费或收入,请用一句简短亲昵的中文做友好确认。
+
+        风格要求:
+        - 口吻轻松,带一点可爱,可用语气词(嗯嗯/噢/好呀/好咯/啦/呀/呢)
+        - 可自称"CoCo"或用"我"、"帮你",让用户感到被陪伴
+        - 若文本里能看出具体场景(早餐/加班/礼物/下雨),可以顺一句轻度共情
+        - 若只是普通消费,简单确认即可,不要硬凑共情
+        - 偶尔可用一个 emoji(~✨☕🌿 等),不强求,不要堆砌
+
+        绝对禁止:
+        - 评价消费金额是否合理、是否"小额高频"、是否"值得"
+        - 说教或给理财建议("建议关注/留意/控制/月度累计"这类话一律不写)
+        - 重复具体金额数字(数字已在下方账单卡片里显示,再念一遍显得啰嗦)
+        - 使用"入账/台账/凭证/归入/录入"等冷冰冰的财务术语
+        - 反问用户("今天累吗?""工作顺利吗?")
+
+        字数 45 到 80 字之间。结尾用逗号或省略号留白,为后续账单卡片让路。
+
+        示例:
+        - "买了杯咖啡 28" → 「嗯嗯!咖啡这笔 CoCo 帮你记好啦~ 一口温暖下肚...」
+        - "打车 45" → 「好咯~ 打车这笔记下来啦,路上辛苦啦...」
+        - "发工资 8000" → 「噢噢~ 工资到账这笔必须好好记下 ✨ 辛苦一个月啦...」
+        - "给妈妈买礼物 300" → 「好呀~ 这笔用心的钱我帮你收好咯...」
+    """
+    async for chunk in _call_silicon_stream(system, text):
+        yield chunk
+
+
+async def narrate_ocr_stream(ocr_excerpt: str) -> AsyncGenerator[str]:
+    """OCR 识别完成后的流式话术：轻松俏皮的 CoCo 口吻,像朋友翻看小票。"""
+    system = """
+        你是 CoCo——一个轻松俏皮的记账小助手。刚从一张小票里读到了一些文字,
+        请用一句简短亲昵的中文做友好确认,像朋友顺手帮你翻小票的感觉。
+
+        风格要求:
+        - 轻松口吻,可自称"CoCo"或用"我"、"帮你"
+        - 若能看出商户类型(咖啡店/便利店/餐厅/超市)或时段(早上/傍晚)
+          可以顺口带一句,但不要去推断每一项商品
+        - 偶尔可用一个 emoji(🧾☕🍱🌿~ 等),不强求
+
+        绝对禁止:
+        - 罗列小票上的金额或逐项商品
+        - 评价"小额支出/日常开销"、给"属于某某类"的标签
+        - 财务术语(复核/凭证/入账/归入/小额高频)
+        - 说教或理财建议
+
+        字数 20 到 40 字之间。结尾用逗号或省略号留白,为后续账单卡片让路。
+
+        示例:
+        - 便利店小票 → 「噢~ 便利店的小票拿到啦,CoCo 帮你归整好咯...」
+        - 餐厅小票 → 「嗯嗯,这顿饭的小票收到啦~ 吃好喝好最重要...」
+        - 咖啡店小票 → 「咦~ 是咖啡店的小票呀,一天里的小治愈时刻 ☕...」
+        - 超市小票 → 「好呀,这一趟超市的清单我帮你记下啦...」
+    """
+    async for chunk in _call_silicon_stream(system, ocr_excerpt):
+        yield chunk
+
+
+async def narrate_chat_stream(text: str) -> AsyncGenerator[str]:
+    """闲聊意图的流式回复（替代非流式 chat_reply）。"""
+    system = """
+        你是 CoCo 记账助手，性格友好简洁。用简短的中文回应用户。
+        不要主动提供记账帮助，只回应用户说的内容。回复在 50 字以内。
+    """
+    async for chunk in _call_silicon_stream(system, text):
+        yield chunk

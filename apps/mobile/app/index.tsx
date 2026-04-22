@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import Animated, {
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -25,6 +26,7 @@ import { PulseDot } from "../components/ui/PulseDot";
 import type { RecordingState } from "../components/chat/ChatInputBar";
 import { ChatInputBar } from "../components/chat/ChatInputBar";
 import { ChatToolBar } from "../components/chat/ChatToolBar";
+import { StreamingBubble } from "../components/chat/StreamingBubble";
 import { TypingIndicator } from "../components/chat/TypingIndicator";
 import { VoiceRecordingOverlay } from "../components/chat/VoiceRecordingOverlay";
 import { colors, radii, shadows, spacing } from "../constants/theme";
@@ -38,66 +40,9 @@ import {
   useLocalChatMessages,
 } from "../hooks/useLocalChatMessages";
 import { CHAT_INITIAL_LIMIT } from "../lib/db/queries";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type ListItem =
-  | { type: "message"; data: ChatMessage }
-  | { type: "separator"; id: string; label: string }
-  | { type: "typing"; id: string };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function toDateLabel(isoString: string): string {
-  const d = new Date(isoString);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  if (target.getTime() === today.getTime()) return "今天";
-  if (target.getTime() === yesterday.getTime()) return "昨天";
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
-}
-
-function buildListItems(
-  messages: readonly ChatMessage[],
-  isLoading: boolean,
-): ListItem[] {
-  const items: ListItem[] = [];
-
-  if (isLoading) {
-    items.push({ type: "typing", id: "typing-indicator" });
-  }
-
-  let prevLabel = "";
-
-  for (const msg of messages) {
-    const label = toDateLabel(msg.created_at);
-    // inverted FlatList 中 push 在消息之后 = 视觉上方（日期标签在该组上方）
-    if (prevLabel !== "" && label !== prevLabel) {
-      items.push({
-        type: "separator",
-        id: `sep-${prevLabel}`,
-        label: prevLabel,
-      });
-    }
-    items.push({ type: "message", data: msg });
-    prevLabel = label;
-  }
-
-  if (prevLabel !== "") {
-    items.push({ type: "separator", id: `sep-${prevLabel}`, label: prevLabel });
-  }
-
-  return items;
-}
-
-function itemKey(item: ListItem): string {
-  if (item.type === "message") return item.data.id;
-  if (item.type === "separator") return item.id;
-  return item.id;
-}
+// buildListItems / ListItem / itemKey 抽到 chat-list-items.ts 以便单测
+// （在 node 环境下不牵连 react-native 模块）。
+import { buildListItems, itemKey, type ListItem } from "./chat-list-items";
 
 // ─── Welcome message ──────────────────────────────────────────────────────────
 
@@ -134,7 +79,13 @@ export default function ChatScreen() {
   const [loadMs, setLoadMs] = useState<number | null>(null);
 
   const insets = useSafeAreaInsets();
-  const { sendText, sendOcr, sendAsr, isLoading: isSending } = useChat();
+  const {
+    sendText,
+    sendOcr,
+    sendAsr,
+    isLoading: isSending,
+    streamingText,
+  } = useChat();
   const { pickImage, pickFromLibrary } = useCamera();
   const [failedOcrIds, setFailedOcrIds] = useState<Set<string>>(new Set());
 
@@ -154,6 +105,20 @@ export default function ChatScreen() {
   messagesRef.current = messages;
   const categoriesRef = useRef(categories);
   categoriesRef.current = categories;
+
+  // 跟踪哪些 bill_card 已经渲染过，只对新增的应用 FadeInDown 入场动画。
+  // 首次从 SQLite 加载出的历史卡片全部视为"已见"，避免页面挂载时群抖。
+  const seenBillCardIds = useRef<Set<string>>(new Set());
+  const firstLoadMarked = useRef(false);
+  useEffect(() => {
+    if (firstLoadMarked.current || messages.length === 0) return;
+    for (const m of messages) {
+      if (m.content_type === "bill_card") {
+        seenBillCardIds.current.add(m.id);
+      }
+    }
+    firstLoadMarked.current = true;
+  }, [messages]);
 
   // 数据变更后由 invalidateQueries 自动刷新，无需 focus refetch
   // （focus refetch 会导致从 image-viewer 返回时滚动位置重置）
@@ -256,12 +221,12 @@ export default function ChatScreen() {
   );
 
   const listItems = useMemo(() => {
-    const items = buildListItems(messages, isSending);
+    const items = buildListItems(messages, isSending, streamingText);
     if (messages.length === 0) {
       items.push({ type: "message", data: WELCOME_MESSAGE });
     }
     return items;
-  }, [messages, isSending]);
+  }, [messages, isSending, streamingText]);
 
   function handleSelectTool(tool: string) {
     if (tool === "手动记账") {
@@ -287,9 +252,26 @@ export default function ChatScreen() {
           </View>
         );
       }
+      if (item.type === "streaming") {
+        return (
+          <View style={styles.typingWrapper}>
+            <StreamingBubble text={item.text} />
+          </View>
+        );
+      }
       const msg = item.data;
 
-      return (
+      // 仅对"本次会话内新增的" bill_card 应用淡入下滑入场动画，
+      // 避免历史消息首次加载时群抖。
+      const isNewBillCard =
+        msg.content_type === "bill_card" &&
+        firstLoadMarked.current &&
+        !seenBillCardIds.current.has(msg.id);
+      if (msg.content_type === "bill_card") {
+        seenBillCardIds.current.add(msg.id);
+      }
+
+      const bubbleNode = (
         <View style={styles.bubbleWrapper}>
           <ChatBubble
             message={msg}
@@ -313,6 +295,14 @@ export default function ChatScreen() {
             }
           />
         </View>
+      );
+
+      return isNewBillCard ? (
+        <Animated.View entering={FadeInDown.duration(250)}>
+          {bubbleNode}
+        </Animated.View>
+      ) : (
+        bubbleNode
       );
     },
     [
