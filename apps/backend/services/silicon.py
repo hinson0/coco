@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
 import httpx
+
 from constants.keywords import (
     SEMANTIC_EXPENSE_KEYWORDS,
     SEMANTIC_INCOME_KEYWORDS,
@@ -240,7 +241,9 @@ async def _call_silicon_stream(system: str, user: str) -> AsyncGenerator[str]:
                 if isinstance(parsed, dict) and "error" in parsed:
                     err = parsed["error"]
                     message = (
-                        err.get("message") if isinstance(err, dict) else str(err)
+                        err.get("message")
+                        if isinstance(err, dict)
+                        else str(err)
                     ) or "SiliconFlow stream error"
                     raise RuntimeError(f"silicon_stream_error: {message}")
                 try:
