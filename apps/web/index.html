@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoCo AI 记账 · 一个聊天窗口 = 所有记账入口</title>
+<meta name="description" content="CoCo AI 记账 · 语音、拍照、文字三合一的智能记账 App。一个聊天窗口 = 所有记账入口。">
+<meta name="keywords" content="记账,AI 记账,智能记账,语音记账,拍照记账,CoCo">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="board">
+
+  <!-- ─── Floating nav pills ───────────────────── -->
+  <nav class="pins">
+    <a href="#" class="pin-logo">
+      <img src="assets/logo.png" alt="">
+      <span>CoCo</span>
+    </a>
+    <ul class="pin-links">
+      <li><a href="#hello">你好</a></li>
+      <li><a href="#three">三合一</a></li>
+      <li><a href="#peek">偷看一眼</a></li>
+      <li><a href="#all">全部能做</a></li>
+      <li><a href="#hi">say hi</a></li>
+    </ul>
+  </nav>
+
+  <!-- ─── Hero cork board ──────────────────────── -->
+  <header class="hero" id="hello">
+
+    <article class="sticky sticky-main">
+      <span class="sticky-tape"></span>
+      <p class="title">
+        一个聊天窗口
+        <span class="eq">=</span>
+        所有记账入口
+      </p>
+      <p class="subtitle">说、拍、打字 &nbsp;·&nbsp; AI 替你记完</p>
+      <span class="cta-tag">✦ 即将上架 · 各大应用市场</span>
+    </article>
+
+    <article class="sticky sticky-rotated s-pos-1">
+      <span class="note-label">🎙 语音记 · 22:07</span>
+      <p class="note-quote">"昨晚火锅 三百二"</p>
+      <p class="ai-reply">→ 餐饮 · ¥320 · 昨天</p>
+    </article>
+
+    <article class="sticky sticky-rotated s-pos-2">
+      <span class="note-label">🎯 本月预算</span>
+      <p class="note-bold">已用 <b>43%</b></p>
+      <div class="progress"><i style="width:43%"></i></div>
+      <span class="small">¥641 &nbsp;/&nbsp; ¥1,500</span>
+    </article>
+
+    <article class="sticky sticky-rotated s-pos-3">
+      <span class="note-label">🔔 自动记 · 微信</span>
+      <p class="note-quote">支付 <b>¥140</b> 给盒马</p>
+      <p class="ai-reply">✓ AI 分类：购物</p>
+    </article>
+
+    <article class="sticky sticky-rotated s-pos-4">
+      <span class="note-label">💬 问 AI</span>
+      <p class="note-quote">"上周花了<br>多少吃饭？"</p>
+      <p class="ai-reply">→ ¥412</p>
+    </article>
+
+    <!-- hand-drawn doodles -->
+    <svg class="doodle doodle-arrow" viewBox="0 0 120 80" aria-hidden="true">
+      <path d="M10 16 C 35 58, 70 66, 108 44" stroke="#DD7E5B" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M108 44 L98 36 M108 44 L96 49" stroke="#DD7E5B" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <svg class="doodle doodle-stars" viewBox="0 0 80 80" aria-hidden="true">
+      <path d="M40 8 L44 36 L72 40 L44 44 L40 72 L36 44 L8 40 L36 36 Z" fill="#E8B544" stroke="#3B2F24" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <svg class="doodle doodle-squiggle" viewBox="0 0 140 30" aria-hidden="true">
+      <path d="M2 15 Q 12 2 22 15 T 42 15 T 62 15 T 82 15 T 102 15 T 122 15 T 138 15" stroke="#8BA581" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>
+    <svg class="doodle doodle-circle" viewBox="0 0 60 60" aria-hidden="true">
+      <circle cx="30" cy="30" r="22" stroke="#DD7E5B" stroke-width="2.5" fill="none" stroke-dasharray="3 5"/>
+    </svg>
+  </header>
+
+  <!-- ─── Three abilities ──────────────────────── -->
+  <section class="three" id="three">
+    <div class="sec-lede-wrap">
+      <h2 class="sec-title">三 种 记 法 <span class="sec-sub">&nbsp;· three ways, one flow</span></h2>
+      <p class="sec-lede">你习惯怎样讲话,就怎样记账。</p>
+    </div>
+
+    <div class="three-cards">
+
+      <article class="three-card card-peach">
+        <div class="emoji-bubble">🎙️</div>
+        <h3>说&nbsp;&nbsp;一&nbsp;&nbsp;句</h3>
+        <p>长按麦克风,"昨晚火锅三百二"。AI 替你写好金额、类别、时间。</p>
+        <div class="card-demo">
+          <svg class="wave" viewBox="0 0 240 40" preserveAspectRatio="none">
+            <path d="M0 20 Q6 8 12 20 T24 20 T36 20 T48 20 T60 20 T72 20 T84 20 T96 20 T108 20 T120 20 T132 20 T144 20 T156 20 T168 20 T180 20 T192 20 T204 20 T216 20 T228 20 T240 20"
+                  stroke="#3B2F24" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-chip">腾讯云 · ASR</div>
+      </article>
+
+      <article class="three-card card-sage">
+        <div class="emoji-bubble">📷</div>
+        <h3>拍&nbsp;&nbsp;张&nbsp;&nbsp;票</h3>
+        <p>小票、发票、电子账单——按一下快门,逐项入账。</p>
+        <div class="card-demo receipt">
+          <span style="width:70%"></span>
+          <span style="width:90%"></span>
+          <span style="width:55%"></span>
+          <span style="width:80%"></span>
+          <span class="total">¥ 168.00</span>
+        </div>
+        <div class="card-chip">腾讯云 · OCR</div>
+      </article>
+
+      <article class="three-card card-butter">
+        <div class="emoji-bubble">⌨️</div>
+        <h3>打&nbsp;&nbsp;一&nbsp;&nbsp;行</h3>
+        <p>"午饭 35"、"打车 18"——最直接的那种,Qwen 拆成账本语言。</p>
+        <div class="card-demo type">
+          <span>午饭 35</span><i class="blinker"></i>
+        </div>
+        <div class="card-chip">Qwen · LLM</div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ─── Screenshots ───────────────────────────── -->
+  <section class="peek" id="peek">
+    <div class="sec-lede-wrap">
+      <h2 class="sec-title">偷 看 一 眼 <span class="sec-sub">&nbsp;· take a peek</span></h2>
+      <p class="sec-lede">四张真实截图——点一下,看大图。</p>
+    </div>
+
+    <div class="peek-stage">
+      <figure class="phone phone-1">
+        <a class="phone-link" href="#zoom-chat" aria-label="放大 · 聊天界面">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <img src="assets/chat.png" alt="聊天界面">
+          </div>
+        </a>
+        <figcaption>聊天 · 和 AI 记一笔</figcaption>
+      </figure>
+
+      <figure class="phone phone-2">
+        <a class="phone-link" href="#zoom-bills" aria-label="放大 · 账单页面">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <img src="assets/bills.png" alt="账单页面">
+          </div>
+        </a>
+        <figcaption>账单 · 一屏读完</figcaption>
+      </figure>
+
+      <figure class="phone phone-3">
+        <a class="phone-link" href="#zoom-stats" aria-label="放大 · 统计页面">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <img src="assets/stats.png" alt="统计页面">
+          </div>
+        </a>
+        <figcaption>统计 · 趋势与分布</figcaption>
+      </figure>
+
+      <figure class="phone phone-4">
+        <a class="phone-link" href="#zoom-profile" aria-label="放大 · 我的页面">
+          <div class="phone-frame">
+            <span class="phone-notch"></span>
+            <img src="assets/profile.png" alt="我的页面">
+          </div>
+        </a>
+        <figcaption>我的 · 账户与预算</figcaption>
+      </figure>
+
+      <svg class="sparkle sparkle-a" viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M15 2v11M15 17v11M2 15h11M17 15h11" stroke="#DD7E5B" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <svg class="sparkle sparkle-b" viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M15 2v11M15 17v11M2 15h11M17 15h11" stroke="#8BA581" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <svg class="sparkle sparkle-c" viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M15 2v11M15 17v11M2 15h11M17 15h11" stroke="#E8B544" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ─── All features as chips ─────────────────── -->
+  <section class="all" id="all">
+    <div class="sec-lede-wrap">
+      <h2 class="sec-title">全 部 能 做 的 <span class="sec-sub">&nbsp;· everything inside</span></h2>
+      <p class="sec-lede">十二张小便签,一张一个能力。</p>
+    </div>
+
+    <div class="chips">
+      <span class="chip c1">🎙️ 语音记账</span>
+      <span class="chip c2">📷 拍照识票</span>
+      <span class="chip c3">⌨️ 文字记账</span>
+      <span class="chip c4">💬 自然语言查询</span>
+      <span class="chip c5">📊 收支统计</span>
+      <span class="chip c6">🎯 预算管理</span>
+      <span class="chip c7">📤 CSV 导出</span>
+      <span class="chip c8">🔌 离线优先</span>
+      <span class="chip c9">🔔 自动记账</span>
+      <span class="chip c10">🔄 多设备同步</span>
+      <span class="chip c11">🎁 广告权益</span>
+      <span class="chip c12">🗂️ 分类管理</span>
+    </div>
+  </section>
+
+  <!-- ─── Tape footer ───────────────────────────── -->
+  <footer class="tape-footer" id="hi">
+    <div class="tape">
+      <div class="tape-row">
+        <p class="tape-title">想和我们说句话？</p>
+        <a href="mailto:hinson0@qq.com" class="tape-mail">hinson0@qq.com ✉</a>
+      </div>
+      <div class="tape-meta">
+        <p>© 2026 CoCo AI · All Rights Reserved.</p>
+        <p>
+          <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">赣ICP备2026007938号</a>
+          &nbsp;·&nbsp; <a href="privacy.html">隐私政策</a>
+          &nbsp;·&nbsp; <a href="terms.html">用户协议</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ─── Lightbox overlays (CSS-only via :target) ─── -->
+<div class="lightbox" id="zoom-chat">
+  <a class="lightbox-dismiss" href="#peek" aria-label="关闭"></a>
+  <img src="assets/chat.png" alt="聊天界面完整截图">
+  <a class="lightbox-close" href="#peek" aria-label="关闭">×</a>
+</div>
+<div class="lightbox" id="zoom-bills">
+  <a class="lightbox-dismiss" href="#peek" aria-label="关闭"></a>
+  <img src="assets/bills.png" alt="账单页面完整截图">
+  <a class="lightbox-close" href="#peek" aria-label="关闭">×</a>
+</div>
+<div class="lightbox" id="zoom-stats">
+  <a class="lightbox-dismiss" href="#peek" aria-label="关闭"></a>
+  <img src="assets/stats.png" alt="统计页面完整截图">
+  <a class="lightbox-close" href="#peek" aria-label="关闭">×</a>
+</div>
+<div class="lightbox" id="zoom-profile">
+  <a class="lightbox-dismiss" href="#peek" aria-label="关闭"></a>
+  <img src="assets/profile.png" alt="我的页面完整截图">
+  <a class="lightbox-close" href="#peek" aria-label="关闭">×</a>
+</div>
+
+</body>
+</html>
