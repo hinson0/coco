@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     database_url: str
     jwt_secret: str
-    jwt_access_expire_minutes: int = 60
+    jwt_access_expire_minutes: int = 10080  # 7天
     jwt_refresh_expire_days: int = 30
 
     # Logging
