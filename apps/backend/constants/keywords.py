@@ -8,16 +8,18 @@
 import json
 from pathlib import Path
 
-_KEYWORDS_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "packages"
-    / "shared"
-    / "src"
-    / "constants"
-    / "keywords.json"
-)
+_REL = Path("packages/shared/src/constants/keywords.json")
 
-_data = json.loads(_KEYWORDS_PATH.read_text(encoding="utf-8"))
+
+def _find_keywords_json() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / _REL
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"未找到 {_REL}（已向上检索至文件系统根）")
+
+
+_data = json.loads(_find_keywords_json().read_text(encoding="utf-8"))
 
 NOTIFICATION_INCOME_KEYWORDS: list[str] = _data["notification"]["income"]
 NOTIFICATION_EXPENSE_KEYWORDS: list[str] = _data["notification"]["expense"]

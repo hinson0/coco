@@ -1,0 +1,42 @@
+# VCS / IDE
+
+.git
+.gitignore
+.vscode
+.idea
+.claude
+.cursor
+
+# Python 缓存
+
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/.pyright
+**/*.egg-info
+**/dist
+**/build
+
+# 环境敏感
+
+**/.env
+**/.env.*
+
+# 与 backend 镜像无关的应用
+
+apps/mobile
+apps/web
+
+# Node 产物
+
+**/node_modules
+**/.expo
+**/.next
+
+# 文档与脚手架
+
+docs
+.remember
