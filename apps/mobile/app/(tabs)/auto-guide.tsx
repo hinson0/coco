@@ -1,6 +1,6 @@
-import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
-import { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
   Alert,
   Platform,
@@ -10,138 +10,23 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GuideImage } from "../../components/auto/GuideImage";
+import { SetupStep } from "../../components/auto/SetupStep";
 import { AppText } from "../../components/ui/AppText";
 import { Card } from "../../components/ui/Card";
-import { PulseDot } from "../../components/ui/PulseDot";
 import { colors, radii } from "../../constants/theme";
+import { useAutoBookkeepingStatus } from "../../hooks/useAutoBookkeepingStatus";
+import { AutoBookkeeping } from "../../lib/auto-bookkeeping";
 
 const guideNotifListener1 = require("../../assets/guides/notif-listener-1.png");
 const guideNotifListener2 = require("../../assets/guides/notif-listener-2.png");
-const guideNotifMain = require("../../assets/guides/notif-main.png");
-const guideNotifChannel1 = require("../../assets/guides/notif-channel-1.png");
-const guideNotifChannel2 = require("../../assets/guides/notif-channel-2.png");
-const guideNotifChannel3 = require("../../assets/guides/notif-channel-3.png");
-const guideAutoStart = require("../../assets/guides/app-autostart.png");
-const guideBattery = require("../../assets/guides/battery-unlimited.png");
 const guideDemoResult = require("../../assets/guides/demo-result.png");
-
-let AutoBookkeeping:
-  | typeof import("../../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping")
-  | null = null;
-if (Platform.OS === "android") {
-  try {
-    AutoBookkeeping = require("../../../../modules/expo-auto-bookkeeping/src/ExpoAutoBookkeeping");
-  } catch {}
-}
-
-// ─── Guide image ─────────────────────────────────────────────────────────────
-
-function GuideImage({ source, label }: { source: number; label: string }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <View style={styles.guideImageWrap}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setExpanded(!expanded)}
-        style={styles.guideImageBtn}
-      >
-        <AppText size="base" color={colors.sage}>
-          {expanded ? "▼" : "▶"} {label}
-        </AppText>
-      </TouchableOpacity>
-      {expanded ? (
-        <Image source={source} style={styles.guideImage} contentFit="contain" />
-      ) : null}
-    </View>
-  );
-}
-
-// ─── Step card ───────────────────────────────────────────────────────────────
-
-interface SetupStepProps {
-  readonly step: number;
-  readonly title: string;
-  readonly done: boolean;
-  readonly onPress: () => void;
-  readonly buttonLabel: string;
-  readonly children?: React.ReactNode;
-}
-
-function SetupStep({
-  step,
-  title,
-  done,
-  onPress,
-  buttonLabel,
-  children,
-}: SetupStepProps) {
-  return (
-    <Card style={styles.stepCard}>
-      <TouchableOpacity
-        style={styles.stepHeader}
-        activeOpacity={0.7}
-        onPress={onPress}
-      >
-        <View style={styles.stepLeft}>
-          <View style={[styles.stepNumber, done && styles.stepNumberDone]}>
-            <AppText size="md" weight="bold" color={colors.white}>
-              {step}
-            </AppText>
-          </View>
-          <AppText size="xl" weight="semibold" color={colors.text}>
-            {title}
-          </AppText>
-        </View>
-        {done ? (
-          <View style={styles.runningTag}>
-            <PulseDot size={8} />
-            <AppText size="md" weight="medium" color={colors.sage}>
-              运行中
-            </AppText>
-          </View>
-        ) : null}
-      </TouchableOpacity>
-      {!done ? (
-        <View style={styles.stepBody}>
-          {children}
-          <TouchableOpacity
-            style={styles.stepBtn}
-            activeOpacity={0.8}
-            onPress={onPress}
-          >
-            <AppText size="md" weight="semibold" color={colors.white}>
-              {buttonLabel}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-    </Card>
-  );
-}
-
-// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function AutoBookkeepingScreen() {
   const insets = useSafeAreaInsets();
-  const [listenerGranted, setListenerGranted] = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(false);
-  const [channelEnabled, setChannelEnabled] = useState(false);
-
-  const checkAll = useCallback(() => {
-    if (!AutoBookkeeping) return;
-    setListenerGranted(AutoBookkeeping.isPermissionGranted());
-    setNotifEnabled(AutoBookkeeping.areNotificationsEnabled());
-    setChannelEnabled(AutoBookkeeping.isChannelEnabled());
-  }, []);
-
-  useEffect(() => {
-    checkAll();
-    const interval = setInterval(checkAll, 3000);
-    return () => clearInterval(interval);
-  }, [checkAll]);
-
-  const allDone = listenerGranted && notifEnabled && channelEnabled;
+  const { listenerGranted, notifEnabled, channelEnabled } =
+    useAutoBookkeepingStatus();
+  const notifFullyConfigured = notifEnabled && channelEnabled;
 
   if (Platform.OS !== "android") {
     return (
@@ -169,14 +54,6 @@ export default function AutoBookkeepingScreen() {
         <AppText size="5xl" weight="bold" color={colors.text}>
           自动记账
         </AppText>
-        {allDone ? (
-          <View style={styles.headerStatus}>
-            <PulseDot size={8} />
-            <AppText size="md" weight="medium" color={colors.sage}>
-              全部就绪
-            </AppText>
-          </View>
-        ) : null}
       </View>
 
       <ScrollView
@@ -187,7 +64,6 @@ export default function AutoBookkeepingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 三步设置 */}
         <SetupStep
           step={1}
           title="通知监听"
@@ -208,65 +84,20 @@ export default function AutoBookkeepingScreen() {
           />
         </SetupStep>
 
-        <SetupStep
-          step={2}
-          title="通知权限"
-          done={notifEnabled && channelEnabled}
-          buttonLabel="去设置"
-          onPress={() => AutoBookkeeping?.openNotificationSettings()}
-        >
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            开启「允许通知」和「悬浮通知」
-          </AppText>
-          <GuideImage
-            source={guideNotifMain}
-            label="参考：通知主设置（小米手机）"
-          />
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            进入底部「自动记账」通知类别
-          </AppText>
-          <GuideImage
-            source={guideNotifChannel1}
-            label="参考：找到自动记账通道（小米手机）"
-          />
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            开启「允许通知」和「悬浮通知」
-          </AppText>
-          <GuideImage
-            source={guideNotifChannel2}
-            label="参考：自动记账通知设置（小米手机）"
-          />
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            锁屏显示选择「显示通知及其内容」
-          </AppText>
-          <GuideImage
-            source={guideNotifChannel3}
-            label="参考：锁屏通知显示规则（小米手机）"
-          />
-        </SetupStep>
-
-        <SetupStep
-          step={3}
-          title="后台运行"
-          done={allDone}
-          buttonLabel="去设置"
-          onPress={() => AutoBookkeeping?.openAutoStartSettings()}
-        >
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            开启自启动，确保 CoCo 在后台持续运行
-          </AppText>
-          <GuideImage
-            source={guideAutoStart}
-            label="参考：开启自启动（小米手机）"
-          />
-          <AppText size="md" color={colors.textLight} style={styles.stepDesc}>
-            电量策略选择「无限制」，防止系统杀后台
-          </AppText>
-          <GuideImage
-            source={guideBattery}
-            label="参考：电量策略选「无限制」（小米手机）"
-          />
-        </SetupStep>
+        {listenerGranted && !notifFullyConfigured ? (
+          <TouchableOpacity
+            style={styles.tipBar}
+            onPress={() => router.push("/smarter-coco")}
+            activeOpacity={0.7}
+          >
+            <AppText size="md" color={colors.text} style={styles.tipText}>
+              ✨ 解锁进阶能力，让自动记账更稳定
+            </AppText>
+            <AppText size="md" weight="semibold" color={colors.sage}>
+              去优化 ›
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
 
         {/* 支持的应用 */}
         <View style={styles.section}>
@@ -386,14 +217,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20 },
@@ -405,65 +228,23 @@ const styles = StyleSheet.create({
   },
   centerText: { textAlign: "center" },
 
-  // Setup steps
-  stepCard: { marginBottom: 12 },
-  stepHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  stepLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.textLighter,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  stepNumberDone: {
-    backgroundColor: colors.sage,
-  },
-  runningTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  stepBody: {
-    marginLeft: 34,
-  },
   stepDesc: {
     marginTop: 10,
     lineHeight: 20,
   },
-  stepBtn: {
-    marginTop: 12,
-    backgroundColor: colors.sage,
-    borderRadius: radii.md,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignSelf: "flex-start",
-  },
 
-  // Guide images
-  guideImageWrap: {
-    marginTop: 8,
-  },
-  guideImageBtn: {
-    paddingVertical: 6,
-  },
-  guideImage: {
-    width: "100%",
-    aspectRatio: 0.5,
+  tipBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.sagePale,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.creamDark,
-    marginTop: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 16,
   },
+  tipText: { flex: 1, marginRight: 8 },
 
   // Sections
   section: { marginTop: 8, marginBottom: 20 },
