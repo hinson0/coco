@@ -251,6 +251,13 @@ export default function ProfileScreen() {
           title="多设备同步"
           onPress={() => router.push("/sync-help")}
         />
+        <View style={styles.separator} />
+        <MenuItem
+          icon="✨"
+          iconBg={colors.sagePale}
+          title="更聪明的 CoCo"
+          onPress={() => router.push("/smarter-coco")}
+        />
       </Card>
 
       {/* 其他 */}
