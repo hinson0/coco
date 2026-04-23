@@ -14,9 +14,11 @@
 
 ## 0423
 
-- TODO 这次在线更新出现了几个问题
+- ~TODO 这次在线更新出现了几个问题
   - 后端的代码没有更新
   - 更新了代码后 要重启用docker去build一次.
+  - docker compose build backend && docker compose up -d && docker compose logs -f backend
+  - 显示是单独重构backend 然后后端启动 查看日志
 - ~TODO 使用api.cocoai.chat 不用ip地址了.
 - ~TODO /review是否可以本地???
   - 可以 需要指定. 但目前不知道她的工作原理.

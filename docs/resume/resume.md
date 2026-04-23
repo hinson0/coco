@@ -5,8 +5,9 @@
     <td>
       <b>姓名：</b> 杨志兵 <b>性别：</b> 男<br>
       <b>学历：</b> 本科 <b>出生年月：</b> 1987年1月<br>
-      <b>民族：</b> 汉 <b>籍贯：</b> 江西抚州 
-      <b>Phone：</b> 13907941239 <b>E-mail：</b> 356745844@qq.com
+      <b>民族：</b> 汉 <b>籍贯：</b> 江西抚州 <br>
+      <b>Phone：</b> 13907941239 <b>E-mail：</b> 356745844@qq.com <br>
+      <b>github: </b> https://github.com/hinson0 <b>
     </td>
     <td width="120">
       <img src="yzb.jpeg" width="100" />
@@ -66,11 +67,12 @@
 **StoryverseAI(美国) | 2025/09 - 至今**
 
 - StoryverseAI — AI 视频剧本创作平台（从 0 到 1 构建 MVP，历时 19 天）
-- CoCo AI 记账 — 多模态智能记账 App（从 0 到 1 构建 MVP，历时 15 天）
+- CoCo AI 记账 — 多模态智能记账 App（从 0 到 1 构建 MVP，历时 15 天）https://cocoai.caht
 
 **赣玛公司 | 2020/05 - 2025/08**
 
-- 和赣州市赣玛公司对接江西省监狱管理局的ERP开发，于江西14个监狱部署ERP。（Python+PostgreSQL）
+- 独立负责赣玛公司企业客服机器人从 0 到 1 建设，基于 LLM + Function Calling 架构接入 ERP 业务 API，实现多轮对话意图识别、上下文槽位管理与工单自动流转；接入官网在线客服双通道，意图识别准确率 88%，替代约 40% 的人工一线客服工作量。（Python+FastAPI+DeepSeek+PostgreSQL）
+- 对接江西省监狱管理局的ERP开发，于江西14个监狱部署ERP。（Python+PostgreSQL）
 
 **自主创业 | 2017/03 - 2020/05**
 
