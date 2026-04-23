@@ -14,7 +14,10 @@
 
 ## 0423
 
-- TODO 使用api.cocoai.chat 不用ip地址了.
+- TODO 这次在线更新出现了几个问题
+  - 后端的代码没有更新
+  - 更新了代码后 要重启用docker去build一次.
+- ~TODO 使用api.cocoai.chat 不用ip地址了.
 - ~TODO /review是否可以本地???
   - 可以 需要指定. 但目前不知道她的工作原理.
   - 然后我也执行了/simplify
