@@ -48,3 +48,6 @@ docs/pdfs/
 docs/**/*.pdf
 .gitignore
 docs/resume/resume4.md
+
+# PostgreSQL 备份
+backups/

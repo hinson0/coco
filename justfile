@@ -171,3 +171,54 @@ mv suffix="":
         echo "✅ 共移动 $count 个 PDF → $dest_dir"
     fi
 
+# ── Docker 运维 ───────────────────────────────
+
+# 备份 PostgreSQL 到 backups/ 目录（需 docker compose 已启动）
+db-backup:
+    #!/usr/bin/env bash
+    set -e
+    mkdir -p backups
+    TS=$(date +%Y%m%d_%H%M%S)
+    FILE="backups/coco_${TS}.sql"
+    trap 'rm -f "$FILE"' ERR
+    docker compose exec -T db pg_dump -U coco coco > "$FILE"
+    trap - ERR
+    SIZE=$(wc -c < "$FILE")
+    if [ "$SIZE" -lt 100 ]; then
+        rm -f "$FILE"
+        echo "❌ 备份失败（文件为空），请确认 docker compose 已启动"
+        exit 1
+    fi
+    echo "✅ 备份完成: $FILE ($(du -sh "$FILE" | cut -f1))"
+
+# 从最新备份恢复（危险！会覆盖当前数据库）
+db-restore:
+    #!/usr/bin/env bash
+    set -e
+    if [ ! -t 0 ]; then
+        echo "❌ db-restore 必须在交互式终端执行"
+        exit 1
+    fi
+    LATEST=$(ls -t backups/coco_*.sql 2>/dev/null | head -1)
+    if [ -z "$LATEST" ]; then
+        echo "❌ backups/ 下没有找到备份文件"
+        exit 1
+    fi
+    echo "⚠️  将从 $LATEST 恢复，当前数据会被覆盖"
+    read -r -p "确认继续？(yes/N): " confirm
+    if [ "$confirm" != "yes" ]; then echo "已取消"; exit 0; fi
+    docker compose exec -T db psql -U coco -d coco -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+    docker compose exec -T db psql -U coco -d coco < "$LATEST"
+    echo "✅ 恢复完成"
+
+# 安全重启：先备份再 down + up（替代直接 docker compose down && up）
+safe-restart:
+    just db-backup
+    docker compose down
+    docker compose up -d
+    echo "✅ 安全重启完成（备份已保存到 backups/）"
+
+# 查看所有备份文件
+db-backups:
+    @ls -lh backups/coco_*.sql 2>/dev/null || echo "暂无备份"
+
