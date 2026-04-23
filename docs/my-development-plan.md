@@ -9,10 +9,32 @@
   - def get_current_user_id(authorization: Annotated[str, Header(alias="Authorization")]):
     pass
 - TODO /review /code-review /pr-review-toolkit 这几个多实践下
+- TODO Route "./chat-list-items.ts" is missing the required default export. Ensure a React component is exported as default.
+  - 怎么会有这个missing的warning
+
+## 0423
+
+- TODO 使用api.cocoai.chat 不用ip地址了.
+- ~TODO /review是否可以本地???
+  - 可以 需要指定. 但目前不知道她的工作原理.
+  - 然后我也执行了/simplify
+  - 也就是说我执行了/review+/simplify
+- ~TODO 降低用户自动记账的心智
+- ~TODO 6.4+6.5继续
+- TODO 第8章节
+  - ~TODO sqlite3原生操作
+  - TODO View视图
+  - ~TODO sqlalchemy的demo
+    - “alchemy”常见读音：
+    - **英式读音**：[ˈælkəmi]
+    - **美式读音**：[ˈælkəmi]
+      它的基本含义为“炼金术”，在计算机领域，SQLAlchemy 借用这个词，寓意其能像炼金术一样，把数据库操作变得更具魔力、更高效，它是一个强大的数据库抽象层库，方便 Python 开发者操作各种数据库。
+
+    - sql [ˈsiːkwəl]
 
 ## 0422
 
-- TODO nginx
+- ~TODO nginx
   ⏺ Nginx 配置与运维速查
 
   一 · 目录结构（Ubuntu/Debian 标准）
@@ -101,18 +123,6 @@
   ▎ 首次部署时，只用写 HTTPS 部分的主体（先只写 listen 80），certbot --nginx 会帮你自动补全跳转和 SSL 指令。
 
 - ~TODO 题目：解释 GIL 对 FastAPI 并发模型的影响。既然有 GIL，FastAPI 为何还能实现高并发？
-- TODO 降低用户自动记账的心智
-- TODO 6.4+6.5继续
-- TODO 第8章节
-  - TODO sqlite3原生操作
-  - TODO View视图
-  - TODO sqlalchemy的demo
-    - “alchemy”常见读音：
-    - **英式读音**：[ˈælkəmi]
-    - **美式读音**：[ˈælkəmi]
-      它的基本含义为“炼金术”，在计算机领域，SQLAlchemy 借用这个词，寓意其能像炼金术一样，把数据库操作变得更具魔力、更高效，它是一个强大的数据库抽象层库，方便 Python 开发者操作各种数据库。
-
-    - sql [ˈsiːkwəl]
 
 - ~TODO VSCODE导入时的选择词汇的排序
   这是 VSCode/Pylance 的补全排序问题，属于配置调整，不是代码修改任务。我直接说明方案，不动文件。
