@@ -12,6 +12,7 @@
 - TODO 刷题
   - 知乎的题目
   - deepseek
+- TODO 用langgraph学习一个chatbot
 
 - TODO 小说 vue3/nextjs + python微服务
   - TODO 先实现微服务 可以吗?
