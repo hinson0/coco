@@ -1,19 +1,125 @@
 # todo-list
 
+- TODO 上架app
 - TODO 体验下`知识图谱`
 - TODO 加一个main代码merge的时候,docker 可以同步代码
-
-- TODO 修复动画的bug
-
 - TODO 这个header的alias是什么意思
   - def get_current_user_id(authorization: Annotated[str, Header(alias="Authorization")]):
     pass
 - TODO /review /code-review /pr-review-toolkit 这几个多实践下
 - TODO Route "./chat-list-items.ts" is missing the required default export. Ensure a React component is exported as default.
-  - 怎么会有这个missing的warning
+  - 怎么会有这个missing的warnin
+- TODO 刷题
+  - 知乎的题目
+  - deepseek
+
+- TODO 小说 vue3/nextjs + python微服务
+  - TODO 先实现微服务 可以吗?
+
+## 0426
+
+- ~TODO 我的以为点在 我不太熟悉Futrue/Task这2个概念.还有aysncio基本的用法.底层os的io执行器selectors
+
+## 0425
+
+- TODO 1+2
+  - 1 async/await的底层机制?
+    - async/await.在语法层面async/await是语法糖.其底层本质是原生协程.
+    - 协程本质上是对generator的yield/sen(暂停与恢复)机制的一层封装.
+    - async/await,它定义了一种协作式调度手段:
+      - async 定义一个原生协程. 执行coroutine返回coroutine object.函数体不会执行.
+      - 协程在await处通过yield交出控制权,等待外界通过send()注入结果恢复协程运行
+  - TODO aysncio
+    - 在python中的异步编程利用的就是:
+      - 协程的恢复与挂起,协程本质上是对generator的yield/send机制的一层封装.
+      - 这个核心是:event loop!事件循环.事件循环起到调度作用.
+      - 负责在合适的时候通过.send(result)把协程唤醒.
+
+    - 拿`餐厅`来解释这个现象最合适了:
+      - 事件循环这个调度员比喻为:服务员
+      - 协程比喻为 我这个消费者
+      - await 后的表达式 比喻为:下单
+
+      ```python
+
+      async def yu():
+        asyncio.sleep(10)
+        return 'yu'
+
+      async def ya():
+        asyncio.sleep(20)
+        return 'ya'
+
+      async def me():
+        await yu()
+        await ya()
+
+
+      me().send(None)
+      me().send(None)
+      ```
+
+    - 整个基本流程为:
+      - async def 声明一个协程函数,当调用时得到一个协程对象.协程对象实际是实现了**await**协议的
+        一个awaitable对象.而**await**返回的是一个coroutine wrapper的对象,其内部就是generator
+      - 当await xxx时,首先执行xxx.**await**()得到一个生成器(迭代器).然后通过.send()来缺东
+      -
+
+- ~TODO 4+5+6
+  - 4 内存泄漏的工具?怎么定位内存泄漏?
+    - 我一般使用tracemalloc.在程序入口使用tracemalloc.start()
+    - 然后在可疑的地方,前后都进行内存快照.使用tracemalloc.take_snapshot()得到2个内存的快照
+    - 然后s2.compare_to(s1, 'lineno') 得到一个stats.
+    - 然后打印前3的存在.然后stat.traceback.format()打印效果
+  - 5 Pydantic 中的 @validator 和 @field_validator (v2) 有什么区别？如何处理递归模型引用？
+    - field validator 是针对field进行校验.支持mode=after/before
+    - 底层由rust实现.
+    - 要实现递归模型引用 首先顶部要from **future** import annotations 或者直接用类的字符串形式
+  - 6 类型提示中的 TypeVar、Generic、Annotated 在实际项目中的使用场景。
+    - typevar 类型变量.占位符的效果
+    - generic 泛化基类.
+    - 在3.12之后已经原生支持了.比如class Items[T]: 类型变量T是由python自动创建.在实例化items才传入
+      对应的具体的类型.比如 int_items = Items[int]() / str_items = Items[str]()
+    - 类型泛化的功能 可以在函数参数/函数/类中直接使用.
+- TODO 墨卷阅读器 - 一款帮你搜索小说的阅读器
+
+## 0424 周五
+
+- ~TODO deepseek的题目
+  - 别名/浅拷贝
+    b = 2
+    a = b
+    a is b
+    id(a) == id(b)
+  - b = [1, 2]
+    a = b
+    a is b?
+    id(a) == id(b) ?
+    b.append(3)
+    a?
+  - b =list([1, 2])
+    a = b
+    id(a) == id(b)?
+    a is b?
+
+  - b = (1, 2)
+    a = b
+    a is b ?
+    id(a) == id(b)?
+
+  - b = (1, 2)
+    a = tuple(b)
+    a is b
+    id(a) == id(b)
+  -
+
+- ~TODO 修复动画的bug
+- ~TODO async/await
+  - 基本的都搞懂了.如果还需要进一步深入的话 需要去了解asyncio的更底层的代码细节.
 
 ## 0423
 
+- ~TODO 数据库的数据去了哪里??
 - ~TODO 这次在线更新出现了几个问题
   - 后端的代码没有更新
   - 更新了代码后 要重启用docker去build一次.
@@ -26,9 +132,23 @@
   - 也就是说我执行了/review+/simplify
 - ~TODO 降低用户自动记账的心智
 - ~TODO 6.4+6.5继续
-- TODO 第8章节
+
+- ~TODO 如何创建一个yzb/yzb的用户.库也对着yzb
+
+  ```python
+  aengine = create_async_engine(
+      DATABASE_URL,
+      echo=True,
+      pool_size=10, # 链接池大小
+      max_overflow=20, # 超出 pool_size 后最多可创建的连接数
+      pool_pre_ping=True, # 连接前检查有效性
+  )
+  ```
+
   - ~TODO sqlite3原生操作
-  - TODO View视图
+  - ~TODO View视图
+    - ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
+    -
   - ~TODO sqlalchemy的demo
     - “alchemy”常见读音：
     - **英式读音**：[ˈælkəmi]
@@ -292,6 +412,15 @@ PID 126417 → worker 4 ←┘
   ./gradlew clean (http要加: android:usesCleartextTraffic="true")
   ./gradlew assembleRelease
   adb install -r app/build/outputs/apk/release/app-release.apk
+
+  ⚠️ 什么时候不需要执行
+  刚刚跑完 expo prebuild --clean（像你那样）
+
+  android/ 目录是全新的，还没构建过
+
+  日常小改动，增量编译完全正常
+
+  在这些情况下强行 clean 只会白白增加下一次构建的耗时（因为要重新编译所有代码和资源）。
 
 - docker compose logs backend
   ubuntu@VM-0-2-ubuntu:~/coco$ docker compose logs backend
